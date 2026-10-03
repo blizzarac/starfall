@@ -161,6 +161,18 @@
         "body": "#7a5a3a",
         "hair": "#d8dce6"
       }
+    },
+    {
+      "id": "workbench_sunspire",
+      "name": "Crafting Table",
+      "x": 21,
+      "y": 10,
+      "dialogue": "workbench",
+      "look": {
+        "body": "#9a6b42",
+        "hair": "#9a6b42"
+      },
+      "sprite": "bench"
     }
   ],
   "portals": [

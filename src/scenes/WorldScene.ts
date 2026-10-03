@@ -321,9 +321,11 @@ export class WorldScene extends Phaser.Scene {
       const body =
         npc.sprite === 'board'
           ? this.add.image(0, 0, 'board').setOrigin(0.5, feetOrigin(this, 'board', 54))
-          : this.npcSprite(npc);
+          : npc.sprite === 'bench'
+            ? this.add.image(0, 0, 'bench').setOrigin(0.5, feetOrigin(this, 'bench', 44))
+            : this.npcSprite(npc);
       const label = this.add
-        .text(0, npc.sprite === 'board' ? -66 : -84, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
+        .text(0, npc.sprite === 'board' ? -66 : npc.sprite === 'bench' ? -56 : -84, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
         .setOrigin(0.5, 1);
       const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
       this.npcViews.set(npc.id, view);
@@ -450,9 +452,9 @@ export class WorldScene extends Phaser.Scene {
       this.lamp(c.x, c.y, 0x6fd6ff, 3.2 + Math.max(portal.area.w, portal.area.h), 0.9);
     }
     for (const npc of this.world.npcs) {
-      if (npc.sprite !== 'board') continue;
       const p = tileToWorld(npc.x, npc.y);
-      this.lamp(p.x + 12, p.y - 40, 0x6ff2ff, 1.4, 0.8);
+      if (npc.sprite === 'board') this.lamp(p.x + 12, p.y - 40, 0x6ff2ff, 1.4, 0.8);
+      if (npc.sprite === 'bench') this.lamp(p.x + 23, p.y - 32, 0x6ff2ff, 1.2, 0.8);
     }
   }
 

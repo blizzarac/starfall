@@ -1420,5 +1420,26 @@
         ]
       }
     }
+  },
+  {
+    "id": "workbench",
+    "nodes": {
+      "start": {
+        "text": "A tinker's workbench, free for anyone to use. Bring what monsters drop and a little gold.",
+        "choices": [
+          {
+            "label": "Craft something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "Leave"
+          }
+        ]
+      }
+    }
   }
 ]

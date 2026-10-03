@@ -37,6 +37,7 @@ export function makeProps(scene: Phaser.Scene): void {
   prop(scene, 'rock', 24, 16, rock);
   prop(scene, 'palm', 34, 48, palm);
   prop(scene, 'board', 24, 29, board);
+  prop(scene, 'bench', 30, 24, bench);
   prop(scene, 'drop', 10, 10, drop);
   for (const windows of [false, true]) prop(scene, windows ? 'house-window' : 'house', 32, 36, (p) => house(p, windows), { outline: false });
   prop(scene, 'cavewall', 32, 36, cavewall, { outline: false });
@@ -165,6 +166,40 @@ function board(p: Pix): void {
   p.rect(16, 6, 4, 1, 0x6ff2ff);
   p.rect(16, 8, 3, 1, 0x4fb8d0);
   p.set(19, 9, 0xffffff);
+}
+
+/** A tinker's workbench: a heavy table with a vise, a brass gear, a hammer and a glowing cell. */
+function bench(p: Pix): void {
+  const wood = ramp(0x9a6b42);
+  const iron = ramp(0x8a94a4);
+  const brass = ramp(0xd8a840);
+  // Legs and a low shelf.
+  for (const x of [2, 25]) p.rect(x, 12, 3, 11, wood.d);
+  p.rect(3, 18, 24, 2, wood.d);
+  p.rect(6, 15, 5, 3, iron.d);
+  p.rect(13, 16, 4, 2, brass.d);
+  // Thick top, lit from above, and its front edge.
+  p.rect(0, 9, 30, 3, wood.b);
+  p.rect(0, 9, 30, 1, wood.l);
+  p.rect(0, 12, 30, 2, wood.k);
+  for (const x of [8, 17, 24]) p.line(x, 10, x, 11, wood.d);
+  // A vise on the left.
+  p.rect(2, 4, 6, 5, iron.b);
+  p.rect(2, 4, 6, 1, iron.l);
+  p.rect(4, 2, 2, 2, iron.d);
+  p.line(1, 6, 9, 6, iron.k);
+  // A brass gear standing on its edge.
+  p.ellipse(14, 5.5, 3.5, 3.5, brass.b);
+  for (const [dx, dy] of [[0, -4], [4, 0], [0, 4], [-4, 0]] as const) p.set(14 + dx, 5 + dy, brass.d);
+  p.ellipse(14, 5.5, 1.2, 1.2, brass.k);
+  p.set(13, 3, brass.h);
+  // Hammer lying on the top.
+  p.line(18, 8, 22, 8, wood.d);
+  p.rect(22, 6, 2, 3, iron.d);
+  // A glowing power cell.
+  p.rect(25, 3, 3, 6, 0x1e3a4a);
+  p.rect(26, 4, 1, 4, 0x6ff2ff);
+  p.set(26, 3, 0xffffff);
 }
 
 function drop(p: Pix): void {

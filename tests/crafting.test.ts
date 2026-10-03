@@ -42,6 +42,17 @@ describe('crafting', () => {
     }
   });
 
+  it('every town has a crafting table that opens the bench', () => {
+    const towns = [...content.maps.values()].filter((m) => m.kind === 'town');
+    expect(towns.length).toBeGreaterThanOrEqual(3);
+    for (const town of towns) {
+      const bench = town.npcs.find((n) => n.sprite === 'bench');
+      expect(bench, town.id).toBeDefined();
+      const nodes = Object.values(content.dialogues.get(bench!.dialogue)!.nodes);
+      expect(nodes.some((n) => 'choices' in n && n.choices.some((c) => c.do.some((a) => a.type === 'openCraft')))).toBe(true);
+    }
+  });
+
   it('every recipe uses real items, and a tinkerer opens the bench', () => {
     expect(content.recipes.size).toBeGreaterThan(10);
     for (const map of ['town', 'sunspire']) {

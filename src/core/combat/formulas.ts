@@ -65,8 +65,9 @@ export function maxHp(level: number, vit: number): number {
   return Math.floor((40 + 8 * level + 0.1 * level * level) * (1 + vit / 100));
 }
 
+/** Grows with level, and clearly with INT: each point adds 2% plus 2 SP (before the job's factor). */
 export function maxSp(level: number, int: number): number {
-  return Math.floor((10 + 2 * level) * (1 + int / 100));
+  return Math.floor((10 + 3 * level) * (1 + int / 50) + 2 * int);
 }
 
 /** ATK from stats alone; weapon ATK is added on top. */
@@ -203,11 +204,12 @@ export function hpRegenAmount(maxHpValue: number, vit: number): number {
 }
 
 export function spRegenIntervalMs(sitting: boolean): number {
-  return sitting ? 4000 : 8000;
+  return sitting ? 2000 : 4000;
 }
 
+/** SP back per regen tick: a share of max SP, plus one for every 4 INT. */
 export function spRegenAmount(maxSpValue: number, int: number): number {
-  return Math.max(1, 1 + Math.floor(maxSpValue / 40) + Math.floor(int / 5));
+  return Math.max(1, 1 + Math.floor(maxSpValue / 40) + Math.floor(int / 4));
 }
 
 // ---- Inventory and trade ---------------------------------------------------

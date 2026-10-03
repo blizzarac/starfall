@@ -212,7 +212,7 @@ export const NpcSchema = z.object({
   dialogue: z.string(),
   look: z.object({ body: z.string().regex(/^#[0-9a-f]{6}$/i), hair: z.string().regex(/^#[0-9a-f]{6}$/i) }),
   /** How it's drawn: a person, or a notice board. */
-  sprite: z.enum(['chibi', 'board']).default('chibi'),
+  sprite: z.enum(['chibi', 'board', 'bench']).default('chibi'),
 });
 export type NpcDef = z.infer<typeof NpcSchema>;
 

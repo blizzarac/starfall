@@ -88,6 +88,18 @@
         "body": "#5f9ed6",
         "hair": "#eaeaea"
       }
+    },
+    {
+      "id": "workbench_saltmere",
+      "name": "Crafting Table",
+      "x": 17,
+      "y": 16,
+      "dialogue": "workbench",
+      "look": {
+        "body": "#9a6b42",
+        "hair": "#9a6b42"
+      },
+      "sprite": "bench"
     }
   ],
   "portals": [
