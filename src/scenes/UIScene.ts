@@ -12,6 +12,7 @@ import { COLORS, TEXT } from '../render/palette';
 import { DialogueBox } from '../ui/DialogueBox';
 import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
+import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
 import { SKILLS, skillLevel, type SkillDef } from '../core/skills';
 import type { Panel } from '../ui/widgets';
@@ -56,6 +57,7 @@ export class UIScene extends Phaser.Scene {
   private menuPanel!: Phaser.GameObjects.Container;
   private frameMs = 16;
   private inventory!: InventoryWindow;
+  private refineWindow!: RefineWindow;
   private skillWindow!: SkillWindow;
   /** Learned active skills, one round button each, above the main row. */
   private skillButtons: Array<{ skill: SkillDef; root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Arc; cd: Phaser.GameObjects.Text; badge: Phaser.GameObjects.Text }> = [];
@@ -91,7 +93,13 @@ export class UIScene extends Phaser.Scene {
     this.inventory = new InventoryWindow(this, this.world);
     this.skillWindow = new SkillWindow(this, this.world);
     this.shop = new ShopWindow(this, this.world);
-    this.dialogue = new DialogueBox(this, this.world, (shopId) => this.shop.open(shopId));
+    this.refineWindow = new RefineWindow(this, this.world);
+    this.dialogue = new DialogueBox(
+      this,
+      this.world,
+      (shopId) => this.shop.open(shopId),
+      () => this.refineWindow.open(),
+    );
     this.buildButtons();
     this.buildMenu();
     this.buildSkillButtons();
@@ -312,13 +320,14 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel];
   }
 
   private refreshPanels(): void {
     if (this.skillWindow.panel.visible) this.skillWindow.refresh();
     if (this.inventory.panel.visible) this.inventory.refresh();
     if (this.shop.panel.visible) this.shop.refresh();
+    if (this.refineWindow.panel.visible) this.refineWindow.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -469,6 +478,7 @@ export class UIScene extends Phaser.Scene {
       ev.on('playerRespawned', () => this.addLog('You wake up at the save point.')),
       ev.on('notice', (e) => this.addLog(e.text)),
       ev.on('castInterrupted', () => this.addLog('Your cast was interrupted.')),
+      ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
       ev.on('jobChanged', (e) => {
         this.addLog(`You are now a ${isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId}! Open Skills to learn new skills.`);
@@ -483,6 +493,7 @@ export class UIScene extends Phaser.Scene {
       ev.on('mapChanged', () => {
         this.dialogue.close();
         this.shop.close();
+        this.refineWindow.close();
         this.showMapName();
       }),
     ];

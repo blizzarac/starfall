@@ -8,7 +8,7 @@ import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
 import { isJobId } from './jobs';
-import { cardBlocker, cardEffects, EQUIP_SLOTS, equipBlocker, isPlain, slotFor, STARTING_GEAR, weaponOf, type EquipSlot, type GearPiece } from './equipment';
+import { cardBlocker, cardEffects, EQUIP_SLOTS, MAX_REFINE, equipBlocker, isPlain, slotFor, STARTING_GEAR, weaponOf, type EquipSlot, type GearPiece } from './equipment';
 import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStats, gainXp, learnSkill, raiseStat } from './progression';
 import * as S from './skills';
 import type { Element } from './combat/formulas';
@@ -32,6 +32,7 @@ export interface WorldEvents extends Record<string, unknown> {
   talk: { npc: NpcDef };
   skillUsed: { skillId: S.SkillId; targets: number[] };
   castInterrupted: Record<string, never>;
+  refined: { name: string; level: number; success: boolean };
   skillsChanged: Record<string, never>;
   equipmentChanged: Record<string, never>;
   jobChanged: { jobId: string };
@@ -330,6 +331,43 @@ export class World {
     return null;
   }
 
+  /** Why this piece can't be refined right now, or null if it can. */
+  refineBlocker(uid: number): string | null {
+    const found = this.findPiece(uid);
+    if (!found) return "You don't have that gear.";
+    const next = found.piece.refine + 1;
+    if (next > MAX_REFINE) return 'Already at +10.';
+    if (!this.hasItem(F.REFINE_ORE, 1)) return `You need a ${this.content.items.get(F.REFINE_ORE)?.name ?? 'refining ore'}.`;
+    if (this.player.gold < F.refineCost(next)) return `You need ${F.refineCost(next)} gold.`;
+    return null;
+  }
+
+  /**
+   * One refine attempt: costs gold and one ore either way. Success raises the
+   * piece by one; failure above +4 destroys it, cards and all.
+   */
+  refine(uid: number): { error: string } | { success: boolean; level: number } {
+    const blocker = this.refineBlocker(uid);
+    if (blocker) return { error: blocker };
+    const { piece, slot } = this.findPiece(uid)!;
+    const next = piece.refine + 1;
+    this.player.gold -= F.refineCost(next);
+    this.removeItem(F.REFINE_ORE, 1);
+    const success = this.rng() < F.refineChance(next);
+    const name = piece.item.name;
+    if (success) {
+      piece.refine = next;
+    } else if (slot) {
+      delete this.player.equipment[slot];
+    } else {
+      this.player.gear = this.player.gear.filter((g) => g !== piece);
+    }
+    this.afterGearChange();
+    this.events.emit('inventoryChanged', {});
+    this.events.emit('refined', { name, level: next, success });
+    return { success, level: next };
+  }
+
   /** Slots a card from the bag into a piece of gear, for good. Returns why not, or null. */
   insertCard(cardId: string, uid: number): string | null {
     const card = this.content.items.get(cardId);
@@ -464,7 +502,7 @@ export class World {
   // ---- NPC services ------------------------------------------------------
 
   /** Runs one dialogue action. Returns a shop id when the action opens a shop. */
-  applyAction(action: DialogueAction): { openShop?: string } {
+  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean } {
     const p = this.player;
     switch (action.type) {
       case 'setSavePoint':
@@ -481,6 +519,8 @@ export class World {
       }
       case 'openShop':
         return { openShop: action.shop };
+      case 'openRefine':
+        return { openRefine: true };
       case 'takeItem':
         this.removeItem(action.id, action.count);
         return {};

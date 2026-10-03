@@ -266,6 +266,10 @@
             ]
           },
           {
+            "label": "Refine my gear",
+            "next": "refine_info"
+          },
+          {
             "label": "How do I wear gear?",
             "next": "howto"
           },
@@ -288,6 +292,22 @@
           },
           {
             "label": "Thanks"
+          }
+        ]
+      },
+      "refine_info": {
+        "text": "Each attempt costs one Brightstone and some gold. Up to +4 I never fail. Past that, the metal can shatter and the piece is gone, cards and all. I'll show you the odds first.",
+        "choices": [
+          {
+            "label": "Let's refine",
+            "do": [
+              {
+                "type": "openRefine"
+              }
+            ]
+          },
+          {
+            "label": "Maybe later"
           }
         ]
       }

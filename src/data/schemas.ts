@@ -201,6 +201,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('setSavePoint') }),
   z.object({ type: z.literal('heal') }),
   z.object({ type: z.literal('openShop'), shop: z.string() }),
+  z.object({ type: z.literal('openRefine') }),
   z.object({ type: z.literal('takeItem'), id: z.string(), count: z.number().int().positive() }),
   z.object({ type: z.literal('giveItem'), id: z.string(), count: z.number().int().positive() }),
   z.object({ type: z.literal('changeJob'), job: z.string() }),

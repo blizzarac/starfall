@@ -14,6 +14,7 @@ export class DialogueBox {
     private readonly scene: Phaser.Scene,
     private readonly world: World,
     private readonly onShop: (shopId: string) => void,
+    private readonly onRefine: () => void,
   ) {
     this.panel = new Panel(
       scene,
@@ -45,8 +46,10 @@ export class DialogueBox {
     const view = this.runner?.view();
     if (!this.runner || !view) {
       const shop = this.runner?.openShop;
+      const refine = this.runner?.openRefine;
       this.close();
       if (shop) this.onShop(shop);
+      if (refine) this.onRefine();
       return;
     }
     const p = this.panel;

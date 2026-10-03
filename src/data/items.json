@@ -25,5 +25,6 @@
   {"id": "moss_cap", "name": "Moss Cap", "type": "equipment", "price": 400, "weight": 6, "equip": {"slot": "head", "def": 1, "bonus": {"hp": 25}, "slots": 1}, "description": "Soft, springy, oddly comforting."},
   {"id": "clover_charm", "name": "Clover Charm", "type": "equipment", "price": 600, "weight": 2, "equip": {"slot": "accessory", "bonus": {"luk": 2}, "slots": 1}, "description": "Lucky, they say."},
   {"id": "tusk_blade", "name": "Tusk Blade", "type": "equipment", "price": 1500, "weight": 30, "equip": {"slot": "weapon", "weaponType": "sword", "atk": 52, "jobs": ["swordsman"], "minLevel": 12, "slots": 0}, "description": "Carved from a Bristleboar tusk."},
-  {"id": "oak_staff", "name": "Oak Staff", "type": "equipment", "price": 450, "weight": 15, "equip": {"slot": "weapon", "weaponType": "staff", "atk": 12, "matk": 15, "jobs": ["mage"], "bonus": {"int": 1}, "slots": 1}, "description": "A plain staff that hums faintly."}
+  {"id": "oak_staff", "name": "Oak Staff", "type": "equipment", "price": 450, "weight": 15, "equip": {"slot": "weapon", "weaponType": "staff", "atk": 12, "matk": 15, "jobs": ["mage"], "bonus": {"int": 1}, "slots": 1}, "description": "A plain staff that hums faintly."},
+  {"id": "brightstone", "name": "Brightstone", "type": "etc", "price": 300, "weight": 5, "description": "Refining ore. Greta uses one per attempt."}
 ]

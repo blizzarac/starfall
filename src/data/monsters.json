@@ -160,6 +160,10 @@
         "chance": 0.004
       },
       {
+        "item": "brightstone",
+        "chance": 0.015
+      },
+      {
         "item": "mossling_card",
         "chance": 0.0005
       }
@@ -215,6 +219,10 @@
       {
         "item": "leather_vest",
         "chance": 0.01
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.04
       },
       {
         "item": "bristleboar_card",

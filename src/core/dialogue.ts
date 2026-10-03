@@ -29,6 +29,8 @@ export class DialogueRunner {
   private choiceMap: number[] = [];
   /** Set when the last choice asked to open a shop; the UI picks it up. */
   openShop: string | null = null;
+  /** Set when the last choice asked to open the refine window. */
+  openRefine = false;
 
   constructor(
     private readonly world: World,
@@ -69,6 +71,7 @@ export class DialogueRunner {
     for (const action of choice.do) {
       const result = this.world.applyAction(action);
       if (result.openShop) this.openShop = result.openShop;
+      if (result.openRefine) this.openRefine = true;
     }
     this.nodeId = choice.next ?? null;
     this.resolve();

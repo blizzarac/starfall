@@ -220,6 +220,22 @@ export function sellPrice(price: number): number {
   return Math.floor(price / 2);
 }
 
+// ---- Refining ------------------------------------------------------------
+
+/** Chance that refining to `nextLevel` succeeds. Up to +4 is always safe. */
+const REFINE_CHANCE = [1, 1, 1, 1, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
+
+export function refineChance(nextLevel: number): number {
+  return REFINE_CHANCE[nextLevel - 1] ?? 0;
+}
+
+/** Gold per refine attempt, on top of one ore. */
+export function refineCost(nextLevel: number): number {
+  return 100 * nextLevel;
+}
+
+export const REFINE_ORE = 'brightstone';
+
 // ---- Movement ------------------------------------------------------------
 
 /** Diagonal steps take √2 as long as straight ones. */
