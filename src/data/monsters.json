@@ -47,7 +47,7 @@
       },
       {
         "item": "jellop_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -104,7 +104,7 @@
       },
       {
         "item": "thornbeetle_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -165,7 +165,7 @@
       },
       {
         "item": "mossling_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -226,7 +226,7 @@
       },
       {
         "item": "bristleboar_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -284,7 +284,7 @@
       },
       {
         "item": "puffcap_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -333,7 +333,7 @@
       },
       {
         "item": "thicket_wolf_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -387,7 +387,7 @@
       },
       {
         "item": "cave_bat_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -441,7 +441,7 @@
       },
       {
         "item": "stoneling_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -507,7 +507,7 @@
       },
       {
         "item": "crystal_golem_card",
-        "chance": 0.01
+        "chance": 0.25
       }
     ],
     "look": {
@@ -556,7 +556,7 @@
       },
       {
         "item": "brinejelly_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -605,7 +605,7 @@
       },
       {
         "item": "shellsnap_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -654,7 +654,7 @@
       },
       {
         "item": "gullwing_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -708,7 +708,7 @@
       },
       {
         "item": "dune_scorpion_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -757,7 +757,7 @@
       },
       {
         "item": "sand_wolf_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -811,7 +811,7 @@
       },
       {
         "item": "sandworm_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -860,7 +860,7 @@
       },
       {
         "item": "rattlebones_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -914,7 +914,7 @@
       },
       {
         "item": "wrapped_one_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -985,7 +985,7 @@
       },
       {
         "item": "dust_pharaoh_card",
-        "chance": 0.01
+        "chance": 0.25
       }
     ],
     "look": {
@@ -1034,7 +1034,7 @@
       },
       {
         "item": "scrap_hound_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -1083,7 +1083,7 @@
       },
       {
         "item": "gear_beetle_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -1132,7 +1132,7 @@
       },
       {
         "item": "sentry_drone_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -1190,7 +1190,7 @@
       },
       {
         "item": "clockwork_knight_card",
-        "chance": 0.0005
+        "chance": 0.01
       }
     ],
     "look": {
@@ -1248,7 +1248,7 @@
       },
       {
         "item": "clockwork_titan_card",
-        "chance": 0.01
+        "chance": 0.25
       }
     ],
     "look": {

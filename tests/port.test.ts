@@ -61,7 +61,7 @@ describe('shared storage', () => {
     expect(w2.takeOut('boar_tusk', 500)).toMatch(/carry/);
   });
 
-  it('the courier charges for storage and teleports only to places you have been', () => {
+  it('the courier charges for storage and teleports free, only to towns you have been', () => {
     const w = newWorld();
     const npc = town.npcs.find((n) => n.dialogue === 'courier')!;
     const def = content.dialogues.get('courier')!;
@@ -78,15 +78,17 @@ describe('shared storage', () => {
     d.choose(1);
     // Never been anywhere but town, and town itself is hidden.
     expect(d.view()!.choices).toEqual(['Never mind']);
+    w.changeMap('meadow-1', { x: 3, y: 3 });
     w.changeMap('saltmere', { x: 3, y: 13 });
     w.changeMap('town', { x: 15, y: 21 });
-    w.player.gold = 1000;
+    w.player.gold = 0;
     d = new DialogueRunner(w, def, npc);
     d.choose(1);
-    expect(d.view()!.choices[0]).toMatch(/Saltmere/);
+    // Fields aren't on the list, even once visited.
+    expect(d.view()!.choices).toEqual(['Saltmere', 'Never mind']);
     d.choose(0);
     expect(w.map.id).toBe('saltmere');
-    expect(w.player.gold).toBe(700);
+    expect(w.player.gold).toBe(0);
   });
 
   it('is saved once for every slot, alongside each save', async () => {

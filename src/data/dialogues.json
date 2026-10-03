@@ -1270,10 +1270,10 @@
         ]
       },
       "warp": {
-        "text": "Where to? I can only send you somewhere you've already been.",
+        "text": "Where to? Travel between towns is free, but only to towns you've already been.",
         "choices": [
           {
-            "label": "Brightmoor (300 gold)",
+            "label": "Brightmoor",
             "if": {
               "visited": "town",
               "notMap": "town"
@@ -1284,12 +1284,12 @@
                 "map": "town",
                 "x": 15,
                 "y": 21,
-                "cost": 300
+                "cost": 0
               }
             ]
           },
           {
-            "label": "Saltmere (300 gold)",
+            "label": "Saltmere",
             "if": {
               "visited": "saltmere",
               "notMap": "saltmere"
@@ -1300,44 +1300,12 @@
                 "map": "saltmere",
                 "x": 3,
                 "y": 13,
-                "cost": 300
+                "cost": 0
               }
             ]
           },
           {
-            "label": "Whisperwood (400 gold)",
-            "if": {
-              "visited": "whisperwood",
-              "notMap": "whisperwood"
-            },
-            "do": [
-              {
-                "type": "warp",
-                "map": "whisperwood",
-                "x": 19,
-                "y": 22,
-                "cost": 400
-              }
-            ]
-          },
-          {
-            "label": "Glimmer Caves (600 gold)",
-            "if": {
-              "visited": "caves-1",
-              "notMap": "caves-1"
-            },
-            "do": [
-              {
-                "type": "warp",
-                "map": "caves-1",
-                "x": 19,
-                "y": 2,
-                "cost": 600
-              }
-            ]
-          },
-          {
-            "label": "Sunspire (600 gold)",
+            "label": "Sunspire",
             "if": {
               "visited": "sunspire",
               "notMap": "sunspire"
@@ -1348,39 +1316,7 @@
                 "map": "sunspire",
                 "x": 16,
                 "y": 6,
-                "cost": 600
-              }
-            ]
-          },
-          {
-            "label": "Sunscorch Dunes (700 gold)",
-            "if": {
-              "visited": "sunscorch-dunes",
-              "notMap": "sunscorch-dunes"
-            },
-            "do": [
-              {
-                "type": "warp",
-                "map": "sunscorch-dunes",
-                "x": 20,
-                "y": 3,
-                "cost": 700
-              }
-            ]
-          },
-          {
-            "label": "Sunken Ruins (900 gold)",
-            "if": {
-              "visited": "sunken-ruins",
-              "notMap": "sunken-ruins"
-            },
-            "do": [
-              {
-                "type": "warp",
-                "map": "sunken-ruins",
-                "x": 17,
-                "y": 2,
-                "cost": 900
+                "cost": 0
               }
             ]
           },
