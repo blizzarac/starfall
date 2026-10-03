@@ -3,6 +3,7 @@ import * as F from '../src/core/combat/formulas';
 import { HOTBAR_SIZE } from '../src/core/entities';
 import { tileDistance } from '../src/core/grid';
 import { gainXp } from '../src/core/progression';
+import type { SkillId } from '../src/core/skills';
 import { World } from '../src/core/world';
 import { loadContent } from '../src/data/content';
 import { migrate } from '../src/save/migrations';
@@ -53,7 +54,7 @@ describe('Auto mode', () => {
   });
 
   it('fires on Jellops, skips spells they barely feel, and prefers what they are weakest to', () => {
-    const mage = (skills: string[]) => {
+    const mage = (skills: SkillId[]) => {
       const w = new World(content, meadow, { seed: 4 });
       gainXp(w.player, 0, 100_000);
       for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
