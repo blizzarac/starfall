@@ -1,4 +1,4 @@
-import { equipBlocker, type GearPiece } from '../core/equipment';
+import { equipBlocker, slotFor, type GearPiece } from '../core/equipment';
 import { formatDeltas, previewEquip } from '../core/progression';
 import type { Player } from '../core/entities';
 import { TONE } from '../render/palette';
@@ -6,7 +6,9 @@ import { TONE } from '../render/palette';
 /**
  * How a piece of gear compares with what's worn now: "If worn: ATK +12", in
  * green when strictly better, red when strictly worse (or not wearable), ink
- * when mixed.
+ * when mixed. When the worn piece is refined higher, it also says what this one
+ * would give at that refine level, so a better base item isn't hidden behind
+ * your refines.
  */
 export function gearVerdict(player: Player, piece: GearPiece): { text: string; color: string; better: boolean } {
   const blocker = equipBlocker(player, piece.item);
@@ -14,5 +16,11 @@ export function gearVerdict(player: Player, piece: GearPiece): { text: string; c
   const deltas = previewEquip(player, piece);
   const better = deltas.length > 0 && deltas.every((d) => d.delta > 0);
   const worse = deltas.length > 0 && deltas.every((d) => d.delta < 0);
-  return { text: `If worn: ${formatDeltas(deltas)}`, color: better ? TONE.good : worse ? TONE.bad : TONE.ink, better };
+  let text = `If worn: ${formatDeltas(deltas)}`;
+  const worn = player.equipment[slotFor(player, piece.item.equip!)];
+  if (worn && worn.refine > piece.refine) {
+    const matched = previewEquip(player, { ...piece, refine: worn.refine });
+    text += ` · at +${worn.refine} like yours: ${formatDeltas(matched)}`;
+  }
+  return { text, color: better ? TONE.good : worse ? TONE.bad : TONE.ink, better };
 }
