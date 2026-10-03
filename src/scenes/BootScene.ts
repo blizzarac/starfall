@@ -107,6 +107,45 @@ export class BootScene extends Phaser.Scene {
       g.generateTexture(windows ? 'house-window' : 'house', 64, 72).clear();
     }
 
+    // Cave wall block: same cube as a house, in dark stone with crystal glints.
+    g.fillStyle(0x4a4552).fillPoints([V(0, 56), V(32, 72), V(32, 34), V(0, 18)], true);
+    g.fillStyle(0x3d3945).fillPoints([V(32, 72), V(64, 56), V(64, 18), V(32, 34)], true);
+    g.fillStyle(0x5e5868).fillPoints([V(0, 18), V(32, 2), V(64, 18), V(32, 34)], true);
+    g.fillStyle(0x9fd8ff, 0.7).fillTriangle(14, 40, 18, 30, 21, 42).fillTriangle(44, 48, 47, 38, 51, 47);
+    g.generateTexture('cavewall', 64, 72).clear();
+
+    // Wolf facing right. Feet at (28, 40).
+    g.fillStyle(0x2a1e2e).fillRect(14, 30, 5, 10).fillRect(22, 31, 5, 9).fillRect(34, 31, 5, 9).fillRect(41, 30, 5, 10);
+    g.fillStyle(0xffffff).fillEllipse(28, 24, 40, 18);
+    g.fillStyle(0xdddddd).fillTriangle(6, 18, 12, 26, 2, 30);
+    g.fillStyle(0xffffff).fillEllipse(46, 18, 18, 15).fillEllipse(55, 21, 10, 7);
+    g.fillStyle(0xffffff).fillTriangle(40, 12, 45, 2, 48, 12).fillTriangle(47, 12, 52, 3, 54, 13);
+    g.fillStyle(0x2a1e2e).fillCircle(49, 16, 1.8).fillCircle(59, 21, 1.6);
+    g.generateTexture('wolf', 60, 44).clear();
+
+    // Mushroom: spotted cap on a stubby stalk. Feet at (24, 42).
+    g.fillStyle(0xfff2e0).fillRoundedRect(16, 22, 16, 20, 6);
+    g.fillStyle(0xffffff).fillEllipse(24, 18, 44, 26);
+    g.fillStyle(0xf5f5f5, 1).fillCircle(14, 14, 3.5).fillCircle(28, 9, 3).fillCircle(34, 18, 3.5);
+    g.fillStyle(0x2a1e2e).fillEllipse(20, 31, 3, 5).fillEllipse(28, 31, 3, 5);
+    g.generateTexture('mushroom', 48, 44).clear();
+
+    // Bat: round body, two wings, hovering. Feet (shadow) at (28, 40).
+    g.fillStyle(0xdddddd).fillTriangle(4, 10, 22, 16, 18, 28).fillTriangle(52, 10, 34, 16, 38, 28);
+    g.fillStyle(0xffffff).fillCircle(28, 18, 10);
+    g.fillStyle(0xffffff).fillTriangle(21, 10, 24, 2, 27, 10).fillTriangle(29, 10, 32, 2, 35, 10);
+    g.fillStyle(0xff4a4a).fillCircle(24, 17, 1.8).fillCircle(32, 17, 1.8);
+    g.generateTexture('bat', 56, 44).clear();
+
+    // Golem: blocky stone body with crystal shoulders. Feet at (28, 52).
+    g.fillStyle(0x2a1e2e, 0.9).fillRect(15, 42, 9, 10).fillRect(32, 42, 9, 10);
+    g.fillStyle(0xffffff).fillRoundedRect(10, 16, 36, 30, 6);
+    g.fillStyle(0xdddddd).fillRoundedRect(17, 4, 22, 16, 5);
+    g.fillStyle(0xdddddd).fillRoundedRect(2, 20, 10, 20, 4).fillRoundedRect(44, 20, 10, 20, 4);
+    g.fillStyle(0xc9f0ff).fillTriangle(6, 20, 10, 8, 14, 20).fillTriangle(42, 20, 46, 8, 50, 20);
+    g.fillStyle(0x7fe3ff).fillCircle(23, 11, 2.2).fillCircle(33, 11, 2.2);
+    g.generateTexture('golem', 56, 56).clear();
+
     // Portal swirl lying on the ground.
     g.fillStyle(0x6fd6ff, 0.35).fillEllipse(32, 16, 60, 28);
     g.lineStyle(3, 0xbff0ff, 0.9).strokeEllipse(32, 16, 46, 20);

@@ -1,0 +1,114 @@
+{
+  "id": "caves-1",
+  "name": "Glimmer Caves",
+  "kind": "dungeon",
+  "grass": [
+    "#77737e",
+    "#716d78"
+  ],
+  "width": 40,
+  "height": 40,
+  "rows": [
+    "XXXXXXXXXXXXXXXXXXX..XXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXX..XXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXX..XXXXXXXXXX.......XX",
+    "XXXXXXXXXXXXX...XXX..X...XXXXX........XX",
+    "XXXXXXXXXXX.....XXX.......XXXX........XX",
+    "XXXX...........XX.....................XX",
+    "XXX.........XXX.......................XX",
+    "XXX........XXX......................XXXX",
+    "XXXX......XXX...................R...XXXX",
+    "XXXXX....XXXX...X........XXXX.......XXXX",
+    "XXXXXX....XXX...........XXXXXX........XX",
+    "XXXXXX.................XXXXXXX.R......XX",
+    "XXXXXX................XXXXXXX.......R.XX",
+    "XXXXXX...............XXXXXXX....X.....XX",
+    "XXXXX...R.XX.........XXXXXXX...XXX....XX",
+    "XXXX......XXX..R....XXXXXXXX...XXXX..XXX",
+    "XXX.......XX........XXXXXXXX...XXXX..XXX",
+    "XXXX.XXX...........XXXXXXXXX...XXXXXXXXX",
+    "XXXXXXXXXX.........XXXXXXXXX...XXXXXXXXX",
+    "XXXXXXXXXXX.......XXXXXXXXX.....XXXXXXXX",
+    "XXXXXXXXXXX.......XXX..XXXX.....XXXXXXXX",
+    "XXXXXXXXXX........XX....XXXX....XXXXXXXX",
+    "XX..XX.........X.........XXXX..XXXXXXXXX",
+    "XX..........R.XX.........XXXXXXXXXXXXXXX",
+    "XX............XXX...........XXXXXXXXXXXX",
+    "XX..R.........XXXX..........XXXXXXXXXXXX",
+    "XX.......R...XXXXX...R..X...XXXXXXXXXXXX",
+    "XX...........XXXXX......X...XXXXXXXXXXXX",
+    "XXX..........XXXXXX........XXXXXXXXXXXXX",
+    "XXXX........XXXXXXXX.......XXXXXXXXXXXXX",
+    "XXXXX......XXXXXXXXX.......XXXXXXXXXXXXX",
+    "XXXXX......XXXXXXXX........XXXXXXXXXXXXX",
+    "XXXXX.......XXXX...........XXXXXXXXXXXXX",
+    "XXXXX.......................XXXXXXXXXXXX",
+    "XXXX..........................XXXXXXXXXX",
+    "XXXX...........................XXXXXXXXX",
+    "XXXXX................................XXX",
+    "XXXXXXX..........XX..................XXX",
+    "XXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXX...XXXXXXXXXXXXXXXXXX"
+  ],
+  "playerStart": {
+    "x": 19,
+    "y": 2
+  },
+  "savePoint": {
+    "x": 19,
+    "y": 2
+  },
+  "spawns": [
+    {
+      "monster": "cave_bat",
+      "count": 10,
+      "respawnMs": 9000,
+      "area": {
+        "x": 3,
+        "y": 5,
+        "w": 34,
+        "h": 30
+      }
+    },
+    {
+      "monster": "stoneling",
+      "count": 7,
+      "respawnMs": 12000,
+      "area": {
+        "x": 3,
+        "y": 10,
+        "w": 34,
+        "h": 27
+      }
+    }
+  ],
+  "npcs": [],
+  "portals": [
+    {
+      "area": {
+        "x": 19,
+        "y": 0,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "whisperwood",
+        "x": 19,
+        "y": 37
+      }
+    },
+    {
+      "area": {
+        "x": 19,
+        "y": 39,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "caves-2",
+        "x": 14,
+        "y": 2
+      }
+    }
+  ]
+}

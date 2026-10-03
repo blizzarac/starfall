@@ -1,0 +1,114 @@
+{
+  "id": "whisperwood",
+  "name": "Whisperwood",
+  "kind": "field",
+  "grass": [
+    "#5f9a4f",
+    "#59924a"
+  ],
+  "width": 40,
+  "height": 40,
+  "rows": [
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTT.T.TTTTT.T.TTTTTTTTT.TTTTTT..TTT",
+    "TTT......T...T.......T...TR..........TTT",
+    "TTT..T.......T.T...,TTTR.R....T.....TTTT",
+    "TT......T.......T......T.R......TT...TTT",
+    "TTTT.T....T...TRT...........TT....T..TTT",
+    "TTT.....T............T.T.T.........RTTTT",
+    "TT...........,,.,T....,T..T......T...TTT",
+    "TT..R.TR.R..T.R....R....T....R,......TTT",
+    "TTT..TT....T.....TT...R..,...T.,...T.TTT",
+    "TTT..T...T.....TT...TT.......,.......TTT",
+    "TTT.......T....T....R....TT..TT......TTT",
+    "TT.........T.....T..T.......T.TRT..T.TTT",
+    "TTTT....T.........T....T..T......,....TT",
+    "TT.T.RT.........T....T.....R...,...T.TTT",
+    "TTT......,R.........T.R..T....T..T...TTT",
+    "TTTTR.T...TT.,R...T.T..T.TT....T....,.TT",
+    "TTTT..T.......R.T..........T....R..T.TTT",
+    "TTT......T.....T..TT.T......,........TTT",
+    "=====================.,T...,T..R..T..TTT",
+    "=====================......T...T.T...TTT",
+    "TTT,...............==.TT.....TRTT.T,.TTT",
+    "TTTT..T..R.....T.TT==...T........TTT.TTT",
+    "TTT.........,......==...T.T,.,........TT",
+    "TTT.........T.,,...==.T.....T.T..,..TTTT",
+    "TTT,T...TT.......R.==......T.........TTT",
+    "TT..TT......T..T...==.,..............TTT",
+    "TTT,T......,..T...,==T,....T....T....TTT",
+    "TTT....R.T.T....TR.==TT...R..T.R..TTTTTT",
+    "TTT..T,.T.......TT.==................TTT",
+    "TTTT.TT..........T.==.T......TT...T..TTT",
+    "TTT....R...........==TT....,.......T..TT",
+    "TTTR..TRTT...T.....==...T.T.......T..TTT",
+    "TTT.....RT....T....==.........T.TRR,.TTT",
+    "TTT.R......T.....T,==......R.........TTT",
+    "TT.R........RT..T..==.....T...T......TTT",
+    "TTTTTTTTTT.TTTTTTTT==TTTTTTTTTTTTT.TT.TT",
+    "TTTTTTTTTTTTTTTTTTT==TTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTT==TTTTTTTTTTTTTTTTTTT"
+  ],
+  "playerStart": {
+    "x": 2,
+    "y": 20
+  },
+  "savePoint": {
+    "x": 2,
+    "y": 20
+  },
+  "spawns": [
+    {
+      "monster": "puffcap",
+      "count": 10,
+      "respawnMs": 9000,
+      "area": {
+        "x": 3,
+        "y": 3,
+        "w": 16,
+        "h": 34
+      }
+    },
+    {
+      "monster": "thicket_wolf",
+      "count": 9,
+      "respawnMs": 10000,
+      "area": {
+        "x": 22,
+        "y": 3,
+        "w": 15,
+        "h": 34
+      }
+    }
+  ],
+  "npcs": [],
+  "portals": [
+    {
+      "area": {
+        "x": 0,
+        "y": 20,
+        "w": 1,
+        "h": 2
+      },
+      "to": {
+        "map": "meadow-3",
+        "x": 37,
+        "y": 20
+      }
+    },
+    {
+      "area": {
+        "x": 19,
+        "y": 39,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "caves-1",
+        "x": 19,
+        "y": 2
+      }
+    }
+  ]
+}

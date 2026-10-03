@@ -26,5 +26,16 @@
   {"id": "clover_charm", "name": "Clover Charm", "type": "equipment", "price": 600, "weight": 2, "equip": {"slot": "accessory", "bonus": {"luk": 2}, "slots": 1}, "description": "Lucky, they say."},
   {"id": "tusk_blade", "name": "Tusk Blade", "type": "equipment", "price": 1500, "weight": 30, "equip": {"slot": "weapon", "weaponType": "sword", "atk": 52, "jobs": ["swordsman"], "minLevel": 12, "slots": 0}, "description": "Carved from a Bristleboar tusk."},
   {"id": "oak_staff", "name": "Oak Staff", "type": "equipment", "price": 450, "weight": 15, "equip": {"slot": "weapon", "weaponType": "staff", "atk": 12, "matk": 15, "jobs": ["mage"], "bonus": {"int": 1}, "slots": 1}, "description": "A plain staff that hums faintly."},
-  {"id": "brightstone", "name": "Brightstone", "type": "etc", "price": 300, "weight": 5, "description": "Refining ore. Greta uses one per attempt."}
+  {"id": "brightstone", "name": "Brightstone", "type": "etc", "price": 300, "weight": 5, "description": "Refining ore. Greta uses one per attempt."},
+  {"id": "puffcap_spore", "name": "Puffcap Spore", "type": "etc", "price": 40, "weight": 2, "description": "A puff of red spores. Alchemists want it."},
+  {"id": "wolf_pelt", "name": "Wolf Pelt", "type": "etc", "price": 60, "weight": 8, "description": "Thick grey fur."},
+  {"id": "bat_wing", "name": "Bat Wing", "type": "etc", "price": 55, "weight": 2, "description": "Leathery and light."},
+  {"id": "glimmer_shard", "name": "Glimmer Shard", "type": "etc", "price": 110, "weight": 6, "description": "A crystal that glows faintly in the dark."},
+  {"id": "golem_core", "name": "Golem Core", "type": "etc", "price": 5000, "weight": 20, "description": "The still-warm heart of the Crystal Golem. Worth a fortune."},
+  {"id": "crystal_mail", "name": "Crystal Mail", "type": "equipment", "price": 4000, "weight": 40, "equip": {"slot": "body", "def": 8, "minLevel": 25, "bonus": {"vit": 2}, "slots": 1}, "description": "Armor grown from living crystal."},
+  {"id": "puffcap_card", "name": "Puffcap Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "accessory", "bonus": {"vit": 1, "hp": 60}}, "description": "Accessory card: VIT +1, Max HP +60. Insert it from Items → Bag."},
+  {"id": "thicket_wolf_card", "name": "Thicket Wolf Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shoes", "bonus": {"agi": 2, "flee": 3}}, "description": "Shoes card: AGI +2, FLEE +3. Insert it from Items → Bag."},
+  {"id": "cave_bat_card", "name": "Cave Bat Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "cloak", "bonus": {"flee": 6}}, "description": "Cloak card: FLEE +6. Insert it from Items → Bag."},
+  {"id": "stoneling_card", "name": "Stoneling Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shield", "resist": {"earth": 0.15}}, "description": "Shield card: 15% less damage from earth monsters. Insert it from Items → Bag."},
+  {"id": "crystal_golem_card", "name": "Crystal Golem Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "body", "bonus": {"def": 5, "hp": 300}}, "description": "Body card: DEF +5, Max HP +300. Only the Crystal Golem carries it. Insert it from Items → Bag."}
 ]

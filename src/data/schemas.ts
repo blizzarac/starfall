@@ -108,8 +108,20 @@ export const MonsterSchema = z.object({
   look: z.object({
     color: z.string().regex(/^#[0-9a-f]{6}$/i),
     scale: z.number().positive(),
-    shape: z.enum(['blob', 'beetle', 'sprout', 'boar']).default('blob'),
+    shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem']).default('blob'),
   }),
+  /** Area bosses (MVPs): one at a time, long real-time respawn, announced. */
+  boss: z.boolean().default(false),
+  /** A telegraphed area attack used while fighting. */
+  special: z
+    .object({
+      kind: z.literal('slam'),
+      everyMs: z.number().int().positive(),
+      windupMs: z.number().int().nonnegative(),
+      radius: z.number().int().positive(),
+      modifier: z.number().positive(),
+    })
+    .optional(),
 });
 export type MonsterDef = z.infer<typeof MonsterSchema>;
 
@@ -125,6 +137,7 @@ export const TERRAIN_CHARS = {
   R: 'rock',
   '~': 'water',
   '#': 'wall',
+  X: 'cavewall',
 } as const;
 
 const PlaceSchema = z.object({ map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
@@ -150,7 +163,7 @@ export const MapSchema = z
   .object({
     id: z.string(),
     name: z.string(),
-    kind: z.enum(['town', 'field']),
+    kind: z.enum(['town', 'field', 'dungeon']),
     /** Two alternating grass shades, so each field has its own feel. */
     grass: z.tuple([z.string().regex(/^#[0-9a-f]{6}$/i), z.string().regex(/^#[0-9a-f]{6}$/i)]).optional(),
     width: z.number().int().positive(),

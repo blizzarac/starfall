@@ -33,6 +33,11 @@ export interface WorldEvents extends Record<string, unknown> {
   skillUsed: { skillId: S.SkillId; targets: number[] };
   castInterrupted: Record<string, never>;
   refined: { name: string; level: number; success: boolean };
+  /** An area boss appeared on, or was defeated on, the current map. */
+  boss: { kind: 'appeared' | 'defeated'; name: string };
+  /** A monster is winding up an area attack: get out of the circle. */
+  telegraph: { monsterId: number; tile: Tile; radius: number; ms: number };
+  slam: { monsterId: number; tile: Tile; radius: number };
   skillsChanged: Record<string, never>;
   equipmentChanged: Record<string, never>;
   jobChanged: { jobId: string };
@@ -70,20 +75,27 @@ export class World {
   readonly session: SessionStats = { kills: 0, baseXp: 0, jobXp: 0, lootValue: 0, deaths: 0 };
   /** Simulated milliseconds since the world was created. */
   time = 0;
+  /** Saved key/value state: boss respawn times, quest flags. */
+  readonly flags = new Map<string, string | number | boolean>();
 
   private currentMap!: MapDef;
   private currentGrid!: Grid;
   private nextId = 1;
   private nextGearUid = 1;
   private respawns: Array<{ spawnIndex: number; at: number }> = [];
+  /** Bosses waiting to respawn, by wall-clock time so the wait survives leaving the map or the game. */
+  private bossWaits: Array<{ spawnIndex: number; at: number }> = [];
   private readonly rng: Rng;
+  /** Wall clock in ms; injectable so tests can fast-forward boss timers. */
+  readonly now: () => number;
 
   constructor(
     readonly content: Content,
     map: MapDef,
-    opts: { seed?: number; playerName?: string } = {},
+    opts: { seed?: number; playerName?: string; now?: () => number } = {},
   ) {
     this.rng = createRng(opts.seed ?? Date.now());
+    this.now = opts.now ?? (() => Date.now());
     this.player = createPlayer(opts.playerName ?? 'Adventurer', map.playerStart);
     this.player.savePoint = { map: map.id, ...map.savePoint };
     for (const id of STARTING_GEAR) {
@@ -557,9 +569,28 @@ export class World {
     this.monsters.clear();
     this.drops.clear();
     this.respawns = [];
+    this.bossWaits = [];
     map.spawns.forEach((spawn, i) => {
+      const def = this.content.monsters.get(spawn.monster)!;
+      const bossAt = def.boss ? Number(this.flags.get(bossFlag(def.id)) ?? 0) : 0;
+      if (bossAt > this.now()) {
+        this.bossWaits.push({ spawnIndex: i, at: bossAt });
+        return;
+      }
       for (let n = 0; n < spawn.count; n++) this.spawnMonster(i);
     });
+  }
+
+  /** Loads saved flags and respawns the current map, so a boss killed before saving stays dead. */
+  restoreFlags(flags: Record<string, string | number | boolean>): void {
+    this.flags.clear();
+    for (const [k, v] of Object.entries(flags)) this.flags.set(k, v);
+    this.loadMap(this.map);
+  }
+
+  /** When the boss of this map comes back, or null if it's alive or there is none. */
+  bossRespawnAt(): number | null {
+    return this.bossWaits.length > 0 ? Math.min(...this.bossWaits.map((b) => b.at)) : null;
   }
 
   /** Puts the player on a tile, cancelling whatever they were doing. */
@@ -784,7 +815,15 @@ export class World {
   private killMonster(m: Monster): void {
     const p = this.player;
     this.monsters.delete(m.id);
-    this.respawns.push({ spawnIndex: m.spawnIndex, at: this.time + this.map.spawns[m.spawnIndex]!.respawnMs });
+    const respawnMs = this.map.spawns[m.spawnIndex]!.respawnMs;
+    if (m.def.boss) {
+      const at = this.now() + respawnMs;
+      this.flags.set(bossFlag(m.def.id), at);
+      this.bossWaits.push({ spawnIndex: m.spawnIndex, at });
+      this.events.emit('boss', { kind: 'defeated', name: m.def.name });
+    } else {
+      this.respawns.push({ spawnIndex: m.spawnIndex, at: this.time + respawnMs });
+    }
     this.events.emit('monsterDied', { monsterId: m.id, tile: { ...m.tile } });
     this.session.kills += 1;
 
@@ -846,6 +885,8 @@ export class World {
       m.stateTimer = 1000;
     }
 
+    if (m.hostile && m.def.special && this.updateSpecial(m, dt)) return;
+
     if (m.hostile) {
       const inRange = () => tileDistance(m.tile, p.tile) <= m.def.attackRange;
       if (!m.next && inRange()) {
@@ -885,6 +926,36 @@ export class World {
     }
   }
 
+  /**
+   * Area attack: wind up on a spot (shown to the player), then hit everything
+   * within the radius. Returns true while the monster is busy with it.
+   */
+  private updateSpecial(m: Monster, dt: number): boolean {
+    const sp = m.def.special!;
+    const p = this.player;
+    if (m.windup) {
+      m.windup.remainingMs -= dt;
+      if (m.windup.remainingMs > 0) return true;
+      const tile = m.windup.tile;
+      m.windup = null;
+      m.specialTimer = sp.everyMs;
+      this.events.emit('slam', { monsterId: m.id, tile, radius: sp.radius });
+      if (!p.dead && tileDistance(tile, p.tile) <= sp.radius) {
+        const atk = ((m.def.atk[0] + m.def.atk[1]) / 2) * sp.modifier;
+        this.hurtPlayer(m, F.damage({ atk, def: derivedStats(p).def }, this.rng));
+      }
+      return true;
+    }
+    m.specialTimer -= dt;
+    if (m.specialTimer <= 0 && !m.next && tileDistance(m.tile, p.tile) <= sp.radius + 1) {
+      m.windup = { remainingMs: sp.windupMs, tile: { ...m.tile } };
+      m.path = [];
+      this.events.emit('telegraph', { monsterId: m.id, tile: { ...m.tile }, radius: sp.radius, ms: sp.windupMs });
+      return true;
+    }
+    return false;
+  }
+
   private monsterAttack(m: Monster): void {
     const p = this.player;
     const d = derivedStats(p);
@@ -893,7 +964,12 @@ export class World {
       this.events.emit('miss', { sourceId: m.id, targetId: 'player' });
       return;
     }
-    const raw = F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng);
+    this.hurtPlayer(m, F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng));
+  }
+
+  /** Applies a monster's hit to the player after resistances, and breaks any cast. */
+  private hurtPlayer(m: Monster, raw: number): void {
+    const p = this.player;
     const endure = p.buffs.get('endure');
     // Monsters hit with their own element, so cards with matching resistance help.
     const resist = Math.min(0.8, cardEffects(p).resist[m.def.element] ?? 0) + (endure ? S.endureReduction(endure.level) : 0);
@@ -945,6 +1021,12 @@ export class World {
   }
 
   private updateRespawns(): void {
+    if (this.bossWaits.length > 0) {
+      const now = this.now();
+      const ready = this.bossWaits.filter((b) => b.at <= now);
+      this.bossWaits = this.bossWaits.filter((b) => b.at > now);
+      for (const b of ready) this.spawnMonster(b.spawnIndex);
+    }
     const due = this.respawns.filter((r) => r.at <= this.time);
     if (due.length === 0) return;
     this.respawns = this.respawns.filter((r) => r.at > this.time);
@@ -967,7 +1049,10 @@ export class World {
       stateTimer: randInt(this.rng, 0, 4000),
       hostile: false,
       attackCooldown: 0,
+      specialTimer: def.special?.everyMs ?? 0,
+      windup: null,
     });
+    if (def.boss) this.events.emit('boss', { kind: 'appeared', name: def.name });
   }
 
   private randomWalkableIn(area: { x: number; y: number; w: number; h: number }): Tile | null {
@@ -1044,4 +1129,9 @@ export function renderPosition(m: Mover, alpha: number): { x: number; y: number 
   if (!m.next) return { x: m.tile.x, y: m.tile.y };
   const t = Math.min(1, (m.stepElapsed + alpha * F.TICK_MS) / m.stepDuration);
   return { x: m.tile.x + (m.next.x - m.tile.x) * t, y: m.tile.y + (m.next.y - m.tile.y) * t };
+}
+
+/** Flag key holding a boss's respawn time (epoch ms). */
+export function bossFlag(monsterId: string): string {
+  return `boss:${monsterId}`;
 }

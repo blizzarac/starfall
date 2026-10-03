@@ -1,0 +1,91 @@
+{
+  "id": "caves-2",
+  "name": "Crystal Hall",
+  "kind": "dungeon",
+  "grass": [
+    "#6e6a80",
+    "#68647a"
+  ],
+  "width": 30,
+  "height": 30,
+  "rows": [
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXX..XXXXXXXXXXXXXX",
+    "XXXXXXXXXXX.........XXXXXXXXXX",
+    "XXXXXXXXX.............XXXXXXXX",
+    "XXXXXXXX...............XXXXXXX",
+    "XXXXXXX.................XXXXXX",
+    "XXXXXX...................XXXXX",
+    "XXXXXX....R.........R....XXXXX",
+    "XXXXX.....................XXXX",
+    "XXXXX.....................XXXX",
+    "XXXXX.....................XXXX",
+    "XXXXX.....................XXXX",
+    "XXXXX.....................XXXX",
+    "XXXXX.....................XXXX",
+    "XXXXX.....................XXXX",
+    "XXXXXX....R.........R....XXXXX",
+    "XXXXXX...................XXXXX",
+    "XXXXXXX.................XXXXXX",
+    "XXXXXXXX...............XXXXXXX",
+    "XXXXXXXXX.............XXXXXXXX",
+    "XXXXXXXXXXX.........XXXXXXXXXX",
+    "XXXXXXXXXXXXXXX.XXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  ],
+  "playerStart": {
+    "x": 14,
+    "y": 2
+  },
+  "savePoint": {
+    "x": 14,
+    "y": 2
+  },
+  "spawns": [
+    {
+      "monster": "crystal_golem",
+      "count": 1,
+      "respawnMs": 1200000,
+      "area": {
+        "x": 13,
+        "y": 16,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "monster": "stoneling",
+      "count": 4,
+      "respawnMs": 15000,
+      "area": {
+        "x": 7,
+        "y": 10,
+        "w": 16,
+        "h": 14
+      }
+    }
+  ],
+  "npcs": [],
+  "portals": [
+    {
+      "area": {
+        "x": 14,
+        "y": 0,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "caves-1",
+        "x": 19,
+        "y": 37
+      }
+    }
+  ]
+}

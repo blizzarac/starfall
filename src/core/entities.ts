@@ -84,6 +84,10 @@ export interface Monster extends Mover {
   /** True once the player has hit it or it has aggroed; it then hunts the player. */
   hostile: boolean;
   attackCooldown: number;
+  /** Time until the next special attack. */
+  specialTimer: number;
+  /** A special attack being wound up: it lands on `tile` when the timer runs out. */
+  windup: { remainingMs: number; tile: Tile } | null;
 }
 
 export interface GroundDrop {

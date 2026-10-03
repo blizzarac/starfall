@@ -234,5 +234,262 @@
       "scale": 1.15,
       "shape": "boar"
     }
+  },
+  {
+    "id": "puffcap",
+    "name": "Puffcap",
+    "level": 14,
+    "hp": 360,
+    "atk": [
+      18,
+      26
+    ],
+    "def": 12,
+    "hit": 40,
+    "flee": 20,
+    "element": "earth",
+    "size": "small",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 450,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 3
+    },
+    "baseXp": 95,
+    "jobXp": 70,
+    "drops": [
+      {
+        "item": "puffcap_spore",
+        "chance": 0.55
+      },
+      {
+        "item": "sweet_apple",
+        "chance": 0.12
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.02
+      },
+      {
+        "item": "puffcap_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#e46a5e",
+      "scale": 1,
+      "shape": "mushroom"
+    }
+  },
+  {
+    "id": "thicket_wolf",
+    "name": "Thicket Wolf",
+    "level": 16,
+    "hp": 430,
+    "atk": [
+      24,
+      32
+    ],
+    "def": 8,
+    "hit": 48,
+    "flee": 32,
+    "element": "earth",
+    "size": "medium",
+    "attackDelayMs": 1200,
+    "attackRange": 1,
+    "moveMs": 220,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 5
+    },
+    "baseXp": 120,
+    "jobXp": 85,
+    "drops": [
+      {
+        "item": "wolf_pelt",
+        "chance": 0.5
+      },
+      {
+        "item": "red_tonic",
+        "chance": 0.05
+      },
+      {
+        "item": "traveler_cloak",
+        "chance": 0.01
+      },
+      {
+        "item": "thicket_wolf_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#8a8f9c",
+      "scale": 1,
+      "shape": "wolf"
+    }
+  },
+  {
+    "id": "cave_bat",
+    "name": "Cave Bat",
+    "level": 19,
+    "hp": 380,
+    "atk": [
+      26,
+      34
+    ],
+    "def": 6,
+    "hit": 58,
+    "flee": 48,
+    "element": "shadow",
+    "size": "small",
+    "attackDelayMs": 1100,
+    "attackRange": 1,
+    "moveMs": 180,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 6
+    },
+    "baseXp": 150,
+    "jobXp": 105,
+    "drops": [
+      {
+        "item": "bat_wing",
+        "chance": 0.5
+      },
+      {
+        "item": "red_tonic",
+        "chance": 0.05
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.03
+      },
+      {
+        "item": "cave_bat_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#6b5a8a",
+      "scale": 1,
+      "shape": "bat"
+    }
+  },
+  {
+    "id": "stoneling",
+    "name": "Stoneling",
+    "level": 22,
+    "hp": 950,
+    "atk": [
+      34,
+      44
+    ],
+    "def": 30,
+    "hit": 60,
+    "flee": 18,
+    "element": "earth",
+    "size": "medium",
+    "attackDelayMs": 1900,
+    "attackRange": 1,
+    "moveMs": 520,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 3
+    },
+    "baseXp": 240,
+    "jobXp": 175,
+    "drops": [
+      {
+        "item": "glimmer_shard",
+        "chance": 0.5
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.08
+      },
+      {
+        "item": "buckler",
+        "chance": 0.01
+      },
+      {
+        "item": "stoneling_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#a39a8c",
+      "scale": 0.8,
+      "shape": "golem"
+    }
+  },
+  {
+    "id": "crystal_golem",
+    "name": "Crystal Golem",
+    "level": 30,
+    "hp": 9000,
+    "atk": [
+      70,
+      95
+    ],
+    "def": 35,
+    "hit": 85,
+    "flee": 20,
+    "element": "earth",
+    "size": "large",
+    "attackDelayMs": 1800,
+    "attackRange": 1,
+    "moveMs": 420,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 7,
+      "chaseRange": 16,
+      "wanderRadius": 2
+    },
+    "baseXp": 4500,
+    "jobXp": 3200,
+    "boss": true,
+    "special": {
+      "kind": "slam",
+      "everyMs": 7000,
+      "windupMs": 1200,
+      "radius": 2,
+      "modifier": 1.6
+    },
+    "drops": [
+      {
+        "item": "golem_core",
+        "chance": 1
+      },
+      {
+        "item": "brightstone",
+        "chance": 1
+      },
+      {
+        "item": "glimmer_shard",
+        "chance": 1
+      },
+      {
+        "item": "crystal_mail",
+        "chance": 0.3
+      },
+      {
+        "item": "crystal_golem_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#9fd8ff",
+      "scale": 2.2,
+      "shape": "golem"
+    }
   }
 ]

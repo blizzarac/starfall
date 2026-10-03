@@ -64,6 +64,8 @@ export class UIScene extends Phaser.Scene {
   private shop!: ShopWindow;
   private dialogue!: DialogueBox;
   private mapBanner!: Phaser.GameObjects.Text;
+  private bossBar!: Phaser.GameObjects.Graphics;
+  private bossText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('UI');
@@ -88,6 +90,8 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '', { ...TEXT, fontSize: '22px', align: 'center', fontStyle: 'bold' })
       .setOrigin(0.5)
       .setVisible(false);
+    this.bossBar = this.add.graphics();
+    this.bossText = this.add.text(0, 0, '', { ...TEXT, fontSize: '12px', fontStyle: 'bold' }).setOrigin(0.5, 0);
     this.mapBanner = this.add.text(0, 0, '', { ...TEXT, fontSize: '22px', fontStyle: 'bold', strokeThickness: 5 }).setOrigin(0.5).setAlpha(0);
     this.buildStatWindow();
     this.inventory = new InventoryWindow(this, this.world);
@@ -119,6 +123,7 @@ export class UIScene extends Phaser.Scene {
     this.drawStatus();
     this.drawButtons();
     this.drawSkillButtons();
+    this.drawBossBar();
     this.drawStatWindow();
     this.drawDebug();
     const p = this.world.player;
@@ -331,9 +336,39 @@ export class UIScene extends Phaser.Scene {
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
+  /** HP bar for an area boss on the current map, or the time until it returns. */
+  private drawBossBar(): void {
+    const { width } = this.scale;
+    const narrow = width < NARROW;
+    const g = this.bossBar.clear();
+    const boss = [...this.world.monsters.values()].find((m) => m.def.boss);
+    const respawn = this.world.bossRespawnAt();
+    const w = narrow ? 236 : Math.min(320, width - 520);
+    const x = narrow ? 8 : (width - w) / 2;
+    const y = narrow ? 152 : 14;
+    if (boss) {
+      const frac = Math.max(0, boss.hp / boss.def.hp);
+      g.fillStyle(0x141a24, 0.85).fillRoundedRect(x, y, w, 30, 6);
+      g.fillStyle(0x3a1e24).fillRoundedRect(x + 6, y + 18, w - 12, 7, 3);
+      if (frac > 0) g.fillStyle(0xe0533d).fillRoundedRect(x + 6, y + 18, (w - 12) * frac, 7, 3);
+      this.bossText.setPosition(x + w / 2, y + 3).setText(`${boss.def.name}  ${Math.ceil(frac * 100)}%`).setVisible(true);
+    } else if (respawn !== null) {
+      const mins = Math.max(0, Math.ceil((respawn - this.world.now()) / 60_000));
+      this.bossText.setPosition(x + w / 2, y + 3).setText(`The hall is quiet… (boss returns in ~${mins} min)`).setVisible(true);
+    } else {
+      this.bossText.setVisible(false);
+    }
+  }
+
+  private showBanner(text: string, color = '#f4f7fb'): void {
+    this.tweens.killTweensOf(this.mapBanner);
+    this.mapBanner.setText(text).setColor(color).setAlpha(1);
+    this.tweens.add({ targets: this.mapBanner, alpha: 0, delay: 2200, duration: 900 });
+  }
+
   private showMapName(): void {
     this.tweens.killTweensOf(this.mapBanner);
-    this.mapBanner.setText(this.world.map.name).setAlpha(1);
+    this.mapBanner.setText(this.world.map.name).setColor('#f4f7fb').setAlpha(1);
     this.tweens.add({ targets: this.mapBanner, alpha: 0, delay: 1400, duration: 800 });
   }
 
@@ -478,6 +513,15 @@ export class UIScene extends Phaser.Scene {
       ev.on('playerRespawned', () => this.addLog('You wake up at the save point.')),
       ev.on('notice', (e) => this.addLog(e.text)),
       ev.on('castInterrupted', () => this.addLog('Your cast was interrupted.')),
+      ev.on('boss', (e) => {
+        if (e.kind === 'appeared') {
+          this.addLog(`${e.name} has appeared!`);
+          this.time.delayedCall(1600, () => this.showBanner(`${e.name} has appeared!`, '#ff9a7a'));
+        } else {
+          this.addLog(`${e.name} has been defeated! MVP!`);
+          this.showBanner(`MVP! ${e.name} defeated`, '#ffe27a');
+        }
+      }),
       ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
       ev.on('jobChanged', (e) => {

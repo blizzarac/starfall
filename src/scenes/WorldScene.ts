@@ -30,6 +30,10 @@ const MONSTER_LOOKS: Record<MonsterDef['look']['shape'], { feet: number }> = {
   beetle: { feet: 36 / 40 },
   sprout: { feet: 40 / 44 },
   boar: { feet: 40 / 44 },
+  wolf: { feet: 40 / 44 },
+  mushroom: { feet: 42 / 44 },
+  bat: { feet: 40 / 44 },
+  golem: { feet: 52 / 56 },
 };
 /** Pointer distance (px) within which a click counts as hitting a monster or drop. */
 const PICK_RADIUS = 24;
@@ -71,7 +75,7 @@ export class WorldScene extends Phaser.Scene {
     this.npcViews.clear();
     this.registry.set('clock', this.clock);
 
-    this.cameras.main.setBackgroundColor('#2f5d3a');
+    this.cameras.main.setBackgroundColor(this.world.map.kind === 'dungeon' ? '#1d1b22' : '#2f5d3a');
     this.drawGround();
     this.placeObstacles();
     this.placePortals();
@@ -168,7 +172,7 @@ export class WorldScene extends Phaser.Scene {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const t = this.world.grid.terrainAt(x, y);
-        if (t !== 'tree' && t !== 'rock' && t !== 'wall') continue;
+        if (t !== 'tree' && t !== 'rock' && t !== 'wall' && t !== 'cavewall') continue;
         const p = tileToWorld(x, y);
         let img: Phaser.GameObjects.Image;
         if (t === 'tree') {
@@ -176,6 +180,9 @@ export class WorldScene extends Phaser.Scene {
           this.trees.push({ img, tile: { x, y } });
         } else if (t === 'wall') {
           img = this.add.image(p.x, p.y, hash(x, y) % 3 === 0 ? 'house-window' : 'house').setOrigin(0.5, 56 / 72);
+          this.trees.push({ img, tile: { x, y } });
+        } else if (t === 'cavewall') {
+          img = this.add.image(p.x, p.y, 'cavewall').setOrigin(0.5, 56 / 72);
           this.trees.push({ img, tile: { x, y } });
         } else {
           img = this.add.image(p.x, p.y + 2, 'rock').setOrigin(0.5, 28 / 32);
@@ -463,6 +470,13 @@ export class WorldScene extends Phaser.Scene {
         this.cameras.main.flash(300, 255, 240, 180);
       }),
       ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets)),
+      ev.on('telegraph', (e) => this.telegraph(e.tile, e.radius, e.ms)),
+      ev.on('slam', (e) => {
+        const at = tileToWorld(e.tile.x, e.tile.y);
+        const burst = this.add.ellipse(at.x, at.y, TILE_W * (e.radius * 2 + 1), TILE_H * (e.radius * 2 + 1), 0xffb15a, 0.5).setDepth(3);
+        this.tweens.add({ targets: burst, alpha: 0, scale: 1.15, duration: 350, onComplete: () => burst.destroy() });
+        this.cameras.main.shake(220, 0.01);
+      }),
       ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('refined', (e) => {
         this.floatText('player', e.success ? `+${e.level}!` : 'Shattered…', e.success ? '#ffe27a' : '#ff6b6b', 18, 1200);
@@ -475,6 +489,16 @@ export class WorldScene extends Phaser.Scene {
       }),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
+  }
+
+  /** A red circle on the ground that fills up until an area attack lands. */
+  private telegraph(tile: Tile, radius: number, ms: number): void {
+    const at = tileToWorld(tile.x, tile.y);
+    const w = TILE_W * (radius * 2 + 1);
+    const h = TILE_H * (radius * 2 + 1);
+    const ring = this.add.ellipse(at.x, at.y, w, h).setStrokeStyle(3, 0xff4a4a, 0.9).setDepth(3);
+    const fill = this.add.ellipse(at.x, at.y, w, h, 0xff4a4a, 0.25).setDepth(3).setScale(0.05);
+    this.tweens.add({ targets: fill, scale: 1, duration: ms, onComplete: () => (ring.destroy(), fill.destroy()) });
   }
 
   /** A streak from the caster to the target for each bolt. */

@@ -4,6 +4,7 @@ export const COLORS = {
   path: [0xe6cf98, 0xdcc48c],
   cobble: [0xd2cdbf, 0xc8c2b3],
   wall: [0xd2cdbf, 0xc8c2b3],
+  cavewall: [0x5b5660, 0x55505a],
   houseWall: 0xf0e2c8,
   houseShade: 0xd9c6a4,
   houseRoof: 0xc9583f,

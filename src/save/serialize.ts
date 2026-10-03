@@ -39,7 +39,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     gold: p.gold,
     storage: {},
     quests: {},
-    flags: {},
+    flags: Object.fromEntries(world.flags),
     position: p.dead ? { ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
     savePoint: { ...p.savePoint },
   };
@@ -83,6 +83,7 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     else p.inventory.set(id, n);
   }
   p.gold = doc.gold;
+  world.restoreFlags(doc.flags);
   p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
 
   // Places on maps that no longer exist, or tiles that are now blocked, fall back to safe spots.
