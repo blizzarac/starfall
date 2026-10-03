@@ -3,6 +3,7 @@ import { Grid, type Terrain } from '../core/grid';
 import { STARTING_GEAR } from '../core/equipment';
 import { JOB_IDS } from '../core/jobs';
 import { SKILL_IDS } from '../core/skills';
+import { PET_FOOD, PET_SPECIES } from '../core/pets';
 import {
   DialogueSchema,
   ItemSchema,
@@ -79,6 +80,10 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
   const needItem = (id: string, where: string) => content.items.has(id) || fail(`${where} refers to unknown item '${id}'`);
 
   for (const m of content.monsters.values()) for (const d of m.drops) needItem(d.item, `Monster '${m.id}' drop`);
+  for (const item of content.items.values()) {
+    if (item.tames && !content.monsters.has(item.tames)) fail(`Lure '${item.id}' tames unknown monster '${item.tames}'`);
+    if (item.tames && !PET_SPECIES[item.tames]) fail(`Lure '${item.id}' tames '${item.tames}', which has no pet entry`);
+  }
   for (const shop of content.shops.values()) for (const id of shop.items) needItem(id, `Shop '${shop.id}'`);
   for (const q of content.quests.values()) {
     if (!content.monsters.has(q.target.monster)) fail(`Quest '${q.id}' hunts unknown monster '${q.target.monster}'`);
@@ -94,6 +99,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     }
   }
 
+  needItem(PET_FOOD, 'Pet food');
   if (!content.maps.has(START_MAP)) fail(`Start map '${START_MAP}' is missing`);
   const grids = new Map([...content.maps.values()].map((m) => [m.id, buildGrid(m)]));
   const walkable = (map: string, x: number, y: number) => grids.get(map)?.isWalkable(x, y) ?? false;

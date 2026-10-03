@@ -5,6 +5,7 @@ import type { Tile } from './grid';
 import { JOBS, jobOf, NOVICE_JOB_CHANGE, type JobId } from './jobs';
 import { learnBlocker, skillLevel, skillStatBonus, type SkillId } from './skills';
 import { gearBonus, weaponOf } from './equipment';
+import { petBonus } from './pets';
 import { BLIND_FACTOR } from './status';
 
 export interface DerivedStats {
@@ -22,7 +23,7 @@ export interface DerivedStats {
 
 /** Base stats plus gear, passive and buff bonuses: what every formula should use. */
 export function effectiveStats(p: Player): F.Stats {
-  const b = gearBonus(p);
+  const b = allBonus(p);
   const k = skillStatBonus(p);
   return {
     str: p.stats.str + b.str + k.str,
@@ -36,7 +37,7 @@ export function effectiveStats(p: Player): F.Stats {
 
 export function derivedStats(p: Player): DerivedStats {
   const s = effectiveStats(p);
-  const gear = gearBonus(p);
+  const gear = allBonus(p);
   const blind = p.statuses.has('blind') ? BLIND_FACTOR : 1;
   const job = jobOf(p);
   const weapon = weaponOf(p);
@@ -54,6 +55,13 @@ export function derivedStats(p: Player): DerivedStats {
     aspd,
     attackDelayMs: F.attackDelayMs(aspd),
   };
+}
+
+/** Gear and pet bonuses added together. */
+function allBonus(p: Player): ReturnType<typeof gearBonus> {
+  const total = gearBonus(p);
+  for (const [k, v] of Object.entries(petBonus(p.pet))) total[k as keyof typeof total] += v ?? 0;
+  return total;
 }
 
 export function createPlayer(name: string, start: Tile): Player {
@@ -89,6 +97,7 @@ export function createPlayer(name: string, start: Tile): Player {
     gear: [],
     gold: 0,
     savePoint: { map: '', ...start },
+    pet: null,
   };
   const d = derivedStats(p);
   p.hp = d.maxHp;

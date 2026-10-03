@@ -135,7 +135,7 @@ export function isPlain(piece: GearPiece): boolean {
 
 const pct = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`;
 
-function describeBonus(b: GearBonus): string[] {
+export function describeBonus(b: GearBonus): string[] {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(b)) if (v) parts.push(`${k.toUpperCase()} ${v > 0 ? '+' : ''}${v}`);
   return parts;

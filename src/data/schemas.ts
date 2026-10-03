@@ -65,7 +65,9 @@ export const ItemSchema = z
     weight: z.number().int().nonnegative(),
     heal: z.object({ hp: z.number().int().nonnegative(), sp: z.number().int().nonnegative() }).optional(),
     /** Special use effect: random teleport on the current map, or return to the save point. */
-    effect: z.enum(['teleport', 'return']).optional(),
+    effect: z.enum(['teleport', 'return', 'tame']).optional(),
+    /** For lures: the monster id this item tames. */
+    tames: z.string().optional(),
     /** Status effects this item cures. */
     cure: z.array(z.enum(['poison', 'stun', 'blind'])).optional(),
     equip: EquipSchema.optional(),
@@ -73,7 +75,8 @@ export const ItemSchema = z
     description: z.string().optional(),
   })
   .refine((i) => (i.type === 'equipment') === (i.equip !== undefined), 'equipment items (and only those) need an equip block')
-  .refine((i) => (i.type === 'card') === (i.card !== undefined), 'cards (and only cards) need a card block');
+  .refine((i) => (i.type === 'card') === (i.card !== undefined), 'cards (and only cards) need a card block')
+  .refine((i) => (i.effect === 'tame') === (i.tames !== undefined), 'lures (and only lures) name the monster they tame');
 export type ItemDef = z.infer<typeof ItemSchema>;
 
 export const DropSchema = z.object({

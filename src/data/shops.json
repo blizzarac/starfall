@@ -46,5 +46,17 @@
       "sailor_boots",
       "seafarer_coat"
     ]
+  },
+  {
+    "id": "pet_shop",
+    "name": "Pet Supplies",
+    "items": [
+      "pet_treat",
+      "wobbly_pudding",
+      "dew_vial",
+      "smoked_bone",
+      "shiny_pearl",
+      "silver_sardine"
+    ]
   }
 ]

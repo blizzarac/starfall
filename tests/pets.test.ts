@@ -1,0 +1,150 @@
+import { describe, expect, it } from 'vitest';
+import * as F from '../src/core/combat/formulas';
+import { tileDistance } from '../src/core/grid';
+import * as Pets from '../src/core/pets';
+import { derivedStats, effectiveStats } from '../src/core/progression';
+import { World } from '../src/core/world';
+import { loadContent } from '../src/data/content';
+import { migrate } from '../src/save/migrations';
+import { applySaveDoc, toSaveDoc } from '../src/save/serialize';
+
+const content = loadContent();
+const meadow = content.maps.get('meadow-1')!;
+
+function run(world: World, ms: number, until?: () => boolean): void {
+  for (let t = 0; t < ms; t += F.TICK_MS) {
+    world.tick();
+    if (until?.()) return;
+  }
+}
+
+/** A player next to a nearly beaten Jellop, holding lures. */
+function readyToTame(seed = 1) {
+  const w = new World(content, meadow, { seed });
+  const m = [...w.monsters.values()][0]!;
+  w.changeMap('meadow-1', { x: m.tile.x, y: m.tile.y - 1 });
+  const jellop = [...w.monsters.values()].sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
+  jellop.hp = 1;
+  w.addItem('wobbly_pudding', 10);
+  return { w, jellop };
+}
+
+function tamed(): World {
+  for (let seed = 1; seed < 50; seed++) {
+    const { w } = readyToTame(seed);
+    for (let i = 0; i < 10 && !w.player.pet; i++) w.useItem('wobbly_pudding');
+    if (w.player.pet) return w;
+  }
+  throw new Error('never tamed');
+}
+
+describe('pet rules', () => {
+  it('fondness and appetite tiers', () => {
+    expect(Pets.fondness(50)).toBe('Awkward');
+    expect(Pets.fondness(250)).toBe('Neutral');
+    expect(Pets.fondness(950)).toBe('Loyal');
+    expect(Pets.appetite(5)).toBe('Starving');
+    expect(Pets.appetite(95)).toBe('Stuffed');
+  });
+
+  it('feeding a hungry pet builds friendship; overfeeding hurts it', () => {
+    const pet: Pets.Pet = { species: 'jellop', name: 'Jelly', intimacy: 100, hunger: 30 };
+    expect(Pets.feed(pet)).toBe(40);
+    expect(pet.intimacy).toBe(140);
+    pet.hunger = 95;
+    expect(Pets.feed(pet)).toBe(-50);
+    expect(pet.hunger).toBe(100);
+  });
+
+  it('bonuses start at Neutral and double when Loyal', () => {
+    const pet: Pets.Pet = { species: 'thicket_wolf', name: 'Rex', intimacy: 100, hunger: 50 };
+    expect(Pets.petBonus(pet)).toEqual({});
+    pet.intimacy = 300;
+    expect(Pets.petBonus(pet)).toEqual({ atk: 10, agi: 1 });
+    pet.intimacy = 950;
+    expect(Pets.petBonus(pet)).toEqual({ atk: 20, agi: 2 });
+  });
+
+  it('worn-down monsters are easier to tame', () => {
+    expect(Pets.tameChance(100, 100)).toBeCloseTo(0.2);
+    expect(Pets.tameChance(1, 100)).toBeGreaterThan(0.75);
+  });
+
+  it('every lure tames a pet species', () => {
+    const lures = [...content.items.values()].filter((i) => i.effect === 'tame');
+    expect(lures.map((l) => l.tames).sort()).toEqual(Object.keys(Pets.PET_SPECIES).sort());
+  });
+});
+
+describe('taming and caring', () => {
+  it('needs the right monster nearby, and keeps the lure otherwise', () => {
+    const w = new World(content, content.maps.get('town')!, { seed: 1 });
+    w.addItem('wobbly_pudding', 1);
+    const notices: string[] = [];
+    w.events.on('notice', (e) => notices.push(e.text));
+    w.useItem('wobbly_pudding');
+    expect(notices.at(-1)).toMatch(/No Jellop/);
+    expect(w.itemCount('wobbly_pudding')).toBe(1);
+  });
+
+  it('a tamed Jellop follows the player and leaves the map as a wild monster', () => {
+    const w = tamed();
+    expect(w.player.pet!.species).toBe('jellop');
+    expect(w.petMover).not.toBeNull();
+    w.moveTo({ x: w.player.tile.x + 6, y: w.player.tile.y });
+    run(w, 6000);
+    expect(tileDistance(w.petMover!.tile, w.player.tile)).toBeLessThanOrEqual(2);
+    const notices: string[] = [];
+    w.events.on('notice', (e) => notices.push(e.text));
+    w.useItem('wobbly_pudding');
+    expect(notices.at(-1)).toMatch(/already have a pet/);
+  });
+
+  it('feeding with treats makes it Neutral, which adds its bonus', () => {
+    const w = tamed();
+    const luk = effectiveStats(w.player).luk;
+    const hp = derivedStats(w.player).maxHp;
+    w.addItem('pet_treat', 5);
+    w.player.pet!.hunger = 20;
+    for (let i = 0; i < 4; i++) {
+      w.player.pet!.hunger = 20;
+      expect(w.feedPet()).toBeNull();
+    }
+    expect(Pets.fondness(w.player.pet!.intimacy)).toBe('Neutral');
+    expect(effectiveStats(w.player).luk).toBe(luk + 2);
+    expect(derivedStats(w.player).maxHp).toBeGreaterThan(hp);
+  });
+
+  it('a looting pet fetches drops near the player', () => {
+    const w = tamed();
+    const p = w.player.tile;
+    const spot = { x: p.x + 2, y: p.y };
+    w.drops.set(9999, { id: 9999, itemId: 'jelly_drop', tile: spot, expiresIn: 60_000 });
+    const before = w.itemCount('jelly_drop');
+    run(w, 5000, () => !w.drops.has(9999));
+    expect(w.drops.has(9999)).toBe(false);
+    expect(w.itemCount('jelly_drop')).toBe(before + 1);
+  });
+
+  it('a starving pet loses friendship and eventually runs away', () => {
+    const w = tamed();
+    w.player.pet!.hunger = 0;
+    w.player.pet!.intimacy = 20;
+    let ran = false;
+    w.events.on('petRanAway', () => (ran = true));
+    run(w, Pets.HUNGER_TICK_MS + 100);
+    expect(ran).toBe(true);
+    expect(w.player.pet).toBeNull();
+  });
+
+  it('the pet is saved and loaded, and old saves load without one', () => {
+    const w = tamed();
+    w.renamePet('Wobbles');
+    const doc = JSON.parse(JSON.stringify(toSaveDoc(w, 0)));
+    const fresh = new World(content, meadow, { seed: 2 });
+    applySaveDoc(fresh, migrate(doc));
+    expect(fresh.player.pet).toMatchObject({ species: 'jellop', name: 'Wobbles' });
+    const { pet: _pet, ...v6 } = { ...doc, schemaVersion: 6 };
+    expect(migrate(v6).pet).toBeNull();
+  });
+});

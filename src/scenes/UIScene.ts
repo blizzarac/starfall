@@ -15,6 +15,7 @@ import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
 import { QuestWindow } from '../ui/QuestWindow';
 import { StorageWindow } from '../ui/StorageWindow';
+import { PetWindow } from '../ui/PetWindow';
 import { audio } from '../audio/engine';
 import type { SaveDb } from '../save/db';
 import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
@@ -66,6 +67,7 @@ export class UIScene extends Phaser.Scene {
   private refineWindow!: RefineWindow;
   private questWindow!: QuestWindow;
   private storageWindow!: StorageWindow;
+  private petWindow!: PetWindow;
   /** Active hunts under the status panel. */
   private tracker!: Phaser.GameObjects.Text;
   private skillWindow!: SkillWindow;
@@ -121,6 +123,10 @@ export class UIScene extends Phaser.Scene {
     this.refineWindow = new RefineWindow(this, this.world);
     this.questWindow = new QuestWindow(this, this.world);
     this.storageWindow = new StorageWindow(this, this.world);
+    this.petWindow = new PetWindow(this, this.world);
+    const openPet = () => this.petWindow.open();
+    this.game.events.on('openPet', openPet);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off('openPet', openPet));
     this.dialogue = new DialogueBox(
       this,
       this.world,
@@ -358,7 +364,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -368,6 +374,7 @@ export class UIScene extends Phaser.Scene {
     if (this.refineWindow.panel.visible) this.refineWindow.refresh();
     if (this.questWindow.panel.visible) this.questWindow.refresh();
     if (this.storageWindow.panel.visible) this.storageWindow.refresh();
+    if (this.petWindow.panel.visible) this.petWindow.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -529,6 +536,7 @@ export class UIScene extends Phaser.Scene {
       [() => `Sounds: ${volumeLabel(audio.current.sfx)}`, () => updateAudioSettings(db, { sfx: nextVolume(audio.current.sfx), muted: false })],
       ['Export save file', () => this.exportSave()],
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
+      ['Pet', () => (this.toggleMenu(), this.petWindow.open())],
       ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
       ['Save and quit to title', () => void endSession(this)],
       ['Close', () => this.toggleMenu()],
@@ -598,6 +606,9 @@ export class UIScene extends Phaser.Scene {
       }),
       ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
+      ev.on('petTamed', (e) => this.addLog(`You tamed a ${e.name}! Tap it to see how it's doing.`)),
+      ev.on('tameFailed', (e) => this.addLog(`The ${e.name} wasn't fooled. Wear it down and try again.`)),
+      ev.on('petRanAway', (e) => this.addLog(`${e.name} got too hungry and ran away…`)),
       ev.on('jobChanged', (e) => {
         const name = isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId;
         this.addLog(`You are now ${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}! Open Skills to learn new skills.`);

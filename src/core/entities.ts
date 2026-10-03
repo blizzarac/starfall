@@ -3,6 +3,7 @@ import type { Stats } from './combat/formulas';
 import type { Equipment, GearPiece } from './equipment';
 import type { Tile } from './grid';
 import type { JobId } from './jobs';
+import type { Pet } from './pets';
 import type { StatusId } from './status';
 
 /** Tile-to-tile movement state shared by the player and monsters. */
@@ -67,6 +68,8 @@ export interface Player extends Mover {
   gear: GearPiece[];
   gold: number;
   savePoint: Place;
+  /** The tamed monster following the player, if any. */
+  pet: Pet | null;
 }
 
 export type PlayerIntent =

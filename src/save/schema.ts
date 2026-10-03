@@ -3,7 +3,7 @@ import { STAT_NAMES } from '../core/combat/formulas';
 import { EQUIP_SLOTS } from '../core/equipment';
 import { JOBS, type JobId } from '../core/jobs';
 
-export const SAVE_SCHEMA_VERSION = 6;
+export const SAVE_SCHEMA_VERSION = 7;
 
 const Place = z.object({ map: z.string(), x: z.number().int(), y: z.number().int() });
 const Counts = z.record(z.string(), z.number().int().positive());
@@ -52,6 +52,15 @@ export const SaveDocSchema = z.object({
   flags: z.record(z.string(), z.union([z.boolean(), z.number(), z.string()])),
   position: Place,
   savePoint: Place,
+  /** The tamed pet, if any. */
+  pet: z
+    .object({
+      species: z.string(),
+      name: z.string().min(1).max(24),
+      intimacy: z.number().int().min(0).max(1000),
+      hunger: z.number().int().min(0).max(100),
+    })
+    .nullable(),
 });
 export type SaveDoc = z.infer<typeof SaveDocSchema>;
 

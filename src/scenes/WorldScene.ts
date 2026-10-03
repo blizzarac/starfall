@@ -78,6 +78,8 @@ export class WorldScene extends Phaser.Scene {
   /** Trees and buildings that fade when the player walks behind them. */
   private trees: Array<{ img: Phaser.GameObjects.Image; tile: Tile }> = [];
   private npcViews = new Map<string, Phaser.GameObjects.Container>();
+  /** The pet following the player, and which species/name it was drawn for. */
+  private petView: { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; key: string; lastX: number } | null = null;
   private hover!: Phaser.GameObjects.Image;
   private debugGfx!: Phaser.GameObjects.Graphics;
   private castBar!: Phaser.GameObjects.Graphics;
@@ -139,6 +141,7 @@ export class WorldScene extends Phaser.Scene {
     this.fadeOccluders();
     this.syncMonsters();
     this.syncDrops();
+    this.syncPet();
     this.updateHold(delta);
     this.updateHover();
     this.drawDebug();
@@ -412,6 +415,51 @@ export class WorldScene extends Phaser.Scene {
     return view;
   }
 
+  private syncPet(): void {
+    const pet = this.world.player.pet;
+    const mover = this.world.petMover;
+    const key = pet ? `${pet.species}:${pet.name}` : '';
+    if (this.petView && (!pet || !mover || this.petView.key !== key)) {
+      this.petView.root.destroy();
+      this.petView = null;
+    }
+    if (!pet || !mover) return;
+    if (!this.petView) {
+      const def = this.world.content.monsters.get(pet.species)!;
+      const shape = def.look.shape;
+      const body = this.add
+        .image(0, 0, shape)
+        .setOrigin(0.5, feetOrigin(this, shape, MONSTER_FEET[shape]))
+        .setTint(Phaser.Display.Color.HexStringToColor(def.look.color).color);
+      const label = this.add.text(0, -34, pet.name, { ...WORLD_TEXT, fontSize: '10px', color: '#ffb8d8' }).setOrigin(0.5, 1);
+      const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.6), body, label]);
+      this.petView = { root, body, label, key, lastX: 0 };
+    }
+    const view = this.petView;
+    const pos = renderPosition(mover, this.alpha);
+    const w = tileToWorld(pos.x, pos.y);
+    view.root.setPosition(w.x, w.y).setDepth(depthFor(w.y) + 0.2);
+    if (Math.abs(w.x - view.lastX) > 0.5) view.body.setFlipX(w.x < view.lastX);
+    view.lastX = w.x;
+    const t = this.time.now / 1000;
+    const hop = mover.next ? Math.abs(Math.sin(t * 12)) * 4 : 0;
+    const squash = mover.next ? Math.sin(t * 14) * 0.08 : Math.sin(t * 3) * 0.03;
+    // Pets are drawn smaller than their wild cousins.
+    view.body.setScale(0.62 * (1 + squash), 0.62 * (1 - squash)).setY(-hop);
+  }
+
+  /** Little hearts rising from the pet (or the player if there is none on screen). */
+  private hearts(count: number): void {
+    const at = this.petView ? { x: this.petView.root.x, y: this.petView.root.y - 30 } : { x: this.player.x, y: this.player.y - 60 };
+    for (let i = 0; i < count; i++) {
+      const heart = this.add
+        .text(at.x + Phaser.Math.Between(-14, 14), at.y, '♥', { fontFamily: IMPACT_FONT, fontSize: '20px', color: '#ff5a8a', stroke: '#16131c', strokeThickness: 4 })
+        .setOrigin(0.5)
+        .setDepth(6000);
+      this.tweens.add({ targets: heart, y: at.y - 40 - i * 6, alpha: 0, delay: i * 120, duration: 800, onComplete: () => heart.destroy() });
+    }
+  }
+
   private syncDrops(): void {
     for (const drop of this.world.drops.values()) {
       if (this.dropViews.has(drop.id)) {
@@ -453,6 +501,11 @@ export class WorldScene extends Phaser.Scene {
     const monster = this.monsterAt(ptr.worldX, ptr.worldY);
     if (monster) {
       this.world.attack(monster.id);
+      return;
+    }
+    const pet = this.petView;
+    if (pet && Phaser.Math.Distance.Between(ptr.worldX, ptr.worldY, pet.root.x, pet.root.y - 12) < this.pickRadius()) {
+      this.game.events.emit('openPet');
       return;
     }
     const npcId = this.npcAt(ptr.worldX, ptr.worldY);
@@ -568,6 +621,14 @@ export class WorldScene extends Phaser.Scene {
         this.cameras.main.flash(300, 255, 240, 180);
       }),
       ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets)),
+      ev.on('petTamed', () => {
+        // The pet view appears on the next frame; celebrate from the player.
+        this.soundEffect('player', 'TAMED!!', '#ff8fb8', true);
+        speedLines(this, this.player.x, this.player.y - 30, { inner: 40, outer: 180, count: 30, color: 0xff5a8a });
+        this.time.delayedCall(50, () => this.hearts(5));
+      }),
+      ev.on('tameFailed', () => this.floatText('player', 'It got away…', '#ffb8d8', 15, 1000)),
+      ev.on('petFed', (e) => (e.delta > 0 ? this.hearts(e.delta >= 40 ? 3 : 1) : this.floatText('player', 'Too full!', '#ffb8d8', 14))),
       ev.on('telegraph', (e) => this.telegraph(e.tile, e.radius, e.ms)),
       ev.on('slam', (e) => {
         const at = tileToWorld(e.tile.x, e.tile.y);

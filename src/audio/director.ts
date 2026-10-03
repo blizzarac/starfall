@@ -56,6 +56,9 @@ export function bindWorldAudio(world: World): () => void {
     ev.on('castInterrupted', () => audio.play('error')),
     ev.on('refined', (e) => audio.play(e.success ? 'refineGood' : 'refineBad')),
     ev.on('questCompleted', () => audio.play('quest')),
+    ev.on('petTamed', () => audio.play('tame')),
+    ev.on('tameFailed', () => audio.play('error')),
+    ev.on('petFed', (e) => audio.play(e.delta > 0 ? 'tame' : 'error')),
     ev.on('boss', (e) => e.kind === 'appeared' && audio.play('warn')),
     ev.on('mapChanged', () => {
       audio.play('warp');

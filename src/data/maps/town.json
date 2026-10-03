@@ -154,6 +154,17 @@
         "body": "#ff8a3d",
         "hair": "#c24a3a"
       }
+    },
+    {
+      "id": "pet_keeper",
+      "name": "Mabel",
+      "x": 24,
+      "y": 20,
+      "dialogue": "pet_keeper",
+      "look": {
+        "body": "#f28fb0",
+        "hair": "#7a4a2a"
+      }
     }
   ],
   "portals": [

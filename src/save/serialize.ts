@@ -3,6 +3,7 @@ import { MAX_REFINE, type EquipSlot, type GearPiece } from '../core/equipment';
 import type { ItemDef } from '../data/schemas';
 import { JOBS } from '../core/jobs';
 import { isSkillId } from '../core/skills';
+import { PET_SPECIES } from '../core/pets';
 import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
@@ -42,6 +43,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     flags: Object.fromEntries(world.flags),
     position: p.dead ? { ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
     savePoint: { ...p.savePoint },
+    pet: p.pet ? { ...p.pet } : null,
   };
 }
 
@@ -85,6 +87,8 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   };
   world.restoreFlags(doc.flags);
   p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
+  // A pet whose species can no longer be tamed is let go.
+  p.pet = doc.pet && PET_SPECIES[doc.pet.species] && world.content.monsters.has(doc.pet.species) ? { ...doc.pet } : null;
 
   // Places on maps that no longer exist, or tiles that are now blocked, fall back to safe spots.
   const valid = (place: SaveDoc['position']) => {

@@ -833,5 +833,55 @@
         ]
       }
     }
+  },
+  {
+    "id": "pet_keeper",
+    "nodes": {
+      "start": {
+        "text": "Hello, {name}! Lonely out there? A little friend makes every road shorter.",
+        "choices": [
+          {
+            "label": "Show me lures and treats",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "pet_shop"
+              }
+            ]
+          },
+          {
+            "label": "How do I tame a pet?",
+            "next": "how"
+          },
+          {
+            "label": "How do I care for it?",
+            "next": "care"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "how": {
+        "text": "Buy the lure for the monster you want, walk within 6 tiles of one and use the lure from your bag. Wear it down a bit first: a tired monster is much easier to win over.",
+        "choices": [
+          {
+            "label": "And then?",
+            "next": "care"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "care": {
+        "text": "Tap your pet to open its window. Feed it a Pet Treat when it's hungry and it grows fond of you. Once it trusts you it helps: stronger stats, and Jellops and Gullwings pick up loot for you. Starve it and it will leave.",
+        "choices": [
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
   }
 ]
