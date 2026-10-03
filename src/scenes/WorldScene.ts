@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
 import { SimClock } from '../core/sim';
+import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
 import { COLORS, TEXT } from '../render/palette';
 import { depthFor, TILE_H, TILE_W, tileToWorld, worldToTile } from '../render/iso';
@@ -75,6 +76,7 @@ export class WorldScene extends Phaser.Scene {
 
   override update(_time: number, delta: number): void {
     this.alpha = this.clock.advance(delta);
+    (this.registry.get('saves') as SaveManager).update(delta);
     this.syncPlayer();
     this.fadeOccluders();
     this.syncMonsters();
@@ -90,6 +92,11 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.world.map;
     const ox = height * (TILE_W / 2);
     const oy = TILE_H / 2;
+    const key = `ground-${this.world.map.id}`;
+    if (this.textures.exists(key)) {
+      this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
+      return;
+    }
     const g = this.make.graphics({}, false);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -124,9 +131,9 @@ export class WorldScene extends Phaser.Scene {
     }
     const texW = (width + height) * (TILE_W / 2);
     const texH = (width + height) * (TILE_H / 2);
-    g.generateTexture('ground', texW, texH);
+    g.generateTexture(key, texW, texH);
     g.destroy();
-    this.add.image(-ox, -oy, 'ground').setOrigin(0, 0).setDepth(0);
+    this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
   }
 
   private placeObstacles(): void {

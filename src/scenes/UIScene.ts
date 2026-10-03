@@ -4,6 +4,8 @@ import { STAT_NAMES, type StatName } from '../core/combat/formulas';
 import type { SimClock } from '../core/sim';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
+import { downloadSave, type SaveManager } from '../save/manager';
+import { endSession } from './session';
 import { COLORS, TEXT } from '../render/palette';
 
 const HOTBAR: Array<{ key: string; itemId: string }> = [
@@ -37,6 +39,11 @@ export class UIScene extends Phaser.Scene {
   private statSummary!: Phaser.GameObjects.Text;
   private debugText!: Phaser.GameObjects.Text;
   private deathText!: Phaser.GameObjects.Text;
+  private menuButton!: Phaser.GameObjects.Text;
+  private savedText!: Phaser.GameObjects.Text;
+  private menu!: Phaser.GameObjects.Container;
+  private menuDim!: Phaser.GameObjects.Rectangle;
+  private menuPanel!: Phaser.GameObjects.Container;
   private frameMs = 16;
 
   constructor() {
@@ -64,6 +71,7 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
     this.buildStatWindow();
     this.buildButtons();
+    this.buildMenu();
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
@@ -86,12 +94,16 @@ export class UIScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale;
     const narrow = width < NARROW;
+    this.menuButton.setPosition(width - 10, 10);
+    this.savedText.setPosition(width - 18 - this.menuButton.width, 18);
+    this.menuDim.setSize(width, height);
+    this.menuPanel.setPosition(width / 2, height / 2);
     this.buttons.forEach((b, i) => {
       const fromRight = this.buttons.length - 1 - i;
       b.root.setPosition(width - 12 - BUTTON_R - fromRight * (BUTTON_R * 2 + BUTTON_GAP), height - 12 - BUTTON_R);
     });
     this.logText.setPosition(12, narrow ? height - 24 - BUTTON_R * 2 : height - 10);
-    this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? 134 : 10);
+    this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? 134 : 52);
     this.deathText.setPosition(width / 2, height / 2 - 60);
     this.statWindow.setPosition(8, 134);
   }
@@ -257,8 +269,67 @@ export class UIScene extends Phaser.Scene {
     kb.on('keydown-Z', () => this.world.toggleSit());
     kb.on('keydown-INSERT', () => this.world.toggleSit());
     kb.on('keydown-A', () => this.toggleStats());
+    kb.on('keydown-ESC', () => this.toggleMenu());
     kb.on('keydown-BACKTICK', () => this.toggleDebug());
     kb.on('keydown-F3', () => this.toggleDebug());
+  }
+
+  // ---- Menu --------------------------------------------------------------
+
+  private saves(): SaveManager {
+    return this.registry.get('saves') as SaveManager;
+  }
+
+  private buildMenu(): void {
+    this.menuButton = this.add
+      .text(0, 0, 'Menu', { ...TEXT, fontSize: '14px', fontStyle: 'bold', backgroundColor: '#1e2633dd', padding: { x: 12, y: 8 } })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.toggleMenu());
+    this.savedText = this.add.text(0, 0, 'Saved', { ...TEXT, fontSize: '12px', color: '#9be38f' }).setOrigin(1, 0).setAlpha(0);
+    const onSaved = () => {
+      this.tweens.killTweensOf(this.savedText);
+      this.savedText.setAlpha(1);
+      this.tweens.add({ targets: this.savedText, alpha: 0, delay: 1200, duration: 600 });
+    };
+    this.game.events.on('saved', onSaved);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off('saved', onSaved));
+
+    // Full-screen dim layer eats taps so nothing reaches the world while the menu is open.
+    this.menuDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.45).setOrigin(0).setInteractive().on('pointerdown', () => this.toggleMenu());
+    const w = 220;
+    const entries: Array<[string, () => void]> = [
+      ['Save now', () => void this.saves().save().then(() => this.addLog('Game saved.'))],
+      ['Export save file', () => this.exportSave()],
+      ['Save and quit to title', () => void endSession(this)],
+      ['Close', () => this.toggleMenu()],
+    ];
+    const h = 44 + entries.length * 46;
+    const panelChildren: Phaser.GameObjects.GameObject[] = [
+      this.add.rectangle(0, 0, w, h, COLORS.ui, 0.96).setStrokeStyle(1, COLORS.uiBorder, 0.7).setInteractive(),
+      this.add.text(0, -h / 2 + 14, 'Menu', { ...TEXT, fontSize: '15px', fontStyle: 'bold' }).setOrigin(0.5, 0),
+    ];
+    entries.forEach(([label, fn], i) => {
+      const y = -h / 2 + 62 + i * 46;
+      const bg = this.add
+        .rectangle(0, y, w - 28, 38, 0x3a4a63)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerup', fn);
+      panelChildren.push(bg, this.add.text(0, y, label, { ...TEXT, fontSize: '13px' }).setOrigin(0.5));
+    });
+    this.menuPanel = this.add.container(0, 0, panelChildren);
+    this.menu = this.add.container(0, 0, [this.menuDim, this.menuPanel]).setVisible(false).setDepth(100);
+  }
+
+  private toggleMenu(): void {
+    this.menu.setVisible(!this.menu.visible);
+  }
+
+  private exportSave(): void {
+    const doc = this.saves().snapshot();
+    void this.saves().save();
+    downloadSave(doc);
+    this.addLog('Save file exported. Keep it somewhere safe.');
   }
 
   // ---- Message log -------------------------------------------------------

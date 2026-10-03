@@ -28,6 +28,7 @@ On touch screens, tap where you'd click; the round buttons in the bottom-right c
 | Z or Insert | Sit (doubles HP and SP regeneration) |
 | A | Stat window (spend points with +) |
 | ` or F3 | Debug overlay: paths, AI state, kills/min, XP/h, loot gold/h |
+| Esc / Menu | Save now, export a save file, or save and quit to the title |
 
 ## Layout
 
@@ -40,6 +41,7 @@ src/
     progression.ts       levels, stat points, derived stats
     sim.ts               fixed-timestep clock with render interpolation
   data/        JSON content + zod schemas (items, monsters, maps)
+  save/        IndexedDB saves (Dexie), migrations, export/import
   scenes/      Phaser scenes: Boot, World, UI
   render/      isometric projection and palette
 tests/         Vitest suites
@@ -53,4 +55,10 @@ Maps are a row-per-line terrain grid for now (`.` grass, `,` flowers, `=` path, 
 
 `.github/workflows/deploy.yml` typechecks, tests and builds every push and PR, and publishes `main` to GitHub Pages. Enable it once under **Settings → Pages → Source: GitHub Actions**. The Vite `base` is `/starfall/` in CI.
 
-Saves, the PWA and the starter town are in the next phase (vertical slice).
+## Saves
+
+Three slots on the title screen. The game autosaves every 60 seconds and whenever the tab is hidden or closed, which matters on phones, where background tabs get killed without warning. Each slot keeps its last 3 saves; if the newest is unreadable, loading falls back to the previous one. Saves live in this browser's IndexedDB, so **export a save file** (title screen or in-game menu) as a backup or to move to another device, and import it into any slot.
+
+When the save format changes, bump `SAVE_SCHEMA_VERSION` in `src/save/schema.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts`; old saves upgrade on load.
+
+The PWA and the starter town are next in the vertical slice.

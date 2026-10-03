@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { loadContent } from '../data/content';
-import { World } from '../core/world';
+import { SaveDb } from '../save/db';
 import { COLORS } from '../render/palette';
 
 /**
- * Validates content, builds the simulation and draws placeholder textures.
+ * Validates content, opens the save database and draws placeholder textures.
  * Real sprite atlases replace the generated textures once art exists.
  */
 export class BootScene extends Phaser.Scene {
@@ -13,15 +13,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    const content = loadContent();
-    const map = content.maps.get('meadow-1')!;
-    const world = new World(content, map);
-    this.registry.set('world', world);
+    this.registry.set('content', loadContent());
+    this.registry.set('db', new SaveDb());
     this.registry.set('debug', false);
 
     this.makeTextures();
-    this.scene.start('World');
-    this.scene.launch('UI');
+    this.scene.start('Title');
   }
 
   private makeTextures(): void {
