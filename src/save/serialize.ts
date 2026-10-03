@@ -118,6 +118,8 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   if (here) Object.assign(p, createMover(here, p.moveMs));
   else world.changeMap(p.savePoint.map, p.savePoint);
 
+  // Characters who changed job before the guild keepsakes existed get theirs now.
+  world.giveJobRelic();
   world.refreshStats();
   const d = derivedStats(p);
   p.hp = Math.min(Math.max(1, c.hp), d.maxHp);

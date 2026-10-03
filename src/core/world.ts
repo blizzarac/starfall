@@ -7,7 +7,7 @@ import { createMover, HOTBAR_SIZE } from './entities';
 import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
-import { isJobId, JOBS, type JobId } from './jobs';
+import { isJobId, jobLineage, JOBS, type JobId } from './jobs';
 import { cardBlocker, cardEffects, EQUIP_SLOTS, MAX_REFINE, equipBlocker, isPlain, slotFor, STARTING_GEAR, weaponOf, type EquipSlot, type GearPiece } from './equipment';
 import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStats, gainXp, learnSkill, raiseStat } from './progression';
 import * as S from './skills';
@@ -15,6 +15,8 @@ import * as St from './status';
 import * as Pets from './pets';
 import { cleanAppearance, type Appearance } from './appearance';
 import { bountyFor, MAX_ACTIVE_QUESTS, questState } from './quests';
+import { checkCondition } from './dialogue';
+import { BOSS_LINES, ENDINGS, FRAGMENTS, JOB_RELICS, PICKUP_FLAGS, SPLINTER, STORY, type Ending } from './story';
 import type { Element } from './combat/formulas';
 import { createRng, randInt, type Rng } from './rng';
 
@@ -71,6 +73,12 @@ export interface WorldEvents extends Record<string, unknown> {
   /** Battle Aura (or Holy Aura, `holy`) burned a monster. */
   auraHit: { targetId: number; amount: number; holy?: boolean };
   bountyCollected: { gold: number };
+  /** A line of story shown over the world for a few seconds. */
+  storyLine: { text: string };
+  /** A story flag changed: story characters may have come or gone. */
+  storyChanged: Record<string, never>;
+  /** The main story ended. */
+  storyEnded: { ending: Ending; title: string };
   /** Holy Aura just weakened a monster's DEF. */
   weakened: { targetId: number };
   petLevelUp: { name: string; level: number };
@@ -131,6 +139,8 @@ export class World {
   private petHungerMs = 0;
   private petAttackMs = 0;
   private auraMs = 0;
+  /** Story lines already shown for a monster (by id and kind), so each plays once. */
+  private storyLinesShown = new Set<string>();
   private holyAuraMs = 0;
   /** Drops the pet couldn't pick up (too heavy), so it doesn't keep trying. */
   private petSkips = new Set<number>();
@@ -173,8 +183,9 @@ export class World {
     return this.currentGrid;
   }
 
+  /** The people and things on this map right now (story characters come and go with the story). */
   get npcs(): readonly NpcDef[] {
-    return this.currentMap.npcs;
+    return this.currentMap.npcs.filter((n) => checkCondition(this, n.if));
   }
 
   // ---- Intents -----------------------------------------------------------
@@ -1111,6 +1122,7 @@ export class World {
   /** Sells `count` of an item to any NPC (plain gear pieces first). Returns an error message, or null on success. */
   sell(itemId: string, count = 1): string | null {
     const item = this.content.items.get(itemId);
+    if (item?.quest) return 'You can’t part with that.';
     if (!item || count < 1 || this.itemCount(itemId) < count) return "You don't have that many.";
     this.removeItem(itemId, count);
     this.player.gold += F.sellPrice(item.price) * count;
@@ -1211,6 +1223,7 @@ export class World {
 
   /** Moves `count` of a stackable item from the bag into storage. Returns why not, or null. */
   store(itemId: string, count: number): string | null {
+    if (this.content.items.get(itemId)?.quest) return 'You’d rather keep that on you.';
     const have = this.player.inventory.get(itemId) ?? 0;
     if (count < 1 || have < count) return "You don't have that many.";
     const items = this.storage.items;
@@ -1320,8 +1333,81 @@ export class World {
           this.events.emit('notice', { text: `The guild gives you a ${this.content.items.get(gift)!.name}.` });
         }
         this.events.emit('jobChanged', { jobId: action.job });
+        this.giveJobRelic();
         return {};
       }
+      case 'setFlag':
+        this.setStoryFlag(action.flag, action.value);
+        return {};
+      case 'storyEnding':
+        this.endStory(action.ending);
+        return {};
+    }
+  }
+
+  // ---- Story ---------------------------------------------------------------
+
+  /** Sets a story flag; story characters on the map may appear or leave. */
+  setStoryFlag(flag: string, value: string | number | boolean = true): void {
+    this.flags.set(flag, value);
+    this.events.emit('storyChanged', {});
+  }
+
+  /** Each first-job guild's keepsake, handed over once (also for characters who changed job before it existed). */
+  giveJobRelic(): void {
+    const line = jobLineage(this.player.jobId);
+    for (const job of line) {
+      const relic = JOB_RELICS[job];
+      if (!relic || this.flags.has(`relic:${relic}`) || !this.content.items.has(relic)) continue;
+      this.flags.set(`relic:${relic}`, true);
+      this.addItem(relic, 1);
+      this.events.emit('notice', { text: `You were given a ${this.content.items.get(relic)!.name}.` });
+    }
+  }
+
+  /** Ends the story: the fragments are spent, the ending's keepsake is yours. */
+  private endStory(ending: Ending): void {
+    if (this.flags.has(STORY.ending)) return;
+    for (const f of Object.values(FRAGMENTS)) if (this.hasItem(f.item, 1)) this.removeItem(f.item, this.itemCount(f.item));
+    if ((ending === 'return' || ending === 'gap') && this.hasItem(SPLINTER, 1)) this.removeItem(SPLINTER, 1);
+    const reward = ENDINGS[ending].reward;
+    if (this.content.items.has(reward)) this.addItem(reward, 1);
+    this.setStoryFlag(STORY.ending, ending);
+    this.events.emit('storyEnded', { ending, title: ENDINGS[ending].title });
+  }
+
+  /** Story drops after a kill: the splinter (first kill), and a boss's fragment until you have it. */
+  private storyDrops(m: Monster): void {
+    const drop = (itemId: string) => {
+      const id = this.nextId++;
+      // Story items wait on the ground much longer than loot.
+      this.drops.set(id, { id, itemId, tile: { ...m.tile }, expiresIn: 10 * 60_000 });
+    };
+    if (!this.flags.has(STORY.splinter) && !this.flags.has(STORY.splinterOut) && !this.hasItem(SPLINTER, 1)) {
+      this.flags.set(STORY.splinterOut, true);
+      drop(SPLINTER);
+    }
+    const frag = FRAGMENTS[m.def.id];
+    if (frag && !this.flags.has(frag.flag) && !this.hasItem(frag.item, 1) && ![...this.drops.values()].some((d) => d.itemId === frag.item)) drop(frag.item);
+  }
+
+  /** A line over the world once a boss turns on you, if you carry Starglass. */
+  private bossLine(m: Monster, kind: 'aggro' | 'lastPhase'): void {
+    const line = BOSS_LINES[m.def.id]?.[kind];
+    if (!line || !this.flags.has(STORY.splinter) || this.storyLinesShown.has(`${m.id}:${kind}`)) return;
+    this.storyLinesShown.add(`${m.id}:${kind}`);
+    this.events.emit('storyLine', { text: line });
+  }
+
+  /** Story moments tied to arriving somewhere. */
+  private onEnterMap(mapId: string): void {
+    if (mapId === 'sunspire' && this.flags.has(STORY.frag1) && !this.flags.has(STORY.fountain)) {
+      this.setStoryFlag(STORY.fountain);
+      this.events.emit('storyLine', { text: 'The fountain runs uphill as you pass.' });
+    }
+    // The heap in the Iron Wastes grows a little every time you come back.
+    if (mapId === 'iron-wastes' && this.flags.has(STORY.frag2)) {
+      this.setStoryFlag(STORY.heap, Number(this.flags.get(STORY.heap) ?? 0) + 1);
     }
   }
 
@@ -1338,6 +1424,7 @@ export class World {
     this.loadMap(map);
     this.placePlayer(tile);
     this.events.emit('mapChanged', { mapId });
+    this.onEnterMap(mapId);
   }
 
   private loadMap(map: MapDef): void {
@@ -1636,6 +1723,7 @@ export class World {
       const id = this.nextId++;
       this.drops.set(id, { id, itemId: drop.item, tile, expiresIn: F.DROP_LIFETIME_MS });
     }
+    this.storyDrops(m);
   }
 
   /** The monster's tile, then walkable neighbors, so several drops don't stack. */
@@ -1660,6 +1748,11 @@ export class World {
     this.drops.delete(drop.id);
     this.addItem(item.id, 1);
     this.flags.set(foundFlag(item.id), true);
+    const storyFlag = PICKUP_FLAGS[item.id];
+    if (storyFlag && !this.flags.has(storyFlag)) {
+      this.setStoryFlag(storyFlag);
+      if (item.id === SPLINTER) this.events.emit('storyLine', { text: 'It’s warm. It wasn’t, a moment ago.' });
+    }
     this.session.lootValue += F.sellPrice(item.price);
     this.events.emit('itemPicked', { item });
   }
@@ -1673,6 +1766,7 @@ export class World {
 
     if (p.dead) m.hostile = false;
     else if (!m.hostile && ai.aggressive && dist <= ai.aggroRange) m.hostile = true;
+    if (m.hostile && m.def.boss) this.bossLine(m, 'aggro');
     if (m.hostile && dist > ai.chaseRange) {
       m.hostile = false;
       m.path = [];
@@ -1836,7 +1930,11 @@ export class World {
   private updateDrops(dt: number): void {
     for (const drop of this.drops.values()) {
       drop.expiresIn -= dt;
-      if (drop.expiresIn <= 0) this.drops.delete(drop.id);
+      if (drop.expiresIn <= 0) {
+        this.drops.delete(drop.id);
+        // A splinter left lying around turns up again on a later kill.
+        if (drop.itemId === SPLINTER) this.flags.delete(STORY.splinterOut);
+      }
     }
   }
 
@@ -1900,6 +1998,7 @@ export class World {
       const ph = m.def.phases[m.phase]!;
       m.phase += 1;
       this.events.emit('bossPhase', { monsterId: m.id, phase: m.phase, shout: ph.shout });
+      if (m.phase === m.def.phases.length) this.bossLine(m, 'lastPhase');
       if (!ph.summon) continue;
       const minion = this.content.monsters.get(ph.summon.monster);
       if (!minion) continue;

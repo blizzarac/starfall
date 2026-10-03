@@ -104,5 +104,42 @@
         "y": 2
       }
     }
+  ],
+  "npcs": [
+    {
+      "id": "the_heart",
+      "name": "The Heart",
+      "x": 18,
+      "y": 1,
+      "dialogue": "the_heart",
+      "look": {
+        "body": "#8a8a8a",
+        "hair": "#8a8a8a"
+      },
+      "sprite": "stone",
+      "if": {
+        "flag": "story:frag3",
+        "notFlag": "story:ending"
+      }
+    },
+    {
+      "id": "pell_citadel",
+      "name": "Pell",
+      "x": 21,
+      "y": 1,
+      "dialogue": "pell_citadel",
+      "look": {
+        "body": "#3aa37a",
+        "hair": "#c9452f"
+      },
+      "lookAs": "guide",
+      "if": {
+        "flagIs": {
+          "flag": "story:pell_fate",
+          "value": "followed"
+        },
+        "notFlag": "story:ending"
+      }
+    }
   ]
 }

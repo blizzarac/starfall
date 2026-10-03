@@ -1,4 +1,5 @@
 import type { Condition, DialogueDef, NpcDef } from '../data/schemas';
+import { isJobId, jobLineage } from './jobs';
 import { visitedFlag, type World } from './world';
 
 export interface DialogueView {
@@ -19,6 +20,15 @@ export function checkCondition(world: World, c: Condition | undefined): boolean 
   if (c.hasItem !== undefined && !world.hasItem(c.hasItem.id, c.hasItem.count)) return false;
   if (c.visited !== undefined && !world.flags.has(visitedFlag(c.visited))) return false;
   if (c.notMap !== undefined && world.map.id === c.notMap) return false;
+  if (c.flag !== undefined && !world.flags.has(c.flag)) return false;
+  if (c.notFlag !== undefined && world.flags.has(c.notFlag)) return false;
+  if (c.flagIs !== undefined) {
+    const v = world.flags.get(c.flagIs.flag);
+    const wanted = Array.isArray(c.flagIs.value) ? c.flagIs.value : [c.flagIs.value];
+    if (v === undefined || !wanted.includes(v)) return false;
+  }
+  if (c.flagMin !== undefined && Number(world.flags.get(c.flagMin.flag) ?? 0) < c.flagMin.n) return false;
+  if (c.jobLine !== undefined && !(isJobId(c.jobLine) && jobLineage(p.jobId).includes(c.jobLine))) return false;
   return true;
 }
 

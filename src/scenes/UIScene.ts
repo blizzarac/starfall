@@ -14,6 +14,7 @@ import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
 import { QuestWindow } from '../ui/QuestWindow';
 import { StorageWindow } from '../ui/StorageWindow';
+import { JournalWindow } from '../ui/JournalWindow';
 import { PetWindow } from '../ui/PetWindow';
 import { HotbarWindow } from '../ui/HotbarWindow';
 import { Minimap } from '../ui/Minimap';
@@ -92,6 +93,7 @@ export class UIScene extends Phaser.Scene {
   private questWindow!: QuestWindow;
   private storageWindow!: StorageWindow;
   private petWindow!: PetWindow;
+  private journal!: JournalWindow;
   private hotbarWindow!: HotbarWindow;
   private worldMap!: WorldMapWindow;
   private appearanceWindow!: AppearanceWindow;
@@ -154,6 +156,7 @@ export class UIScene extends Phaser.Scene {
     this.questWindow = new QuestWindow(this, this.world);
     this.storageWindow = new StorageWindow(this, this.world);
     this.petWindow = new PetWindow(this, this.world);
+    this.journal = new JournalWindow(this, this.world);
     this.hotbarWindow = new HotbarWindow(this, this.world);
     this.worldMap = new WorldMapWindow(this, this.world);
     this.appearanceWindow = new AppearanceWindow(this, this.world);
@@ -433,7 +436,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.craftWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel, this.worldMap.panel, this.appearanceWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.craftWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.journal.panel, this.hotbarWindow.panel, this.worldMap.panel, this.appearanceWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -614,6 +617,7 @@ export class UIScene extends Phaser.Scene {
       [() => `Effects: ${quality.low ? 'Low (30 fps)' : 'Full'}`, () => setQuality(db, this.game, !quality.low)],
       ['Export save file', () => this.exportSave()],
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
+      ['Journal', () => (this.toggleMenu(), this.journal.open())],
       ['Pet', () => (this.toggleMenu(), this.petWindow.open())],
       ['World map', () => (this.toggleMenu(), this.worldMap.open())],
       ['Appearance', () => (this.toggleMenu(), this.appearanceWindow.open())],
@@ -695,6 +699,8 @@ export class UIScene extends Phaser.Scene {
       ev.on('tameFailed', (e) => this.addLog(`The ${e.name} wasn't fooled. Wear it down and try again.`)),
       ev.on('petRanAway', (e) => this.addLog(`${e.name} got too hungry and ran away…`)),
       ev.on('petLevelUp', (e) => this.addLog(`${e.name} reached level ${e.level}!`)),
+      ev.on('storyLine', (e) => this.storyLine(e.text)),
+      ev.on('storyEnded', (e) => this.storyLine(`— ${e.title} —`, 6000)),
       ev.on('jobChanged', (e) => {
         const name = isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId;
         this.addLog(`You are now ${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}! Open Skills to learn new skills.`);
@@ -720,6 +726,18 @@ export class UIScene extends Phaser.Scene {
       }),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
+  }
+
+  /** A quiet line of story across the middle of the screen, fading in and out. */
+  private storyLine(text: string, ms = 4500): void {
+    const { width, height } = viewSize(this);
+    const line = this.add
+      .text(width / 2, height * 0.32, text, { ...TEXT, fontSize: '16px', fontStyle: 'italic', color: '#f4f1e8', stroke: '#16131c', strokeThickness: 5, align: 'center', wordWrap: { width: Math.min(360, width - 48) } })
+      .setOrigin(0.5)
+      .setDepth(90)
+      .setAlpha(0);
+    this.tweens.add({ targets: line, alpha: 1, duration: 700, hold: ms - 1400, yoyo: true, onComplete: () => line.destroy() });
+    this.addLog(text);
   }
 
   private addLog(line: string): void {

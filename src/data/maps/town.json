@@ -75,6 +75,9 @@
       "look": {
         "body": "#3aa37a",
         "hair": "#c9452f"
+      },
+      "if": {
+        "notFlag": "story:frag1"
       }
     },
     {
@@ -198,6 +201,43 @@
       "look": {
         "body": "#7a5a9a",
         "hair": "#d8b070"
+      }
+    },
+    {
+      "id": "pell_returned",
+      "name": "Pell",
+      "x": 17,
+      "y": 19,
+      "dialogue": "guide",
+      "look": {
+        "body": "#3aa37a",
+        "hair": "#c9452f"
+      },
+      "lookAs": "guide",
+      "if": {
+        "flagIs": {
+          "flag": "story:ending",
+          "value": [
+            "silence",
+            "crown",
+            "gap"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pell_desk",
+      "name": "Pell’s Desk",
+      "x": 16,
+      "y": 20,
+      "dialogue": "pell_desk",
+      "look": {
+        "body": "#9a6b42",
+        "hair": "#9a6b42"
+      },
+      "sprite": "bench",
+      "if": {
+        "flag": "story:frag1"
       }
     }
   ],

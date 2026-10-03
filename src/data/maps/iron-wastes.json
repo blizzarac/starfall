@@ -121,5 +121,38 @@
         "y": 33
       }
     }
+  ],
+  "npcs": [
+    {
+      "id": "scrap_heap",
+      "name": "Scrap Heap",
+      "x": 25,
+      "y": 27,
+      "dialogue": "scrap_heap",
+      "look": {
+        "body": "#8a8a8a",
+        "hair": "#8a8a8a"
+      },
+      "sprite": "stone",
+      "if": {
+        "flag": "story:frag2"
+      }
+    },
+    {
+      "id": "pell_wastes",
+      "name": "Pell",
+      "x": 17,
+      "y": 3,
+      "dialogue": "pell_wastes",
+      "look": {
+        "body": "#3aa37a",
+        "hair": "#c9452f"
+      },
+      "lookAs": "guide",
+      "if": {
+        "flag": "story:crown",
+        "notFlag": "story:pell_fate"
+      }
+    }
   ]
 }

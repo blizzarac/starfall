@@ -112,5 +112,19 @@
   {"id": "gear_beetle_card", "name": "Gear Beetle Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shield", "bonus": {"def": 3, "vit": 1}}, "description": "Shield card: DEF +3, VIT +1. Insert it from Items → Bag."},
   {"id": "sentry_drone_card", "name": "Sentry Drone Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "accessory", "bonus": {"dex": 2, "hit": 10}}, "description": "Accessory card: DEX +2, HIT +10. Insert it from Items → Bag."},
   {"id": "clockwork_knight_card", "name": "Clockwork Knight Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "body", "bonus": {"vit": 3, "hp": 150}}, "description": "Armor card: VIT +3, HP +150. Insert it from Items → Bag."},
-  {"id": "clockwork_titan_card", "name": "Clockwork Titan Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "weapon", "bonus": {"atk": 20, "str": 2}}, "description": "Weapon card: ATK +20, STR +2. Only the Clockwork Titan carries it. Insert it from Items → Bag."}
+  {"id": "clockwork_titan_card", "name": "Clockwork Titan Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "weapon", "bonus": {"atk": 20, "str": 2}}, "description": "Weapon card: ATK +20, STR +2. Only the Clockwork Titan carries it. Insert it from Items → Bag."},
+  {"id": "star_splinter", "name": "Cold Splinter", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Warm to the touch. It wasn’t, a moment ago."},
+  {"id": "starglass_1", "name": "Starglass (I)", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "It was holding this shut."},
+  {"id": "starglass_2", "name": "Starglass (II)", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "It fit a crown once. Badly."},
+  {"id": "starglass_3", "name": "Starglass (III)", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Still turning, slowly, toward the sky."},
+  {"id": "pell_map", "name": "Pell’s Map", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Sunspire, circled twice. Something east of it, scratched out."},
+  {"id": "oathstone", "name": "Oathstone", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Given by the Swordsman Guild. Some doors are meant to stay closed."},
+  {"id": "burnt_notebook", "name": "Burnt Notebook", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Given by the Mage Guild. Every engine needs a heart. The next page is ash."},
+  {"id": "silent_feather", "name": "Silent Feather", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Given by the Archer’s Lodge. The wolves went quiet the night it fell."},
+  {"id": "prayer_cord", "name": "Prayer Cord", "type": "etc", "price": 0, "weight": 0, "quest": true, "description": "Given by the Acolytes. Knots tied by someone who was afraid."},
+  {"id": "cracked_crown", "name": "Cracked Crown", "type": "equipment", "price": 6000, "weight": 5, "equip": {"slot": "head", "def": 3, "bonus": {"str": 2, "agi": 2, "vit": 2, "int": 2, "dex": 2, "luk": 2}}, "description": "Sized for a head that wasn’t his."},
+  {"id": "quiet_stone", "name": "Quiet Stone", "type": "equipment", "price": 0, "weight": 1, "quest": true, "equip": {"slot": "accessory", "def": 3, "bonus": {"vit": 4, "hp": 300}}, "description": "It used to hum."},
+  {"id": "guild_seal", "name": "Guild Seal", "type": "equipment", "price": 0, "weight": 1, "quest": true, "equip": {"slot": "accessory", "bonus": {"str": 3, "int": 3, "atk": 15, "matk": 15}}, "description": "Heavier than it looks. Heavier every day."},
+  {"id": "empty_setting", "name": "Empty Setting", "type": "equipment", "price": 0, "weight": 1, "quest": true, "equip": {"slot": "accessory", "bonus": {"agi": 3, "dex": 3, "hit": 8, "flee": 8}}, "description": "Something was set here. It left."},
+  {"id": "starglass_heart", "name": "Starglass Heart", "type": "equipment", "price": 0, "weight": 1, "quest": true, "equip": {"slot": "accessory", "bonus": {"str": 3, "agi": 3, "vit": 3, "int": 3, "dex": 3, "luk": 3}}, "description": "Warm to the touch."}
 ]

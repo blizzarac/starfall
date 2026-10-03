@@ -83,7 +83,32 @@
       }
     }
   ],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "ring_of_trees",
+      "name": "A Ring of Trees",
+      "x": 15,
+      "y": 7,
+      "dialogue": "ring_of_trees",
+      "look": {
+        "body": "#8a8a8a",
+        "hair": "#8a8a8a"
+      },
+      "sprite": "stone"
+    },
+    {
+      "id": "ring_of_trees",
+      "name": "A Ring of Trees",
+      "x": 15,
+      "y": 7,
+      "dialogue": "ring_of_trees",
+      "look": {
+        "body": "#8a8a8a",
+        "hair": "#8a8a8a"
+      },
+      "sprite": "stone"
+    }
+  ],
   "portals": [
     {
       "area": {

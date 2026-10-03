@@ -82,7 +82,43 @@
   {
     "id": "guide",
     "nodes": {
-      "start": {
+      "fight": {
+        "text": "Tap a monster and you'll walk up and keep attacking. Sit to recover faster, and keep a few Red Tonics on hand.",
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "menu"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "where": {
+        "text": "Take the road south to the Southern Meadow. The Jellops there are harmless unless you poke them.",
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "menu"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "stronger": {
+        "text": "Every level gives stat points: open Stats to spend them. At job level 10 you can join a guild: Swordsmen (Captain Harlan), Mages (Magister Ilse), Archers (Wren) or Acolytes (Sister Maren). Sell loot to Bram so your bag never gets too heavy.",
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "menu"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "menu": {
         "text": "New in Brightmoor? I'm Pell. Ask me anything.",
         "choices": [
           {
@@ -102,39 +138,114 @@
           }
         ]
       },
-      "fight": {
-        "text": "Tap a monster and you'll walk up and keep attacking. Sit to recover faster, and keep a few Red Tonics on hand.",
-        "choices": [
+      "start": {
+        "branch": [
           {
-            "label": "Anything else?",
-            "next": "start"
+            "if": {
+              "flagIs": {
+                "flag": "story:ending",
+                "value": "silence"
+              }
+            },
+            "next": "ep_silence"
           },
           {
-            "label": "Thanks"
+            "if": {
+              "flagIs": {
+                "flag": "story:ending",
+                "value": "crown"
+              }
+            },
+            "next": "ep_crown"
+          },
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:ending",
+                "value": "gap"
+              }
+            },
+            "next": "ep_gap"
+          },
+          {
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "notFlag": "story:pell"
+            },
+            "next": "splinter"
+          },
+          {
+            "if": {
+              "flag": "story:pell",
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            },
+            "next": "again"
+          }
+        ],
+        "else": "menu"
+      },
+      "splinter": {
+        "text": "He sees it before you say anything. “Put that away.” A pause. “Don’t show Nim.”",
+        "choices": [
+          {
+            "label": "Put it away",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:pell",
+                "value": true
+              }
+            ]
           }
         ]
       },
-      "where": {
-        "text": "Take the road south to the Southern Meadow. The Jellops there are harmless unless you poke them.",
+      "again": {
+        "text": "“I said put it away.” He doesn’t look at you for the rest of the day.",
         "choices": [
           {
             "label": "Anything else?",
-            "next": "start"
+            "next": "menu"
           },
           {
-            "label": "Thanks"
+            "label": "Goodbye"
           }
         ]
       },
-      "stronger": {
-        "text": "Every level gives stat points: open Stats to spend them. At job level 10 you can join a guild: Swordsmen (Captain Harlan), Mages (Magister Ilse), Archers (Wren) or Acolytes (Sister Maren). Sell loot to Bram so your bag never gets too heavy.",
+      "ep_silence": {
+        "text": "“It’s quiet now. I’d forgotten quiet.”",
         "choices": [
           {
             "label": "Anything else?",
-            "next": "start"
+            "next": "menu"
           },
           {
-            "label": "Thanks"
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "ep_crown": {
+        "text": "“Guard it better than they did.”",
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "menu"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "ep_gap": {
+        "text": "He stops, as if you’d spoken. “…You’re warm. You weren’t, a moment ago.”",
+        "choices": [
+          {
+            "label": "Goodbye"
           }
         ]
       }
@@ -156,6 +267,14 @@
           {
             "label": "What does a Swordsman do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "swordsman"
+            }
           },
           {
             "label": "Goodbye"
@@ -247,6 +366,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“Whatever that golem guarded, it guarded well. Don’t undo its work.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“A king tried to wear it. Remember how that ended.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Some doors are meant to stay closed.”",
+        "choices": []
       }
     }
   },
@@ -329,6 +477,14 @@
           {
             "label": "What does a Mage do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "mage"
+            }
           },
           {
             "label": "Goodbye"
@@ -420,6 +576,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“Feel how it pulls? That isn’t magic. That’s appetite.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“The old empire ran on it. Ran out, too.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Every engine needs a heart. Ask whose.”",
+        "choices": []
       }
     }
   },
@@ -460,6 +645,14 @@
           {
             "label": "What does an Archer do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "archer"
+            }
           },
           {
             "label": "Goodbye"
@@ -551,6 +744,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“The wolves went quiet the night you found it.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“Birds won’t fly east anymore.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Listen. The wind’s stopped.”",
+        "choices": []
       }
     }
   },
@@ -570,6 +792,14 @@
           {
             "label": "What does an Acolyte do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "acolyte"
+            }
           },
           {
             "label": "Goodbye"
@@ -661,6 +891,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“I prayed over it. Something prayed back.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“It isn’t praying. It’s calling.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Whatever you decide, decide it kindly.”",
+        "choices": []
       }
     }
   },
@@ -754,6 +1013,14 @@
             "next": "about"
           },
           {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "swordsman"
+            }
+          },
+          {
             "label": "Goodbye"
           }
         ]
@@ -835,6 +1102,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“Whatever that golem guarded, it guarded well. Don’t undo its work.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“A king tried to wear it. Remember how that ended.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Some doors are meant to stay closed.”",
+        "choices": []
       }
     }
   },
@@ -854,6 +1150,14 @@
           {
             "label": "What does a Wizard do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "mage"
+            }
           },
           {
             "label": "Goodbye"
@@ -937,6 +1241,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“Feel how it pulls? That isn’t magic. That’s appetite.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“The old empire ran on it. Ran out, too.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Every engine needs a heart. Ask whose.”",
+        "choices": []
       }
     }
   },
@@ -956,6 +1289,14 @@
           {
             "label": "What does a Hunter do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "archer"
+            }
           },
           {
             "label": "Goodbye"
@@ -1039,6 +1380,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“The wolves went quiet the night you found it.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“Birds won’t fly east anymore.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Listen. The wind’s stopped.”",
+        "choices": []
       }
     }
   },
@@ -1058,6 +1428,14 @@
           {
             "label": "What does a Priest do?",
             "next": "about"
+          },
+          {
+            "label": "About the shards…",
+            "next": "shards",
+            "if": {
+              "flag": "story:frag1",
+              "jobLine": "acolyte"
+            }
           },
           {
             "label": "Goodbye"
@@ -1141,6 +1519,35 @@
             "label": "Thanks"
           }
         ]
+      },
+      "shards": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "shards3"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "shards2"
+          }
+        ],
+        "else": "shards1"
+      },
+      "shards1": {
+        "text": "“I prayed over it. Something prayed back.”",
+        "choices": []
+      },
+      "shards2": {
+        "text": "“It isn’t praying. It’s calling.”",
+        "choices": []
+      },
+      "shards3": {
+        "text": "“Whatever you decide, decide it kindly.”",
+        "choices": []
       }
     }
   },
@@ -1214,6 +1621,13 @@
             "next": "desert"
           },
           {
+            "label": "Ask about his cargo",
+            "next": "cargo",
+            "if": {
+              "flag": "story:map"
+            }
+          },
+          {
             "label": "Goodbye"
           }
         ]
@@ -1227,6 +1641,38 @@
           },
           {
             "label": "Maybe later"
+          }
+        ]
+      },
+      "cargo": {
+        "text": "“Same stones, every crossing. Someone in the sand pays double.” He watches the water. “Your friend sailed with me last month. Paid in glass. Didn’t come back.”",
+        "choices": [
+          {
+            "label": "Sail to Sunspire (500 gold)",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:rook",
+                "value": true
+              },
+              {
+                "type": "warp",
+                "map": "sunspire",
+                "x": 16,
+                "y": 6,
+                "cost": 500
+              }
+            ]
+          },
+          {
+            "label": "Goodbye",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:rook",
+                "value": true
+              }
+            ]
           }
         ]
       }
@@ -1342,7 +1788,23 @@
   {
     "id": "tinker",
     "nodes": {
-      "start": {
+      "howto": {
+        "text": "Bring me what monsters drop and a little gold, and I'll turn it into tonics, wings or gear. Shells, pelts and shards for the basics; gear cogs, power cells and scrap from the Iron Wastes for the good stuff. The bench shows what you're short of.",
+        "choices": [
+          {
+            "label": "Let's build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "menu": {
         "text": "Nim's Tinkery! Scrap in, wonders out. Got anything that clanks?",
         "choices": [
           {
@@ -1362,11 +1824,77 @@
           }
         ]
       },
-      "howto": {
-        "text": "Bring me what monsters drop and a little gold, and I'll turn it into tonics, wings or gear. Shells, pelts and shards for the basics; gear cogs, power cells and scrap from the Iron Wastes for the good stuff. The bench shows what you're short of.",
+      "start": {
+        "branch": [
+          {
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "notFlag": "story:splinter_fate"
+            },
+            "next": "splinter"
+          },
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:splinter_fate",
+                "value": "nim"
+              },
+              "notFlag": "story:ending"
+            },
+            "next": "hums"
+          },
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:ending",
+                "value": "silence"
+              }
+            },
+            "next": "dark"
+          }
+        ],
+        "else": "menu"
+      },
+      "splinter": {
+        "text": "Nim stops working. “That’s— where did you find that?” A long look. “Leave it with me. I won’t ask twice.”",
         "choices": [
           {
-            "label": "Let's build something",
+            "label": "Leave it with Nim",
+            "next": "left",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "star_splinter",
+                "count": 1
+              },
+              {
+                "type": "setFlag",
+                "flag": "story:splinter_fate",
+                "value": "nim"
+              }
+            ]
+          },
+          {
+            "label": "Keep it",
+            "next": "kept",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:splinter_fate",
+                "value": "kept"
+              }
+            ]
+          }
+        ]
+      },
+      "left": {
+        "text": "Nim wraps it in cloth without touching it. “Thank you.” It doesn’t sound like thanks.",
+        "choices": [
+          {
+            "label": "Let’s build something",
             "do": [
               {
                 "type": "openCraft"
@@ -1374,7 +1902,59 @@
             ]
           },
           {
-            "label": "Thanks"
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "kept": {
+        "text": "“Your choice.” Nim goes back to work, and doesn’t look up again.",
+        "choices": [
+          {
+            "label": "Let’s build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "hums": {
+        "text": "“It hums at night. I don’t sleep much.” Nim rubs tired eyes. “Anyway. Scrap in, wonders out.”",
+        "choices": [
+          {
+            "label": "Let’s build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "How does tinkering work?",
+            "next": "howto"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "dark": {
+        "text": "“The cells went dark. All of them, the same night.” Nim turns one over in the light. “Scrap in. Scrap out.”",
+        "choices": [
+          {
+            "label": "Let’s build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
           }
         ]
       }
@@ -1461,6 +2041,1064 @@
             "label": "Goodbye"
           }
         ]
+      }
+    }
+  },
+  {
+    "id": "ring_of_trees",
+    "nodes": {
+      "start": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:splinter_fate",
+                "value": "buried"
+              }
+            },
+            "next": "after"
+          }
+        ],
+        "else": "ring"
+      },
+      "ring": {
+        "text": "The trees here lean away from the middle. The ground there is warm.",
+        "choices": [
+          {
+            "label": "Bury the splinter",
+            "next": "buried",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "star_splinter",
+                "count": 1
+              },
+              {
+                "type": "setFlag",
+                "flag": "story:splinter_fate",
+                "value": "buried"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "notFlag": "story:splinter_fate"
+            }
+          },
+          {
+            "label": "Leave"
+          }
+        ]
+      },
+      "buried": {
+        "text": "The ground takes it. The trees straighten, a little.",
+        "choices": []
+      },
+      "after": {
+        "text": "The trees stand straight here now. The ground is cold.",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "pell_desk",
+    "nodes": {
+      "start": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:ending",
+                "value": "return"
+              }
+            },
+            "next": "gone"
+          },
+          {
+            "if": {
+              "notFlag": "story:map"
+            },
+            "next": "map"
+          }
+        ],
+        "else": "empty"
+      },
+      "map": {
+        "text": "Pell’s desk. Everything is gone but a map: Sunspire, circled twice. Something east of it, scratched out.",
+        "choices": [
+          {
+            "label": "Take the map",
+            "do": [
+              {
+                "type": "giveItem",
+                "id": "pell_map",
+                "count": 1
+              },
+              {
+                "type": "setFlag",
+                "flag": "story:map",
+                "value": true
+              }
+            ]
+          },
+          {
+            "label": "Leave it"
+          }
+        ]
+      },
+      "empty": {
+        "text": "An empty desk. He left in a hurry, or wanted it to look that way.",
+        "choices": []
+      },
+      "gone": {
+        "text": "The desk is bare. Nobody has asked about him. Nobody seems to remember he was here.",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "archivist",
+    "nodes": {
+      "start": {
+        "branch": [
+          {
+            "if": {
+              "flag": "story:frag3"
+            },
+            "next": "three"
+          },
+          {
+            "if": {
+              "flag": "story:frag2"
+            },
+            "next": "two"
+          }
+        ],
+        "else": "one"
+      },
+      "one": {
+        "text": "An old man among the stones, writing in the dust with one finger. “We gave it a name. That was the mistake.”",
+        "choices": [
+          {
+            "label": "Who are you?",
+            "next": "who",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:archivist",
+                "value": true
+              }
+            ]
+          },
+          {
+            "label": "Leave",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:archivist",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "two": {
+        "text": "“It answers to nothing now. Not even you.”",
+        "choices": [
+          {
+            "label": "Leave"
+          }
+        ]
+      },
+      "three": {
+        "text": "He doesn’t look up. “Don’t name it. Whatever you do.”",
+        "choices": [
+          {
+            "label": "Leave"
+          }
+        ]
+      },
+      "who": {
+        "text": "“I kept the records. Then I kept them from being read.” He wipes the dust clean.",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "throne",
+    "nodes": {
+      "start": {
+        "text": "The throne is cold. The crown on it is cracked, and too small for the skull beneath it.",
+        "choices": [
+          {
+            "label": "Take the crown",
+            "do": [
+              {
+                "type": "giveItem",
+                "id": "cracked_crown",
+                "count": 1
+              },
+              {
+                "type": "setFlag",
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            ]
+          },
+          {
+            "label": "Leave it",
+            "next": "left",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:crown",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "left": {
+        "text": "You leave it where he left it.",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "scrap_heap",
+    "nodes": {
+      "start": {
+        "branch": [
+          {
+            "if": {
+              "flagMin": {
+                "flag": "story:heap",
+                "n": 3
+              }
+            },
+            "next": "three"
+          },
+          {
+            "if": {
+              "flagMin": {
+                "flag": "story:heap",
+                "n": 2
+              }
+            },
+            "next": "two"
+          }
+        ],
+        "else": "one"
+      },
+      "one": {
+        "text": "Scrap, stacked with care. Someone took their time.",
+        "choices": []
+      },
+      "two": {
+        "text": "The scrap has shoulders now.",
+        "choices": []
+      },
+      "three": {
+        "text": "It’s facing the Citadel. It wasn’t, before.",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "pell_wastes",
+    "nodes": {
+      "start": {
+        "text": "Pell, among the machines. They work around him and don’t touch him. “You found the map.” A breath. “Of course you did.”",
+        "choices": [
+          {
+            "label": "Why are you here?",
+            "next": "why"
+          }
+        ]
+      },
+      "why": {
+        "text": "“It isn’t a weapon. It’s a door. Someone has to stand in it.”",
+        "choices": [
+          {
+            "label": "Draw your weapon",
+            "next": "fought",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:pell_fate",
+                "value": "fought"
+              }
+            ]
+          },
+          {
+            "label": "Follow him",
+            "next": "followed",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:pell_fate",
+                "value": "followed"
+              }
+            ]
+          },
+          {
+            "label": "Walk past",
+            "next": "passed",
+            "do": [
+              {
+                "type": "setFlag",
+                "flag": "story:pell_fate",
+                "value": "passed"
+              }
+            ]
+          }
+        ]
+      },
+      "fought": {
+        "text": "He doesn’t raise his sword. Then he’s gone.",
+        "choices": []
+      },
+      "followed": {
+        "text": "“Then keep up.”",
+        "choices": []
+      },
+      "passed": {
+        "text": "“Good. Someone should.”",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "pell_citadel",
+    "nodes": {
+      "start": {
+        "text": "“Go on. I’ll be here either way.”",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "the_heart",
+    "nodes": {
+      "start": {
+        "branch": [
+          {
+            "if": {
+              "jobLine": "swordsman"
+            },
+            "next": "h_swordsman"
+          },
+          {
+            "if": {
+              "jobLine": "mage"
+            },
+            "next": "h_mage"
+          },
+          {
+            "if": {
+              "jobLine": "archer"
+            },
+            "next": "h_archer"
+          },
+          {
+            "if": {
+              "jobLine": "acolyte"
+            },
+            "next": "h_acolyte"
+          }
+        ],
+        "else": "h_base"
+      },
+      "h_swordsman": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:pell_fate",
+                "value": "followed"
+              }
+            },
+            "next": "hp_swordsman"
+          }
+        ],
+        "else": "hn_swordsman"
+      },
+      "hn_swordsman": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. Your oathstone is heavy in your pocket. Some doors are meant to stay closed.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "hp_swordsman": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. Your oathstone is heavy in your pocket. Some doors are meant to stay closed.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Stand in the gap",
+            "next": "end_gap",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "gap"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "left"
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "h_mage": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:pell_fate",
+                "value": "followed"
+              }
+            },
+            "next": "hp_mage"
+          }
+        ],
+        "else": "hn_mage"
+      },
+      "hn_mage": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. Your notebook falls open on its own. Every engine needs a heart.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "hp_mage": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. Your notebook falls open on its own. Every engine needs a heart.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Stand in the gap",
+            "next": "end_gap",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "gap"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "left"
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "h_archer": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:pell_fate",
+                "value": "followed"
+              }
+            },
+            "next": "hp_archer"
+          }
+        ],
+        "else": "hn_archer"
+      },
+      "hn_archer": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. Outside, the wind has stopped.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "hp_archer": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. Outside, the wind has stopped.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Stand in the gap",
+            "next": "end_gap",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "gap"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "left"
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "h_acolyte": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:pell_fate",
+                "value": "followed"
+              }
+            },
+            "next": "hp_acolyte"
+          }
+        ],
+        "else": "hn_acolyte"
+      },
+      "hn_acolyte": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. The cord in your hand tightens. It isn’t praying. It’s calling.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "hp_acolyte": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter. The cord in your hand tightens. It isn’t praying. It’s calling.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Stand in the gap",
+            "next": "end_gap",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "gap"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "left"
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "h_base": {
+        "branch": [
+          {
+            "if": {
+              "flagIs": {
+                "flag": "story:pell_fate",
+                "value": "followed"
+              }
+            },
+            "next": "hp_base"
+          }
+        ],
+        "else": "hn_base"
+      },
+      "hn_base": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "hp_base": {
+        "text": "Three fragments fit together. In the middle, a gap the size of a splinter.",
+        "choices": [
+          {
+            "label": "Shatter them",
+            "next": "end_silence",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "silence"
+              }
+            ]
+          },
+          {
+            "label": "Bind them to your guild",
+            "next": "end_crown",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "crown"
+              }
+            ],
+            "if": {
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "taken"
+              }
+            }
+          },
+          {
+            "label": "Set the splinter in the gap",
+            "next": "end_return",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "return"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              }
+            }
+          },
+          {
+            "label": "Stand in the gap",
+            "next": "end_gap",
+            "do": [
+              {
+                "type": "storyEnding",
+                "ending": "gap"
+              }
+            ],
+            "if": {
+              "hasItem": {
+                "id": "star_splinter",
+                "count": 1
+              },
+              "flagIs": {
+                "flag": "story:crown",
+                "value": "left"
+              }
+            }
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "end_silence": {
+        "text": "The light goes out of them. Out of everything, a little.",
+        "choices": []
+      },
+      "end_crown": {
+        "text": "They answer to you now. So does everything that comes for them.",
+        "choices": []
+      },
+      "end_return": {
+        "text": "It rises. The roof was never meant to hold it. Far above, a star goes out, and one comes back.",
+        "choices": []
+      },
+      "end_gap": {
+        "text": "Pell was right. It’s a door. You are what stands in it.",
+        "choices": []
       }
     }
   }

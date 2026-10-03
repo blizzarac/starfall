@@ -4,6 +4,7 @@ import type { Tile } from '../core/grid';
 import { weaponOf } from '../core/equipment';
 import { jobOf } from '../core/jobs';
 import { auraRadius, skillLevel, type SkillId } from '../core/skills';
+import { STORY } from '../core/story';
 import { STATUS_INFO } from '../core/status';
 import type { MonsterDef, NpcDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
@@ -325,6 +326,14 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  private refreshNpcs(): void {
+    const ids = this.world.npcs.map((n) => n.id).join();
+    if (ids === [...this.npcViews.keys()].join()) return;
+    for (const view of this.npcViews.values()) view.destroy();
+    this.npcViews.clear();
+    this.placeNpcs();
+  }
+
   private placeNpcs(): void {
     for (const npc of this.world.npcs) {
       const p = tileToWorld(npc.x, npc.y);
@@ -333,9 +342,13 @@ export class WorldScene extends Phaser.Scene {
           ? this.add.image(0, 0, 'board').setOrigin(0.5, feetOrigin(this, 'board', 54))
           : npc.sprite === 'bench'
             ? this.add.image(0, 0, 'bench').setOrigin(0.5, feetOrigin(this, 'bench', 44))
-            : this.npcSprite(npc);
+            : npc.sprite === 'stone'
+              ? this.add.image(0, 0, 'rock').setOrigin(0.5, 0.8).setScale(1.3)
+              : this.npcSprite(npc);
+      const labelY = npc.sprite === 'board' ? -66 : npc.sprite === 'bench' ? -56 : npc.sprite === 'stone' ? -40 : -84;
+      // Places you can inspect get a pale label; people a gold one.
       const label = this.add
-        .text(0, npc.sprite === 'board' ? -66 : npc.sprite === 'bench' ? -56 : -84, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
+        .text(0, labelY, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: npc.sprite === 'stone' ? '#e8e4d8' : '#ffe27a' })
         .setOrigin(0.5, 1);
       const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
       this.npcViews.set(npc.id, view);
@@ -422,7 +435,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private npcSprite(npc: NpcDef): Phaser.GameObjects.Sprite {
-    const key = ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), npcAppearance(npc.id, hexColor(npc.look.hair)));
+    const who = npc.lookAs ?? npc.id;
+    const key = ensureChibi(this, `npc-${who}`, hexColor(npc.look.body), npcAppearance(who, hexColor(npc.look.hair)));
     const h = hash(npc.x, npc.y);
     // Everyone breathes on their own rhythm.
     return this.add
@@ -435,6 +449,11 @@ export class WorldScene extends Phaser.Scene {
 
   /** A glow that shines in the dark: `scale` sizes it, `strength` is its brightness at full dark. */
   private lamp(x: number, y: number, color: number, scale: number, strength: number, cull = false): Phaser.GameObjects.Image {
+    // After the Silence ending, the Starglass glows are gone: lamps burn dim and grey.
+    if (this.world.flags.get(STORY.ending) === 'silence') {
+      color = 0x8a8a8a;
+      strength *= 0.5;
+    }
     const img = this.add.image(x, y, 'light').setTint(color).setScale(scale).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
     this.lamps.push({ img, strength });
     if (cull) this.decor.push(img);
@@ -483,6 +502,8 @@ export class WorldScene extends Phaser.Scene {
     this.night = light.night;
     this.nightOverlay.setVisible(light.tint !== 0xffffff).setFillStyle(light.tint);
     for (const l of this.lamps) l.img.setAlpha(l.strength * light.night);
+    // After the Gap ending you carry a light of your own, even in daylight.
+    if (this.world.flags.get(STORY.ending) === 'gap') this.playerLight.setAlpha(Math.max(this.playerLight.alpha, 0.5)).setTint(0xfff2c8);
   }
 
   /** Hides scenery that's off screen, so the renderer skips it. Checked a few times a second. */
@@ -759,6 +780,8 @@ export class WorldScene extends Phaser.Scene {
     const offs = [
       // Rebuild everything for the new map; the UI scene stays up.
       ev.on('mapChanged', () => this.scene.restart()),
+      // Story characters come and go as the story moves.
+      ev.on('storyChanged', () => this.refreshNpcs()),
       ev.on('damage', (e) => {
         const crit = e.crit;
         const toPlayer = e.targetId === 'player';

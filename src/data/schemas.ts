@@ -89,6 +89,8 @@ export const ItemSchema = z
     cure: z.array(z.enum(['poison', 'stun', 'blind'])).optional(),
     equip: EquipSchema.optional(),
     card: CardSchema.optional(),
+    /** Story items: can't be sold, stored or dropped. */
+    quest: z.boolean().default(false),
     /** Collars and charms your pet wears. */
     petGear: PetGearSchema.optional(),
     description: z.string().optional(),
@@ -204,6 +206,30 @@ export const TERRAIN_CHARS = {
 
 const PlaceSchema = z.object({ map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
 
+/** All listed checks must pass. */
+export const ConditionSchema = z.object({
+  job: z.string().optional(),
+  jobLevelMin: z.number().int().optional(),
+  skillMin: z.object({ id: z.string(), level: z.number().int().positive() }).optional(),
+  hasItem: z.object({ id: z.string(), count: z.number().int().positive() }).optional(),
+  /** The player has been to this map before. */
+  visited: z.string().optional(),
+  /** The player is not on this map right now (hides a teleport to where you already are). */
+  notMap: z.string().optional(),
+  /** A flag is set (any value) / is not set. */
+  flag: z.string().optional(),
+  notFlag: z.string().optional(),
+  /** A flag holds this value (or one of these values). */
+  flagIs: z
+    .object({ flag: z.string(), value: z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number(), z.boolean()]))]) })
+    .optional(),
+  /** A numeric flag is at least `n`. */
+  flagMin: z.object({ flag: z.string(), n: z.number() }).optional(),
+  /** The player's job is this one or grew from it (e.g. 'swordsman' matches a Knight). */
+  jobLine: z.string().optional(),
+});
+export type Condition = z.infer<typeof ConditionSchema>;
+
 export const NpcSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+$/),
   name: z.string(),
@@ -211,8 +237,12 @@ export const NpcSchema = z.object({
   y: z.number().int().nonnegative(),
   dialogue: z.string(),
   look: z.object({ body: z.string().regex(/^#[0-9a-f]{6}$/i), hair: z.string().regex(/^#[0-9a-f]{6}$/i) }),
-  /** How it's drawn: a person, or a notice board. */
-  sprite: z.enum(['chibi', 'board', 'bench']).default('chibi'),
+  /** How it's drawn: a person, a notice board, a workbench, or a stone (a place you can inspect). */
+  sprite: z.enum(['chibi', 'board', 'bench', 'stone']).default('chibi'),
+  /** Only there while this holds (story characters come and go). */
+  if: ConditionSchema.optional(),
+  /** Look exactly like another NPC (the same person met somewhere else). */
+  lookAs: z.string().optional(),
 });
 export type NpcDef = z.infer<typeof NpcSchema>;
 
@@ -269,18 +299,6 @@ export type MapDef = z.infer<typeof MapSchema>;
 
 // ---- Dialogue -------------------------------------------------------------
 
-/** All listed checks must pass. */
-export const ConditionSchema = z.object({
-  job: z.string().optional(),
-  jobLevelMin: z.number().int().optional(),
-  skillMin: z.object({ id: z.string(), level: z.number().int().positive() }).optional(),
-  hasItem: z.object({ id: z.string(), count: z.number().int().positive() }).optional(),
-  /** The player has been to this map before. */
-  visited: z.string().optional(),
-  /** The player is not on this map right now (hides a teleport to where you already are). */
-  notMap: z.string().optional(),
-});
-export type Condition = z.infer<typeof ConditionSchema>;
 
 export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('setSavePoint') }),
@@ -295,6 +313,10 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('openStorage'), fee: z.number().int().nonnegative() }),
   /** Opens the tinkerer's crafting bench. */
   z.object({ type: z.literal('openCraft') }),
+  /** Sets a world flag (story progress and choices). */
+  z.object({ type: z.literal('setFlag'), flag: z.string(), value: z.union([z.string(), z.number(), z.boolean()]).default(true) }),
+  /** Ends the main story. */
+  z.object({ type: z.literal('storyEnding'), ending: z.enum(['silence', 'crown', 'return', 'gap']) }),
   /** Teleports for a fee. */
   z.object({ type: z.literal('warp'), map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative(), cost: z.number().int().nonnegative() }),
 ]);

@@ -97,9 +97,10 @@ export class ShopWindow {
     const w = this.world;
     const stacks: SellRow[] = [...w.player.inventory.keys()]
       .map((id) => w.content.items.get(id))
-      .filter((i): i is ItemDef => !!i)
+      // Story items aren't for sale.
+      .filter((i): i is ItemDef => !!i && !i.quest)
       .map((item) => ({ kind: 'stack', item }));
-    return [...stacks, ...w.player.gear.map((piece): SellRow => ({ kind: 'piece', piece }))];
+    return [...stacks, ...w.player.gear.filter((g) => !g.item.quest).map((piece): SellRow => ({ kind: 'piece', piece }))];
   }
 
   private pieceRow(piece: GearPiece, y: number, pw: number): void {

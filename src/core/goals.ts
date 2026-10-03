@@ -1,6 +1,7 @@
 import type { MapDef } from '../data/schemas';
 import { jobOf, SECOND_JOB_LEVEL } from './jobs';
 import { skillLevel } from './skills';
+import { storyHint } from './story';
 import { bossFlag, visitedFlag, type World } from './world';
 
 /** Lowest and highest monster level on a map (bosses left out), or null for towns. */
@@ -34,6 +35,9 @@ export function nextGoal(world: World): string {
   if (job.tier === 1 && p.jobLevel >= SECOND_JOB_LEVEL) {
     return been('sunspire') ? 'Take your second-job trial with your guild in Sunspire.' : 'Sail to Sunspire from Saltmere for your second-job trial.';
   }
+  // The main story, when its next step is within reach.
+  const story = storyHint(world.flags, p.baseLevel, been);
+  if (story) return story;
   if (p.baseLevel >= 18 && !been('saltmere')) return 'Head east from Whisperwood to the harbor town of Saltmere.';
   if (p.baseLevel >= 30 && !been('sunspire')) return "Captain Rook's ship sails from Saltmere to the desert city of Sunspire.";
   if (p.baseLevel >= 28 && p.baseLevel < 45 && !world.flags.has(bossFlag('crystal_golem'))) return 'The Crystal Golem waits below the Glimmer Caves (Lv 30 boss).';

@@ -97,7 +97,68 @@
       }
     }
   ],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "archivist",
+      "name": "The Archivist",
+      "x": 19,
+      "y": 4,
+      "dialogue": "archivist",
+      "look": {
+        "body": "#6a6a72",
+        "hair": "#d8d8d0"
+      },
+      "if": {
+        "flag": "story:map"
+      }
+    },
+    {
+      "id": "throne",
+      "name": "The Throne",
+      "x": 18,
+      "y": 33,
+      "dialogue": "throne",
+      "look": {
+        "body": "#8a8a8a",
+        "hair": "#8a8a8a"
+      },
+      "sprite": "stone",
+      "if": {
+        "flag": "story:frag2",
+        "notFlag": "story:crown"
+      }
+    },
+    {
+      "id": "archivist",
+      "name": "The Archivist",
+      "x": 19,
+      "y": 4,
+      "dialogue": "archivist",
+      "look": {
+        "body": "#6a6a72",
+        "hair": "#d8d8d0"
+      },
+      "if": {
+        "flag": "story:map"
+      }
+    },
+    {
+      "id": "throne",
+      "name": "The Throne",
+      "x": 18,
+      "y": 33,
+      "dialogue": "throne",
+      "look": {
+        "body": "#8a8a8a",
+        "hair": "#8a8a8a"
+      },
+      "sprite": "stone",
+      "if": {
+        "flag": "story:frag2",
+        "notFlag": "story:crown"
+      }
+    }
+  ],
   "portals": [
     {
       "area": {
