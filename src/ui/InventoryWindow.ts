@@ -1,10 +1,11 @@
 import type Phaser from 'phaser';
-import { cardBlocker, describeCard, describePiece, EQUIP_SLOTS, equipBlocker, pieceName, SLOT_NAMES, type GearPiece } from '../core/equipment';
-import { derivedStats, formatDeltas, previewEquip } from '../core/progression';
+import { cardBlocker, describeCard, describePiece, EQUIP_SLOTS, pieceName, SLOT_NAMES, type GearPiece } from '../core/equipment';
+import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { itemInfo } from '../core/items';
+import { gearVerdict } from './compare';
 import { itemName } from './ItemInfo';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
@@ -218,12 +219,8 @@ export class InventoryWindow {
 
   /** How this piece compares with what's worn now, in green (better), red (worse) or ink (mixed). */
   private compare(piece: GearPiece, top: number, pw: number): void {
-    const blocker = equipBlocker(this.world.player, piece.item);
-    const deltas = blocker ? [] : previewEquip(this.world.player, piece);
-    const color = blocker ? TONE.bad : deltas.every((d) => d.delta > 0) && deltas.length ? TONE.good : deltas.every((d) => d.delta < 0) && deltas.length ? TONE.bad : TONE.ink;
-    this.panel.add(
-      this.scene.add.text(12, top, blocker ?? `If worn: ${formatDeltas(deltas)}`, { ...TEXT, fontSize: '11px', fontStyle: 'bold', color, wordWrap: { width: pw - 24 } }),
-    );
+    const v = gearVerdict(this.world.player, piece);
+    this.panel.add(this.scene.add.text(12, top, v.text, { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: v.color, wordWrap: { width: pw - 24 } }));
   }
 
   /** A row's title (tap it for the item card) and a short description beside the buttons. */

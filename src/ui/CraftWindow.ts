@@ -3,9 +3,10 @@ import type { World } from '../core/world';
 import type { RecipeDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
+import { gearVerdict } from './compare';
 import { itemName } from './ItemInfo';
 
-const ROW_H = 62;
+const ROW_H = 80;
 
 /** The tinkerer's bench: every recipe with what you have of each material; ones you can make come first. */
 export class CraftWindow {
@@ -48,9 +49,16 @@ export class CraftWindow {
       }).root,
     );
     const ready = (r: RecipeDef) => w.craftShortfall(r.id).length === 0;
+    const upgrade = (r: RecipeDef) => {
+      const item = w.content.items.get(r.result)!;
+      return !!item.equip && gearVerdict(w.player, w.newPiece(item)).better;
+    };
+    // Ones you can make first, and upgrades for you first within each group.
     const recipes = [...w.content.recipes.values()]
       .filter((r) => !this.onlyReady || ready(r))
-      .sort((a, b) => Number(ready(b)) - Number(ready(a)));
+      .map((r) => ({ r, key: Number(ready(r)) * 2 + Number(upgrade(r)) }))
+      .sort((a, b) => b.key - a.key)
+      .map(({ r }) => r);
     if (recipes.length === 0) {
       p.add(this.scene.add.text(12, 80, 'Nothing you can make yet. Monsters drop the materials.', { ...TEXT, fontSize: '12px', color: TONE.muted, wordWrap: { width: p.w - 24 } }));
     }
@@ -66,7 +74,10 @@ export class CraftWindow {
     const item = w.content.items.get(r.result)!;
     const can = w.craftShortfall(r.id).length === 0;
     const level = item.equip?.minLevel && item.equip.minLevel > 1 ? `  · Lv ${item.equip.minLevel}` : '';
-    this.panel.add(itemName(this.scene, w, 12, y + 2, `${item.name}${r.count > 1 ? ` ×${r.count}` : ''}${level}`, item));
+    // Gear: how it compares with what you wear now, flagged when it's a clear upgrade.
+    const verdict = item.equip ? gearVerdict(w.player, w.newPiece(item)) : null;
+    const name = this.panel.add(itemName(this.scene, w, 12, y + 2, `${verdict?.better ? '▲ ' : ''}${item.name}${r.count > 1 ? ` ×${r.count}` : ''}${level}`, item));
+    if (verdict?.better) name.setColor(TONE.good);
     // Each material with how many you have, red when short.
     const parts = r.materials.map((m) => {
       const have = w.itemCount(m.item);
@@ -84,6 +95,15 @@ export class CraftWindow {
       }
       this.panel.add(t);
       x += t.width + 10;
+    }
+    const below = y + 20 + (line + 1) * 15;
+    if (verdict) {
+      this.panel.add(this.scene.add.text(12, below, verdict.text, { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: verdict.color, wordWrap: { width: pw - 108 }, maxLines: 2 }));
+    } else if (item.petGear && w.player.pet) {
+      const worn = w.player.pet.gear;
+      this.panel.add(
+        this.scene.add.text(12, below, worn ? `Your pet wears: ${worn.name}` : 'Your pet wears nothing yet', { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: worn ? TONE.ink : TONE.good, wordWrap: { width: pw - 108 } }),
+      );
     }
     this.panel.add(
       makeButton(this.scene, pw - 84, y + 8, 72, 32, 'Craft', () => {

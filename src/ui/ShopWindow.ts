@@ -1,12 +1,12 @@
 import type Phaser from 'phaser';
 import { sellPrice } from '../core/combat/formulas';
-import { equipBlocker, isPlain, pieceName, type GearPiece } from '../core/equipment';
-import { formatDeltas, previewEquip } from '../core/progression';
+import { isPlain, pieceName, type GearPiece } from '../core/equipment';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 import { itemInfo } from '../core/items';
+import { gearVerdict } from './compare';
 import { itemName } from './ItemInfo';
 
 type Tab = 'buy' | 'sell';
@@ -133,11 +133,9 @@ export class ShopWindow {
     );
     if (item.equip) {
       if (this.tab === 'buy') {
-        const blocker = equipBlocker(w.player, item);
-        const deltas = blocker ? [] : previewEquip(w.player, w.newPiece(item));
-        const color = blocker ? TONE.bad : deltas.length && deltas.every((d) => d.delta > 0) ? TONE.good : deltas.length && deltas.every((d) => d.delta < 0) ? TONE.bad : TONE.ink;
+        const v = gearVerdict(w.player, w.newPiece(item));
         this.panel.add(
-          this.scene.add.text(12, desc.y + desc.height + 1, blocker ?? `If worn: ${formatDeltas(deltas)}`, { ...TEXT, fontSize: '10px', fontStyle: 'bold', color, wordWrap: { width: pw - 24 } }),
+          this.scene.add.text(12, desc.y + desc.height + 1, v.text, { ...TEXT, fontSize: '10px', fontStyle: 'bold', color: v.color, wordWrap: { width: pw - 24 } }),
         );
       }
     }
