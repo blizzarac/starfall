@@ -1,5 +1,5 @@
 import type { MapDef } from '../data/schemas';
-import { jobOf } from './jobs';
+import { jobOf, SECOND_JOB_LEVEL } from './jobs';
 import { skillLevel } from './skills';
 import { bossFlag, visitedFlag, type World } from './world';
 
@@ -31,7 +31,7 @@ export function nextGoal(world: World): string {
     if (skillLevel(p, 'basic_training') < 9) return 'Put your skill points into Basic Training (Skills).';
     return 'Join a guild in Brightmoor: Captain Harlan, Magister Ilse, Wren or Sister Maren.';
   }
-  if (job.tier === 1 && p.jobLevel >= 40) {
+  if (job.tier === 1 && p.jobLevel >= SECOND_JOB_LEVEL) {
     return been('sunspire') ? 'Take your second-job trial with your guild in Sunspire.' : 'Sail to Sunspire from Saltmere for your second-job trial.';
   }
   if (p.baseLevel >= 18 && !been('saltmere')) return 'Head east from Whisperwood to the harbor town of Saltmere.';

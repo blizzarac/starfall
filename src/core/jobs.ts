@@ -157,4 +157,4 @@ export function jobLineage(jobId: JobId): JobId[] {
 export const NOVICE_JOB_CHANGE = { jobLevel: 10, basicTraining: 9 };
 
 /** First jobs move on to their second job at this job level. */
-export const SECOND_JOB_LEVEL = 40;
+export const SECOND_JOB_LEVEL = 30;

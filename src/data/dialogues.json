@@ -762,7 +762,7 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 40,
+              "jobLevelMin": 30,
               "hasItem": {
                 "id": "scorpion_tail",
                 "count": 10
@@ -772,7 +772,7 @@
           },
           {
             "if": {
-              "jobLevelMin": 40
+              "jobLevelMin": 30
             },
             "next": "fee"
           }
@@ -780,7 +780,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "You have promise, but not yet. Come back at job level 40 as a Swordsman.",
+        "text": "You have promise, but not yet. Come back at job level 30 as a Swordsman.",
         "choices": [
           {
             "label": "I'll be back"
@@ -864,7 +864,7 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 40,
+              "jobLevelMin": 30,
               "hasItem": {
                 "id": "sand_ruby",
                 "count": 3
@@ -874,7 +874,7 @@
           },
           {
             "if": {
-              "jobLevelMin": 40
+              "jobLevelMin": 30
             },
             "next": "fee"
           }
@@ -882,7 +882,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "You have promise, but not yet. Come back at job level 40 as a Mage.",
+        "text": "You have promise, but not yet. Come back at job level 30 as a Mage.",
         "choices": [
           {
             "label": "I'll be back"
@@ -966,7 +966,7 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 40,
+              "jobLevelMin": 30,
               "hasItem": {
                 "id": "sand_pelt",
                 "count": 10
@@ -976,7 +976,7 @@
           },
           {
             "if": {
-              "jobLevelMin": 40
+              "jobLevelMin": 30
             },
             "next": "fee"
           }
@@ -984,7 +984,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "You have promise, but not yet. Come back at job level 40 as a Archer.",
+        "text": "You have promise, but not yet. Come back at job level 30 as a Archer.",
         "choices": [
           {
             "label": "I'll be back"
@@ -1068,7 +1068,7 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 40,
+              "jobLevelMin": 30,
               "hasItem": {
                 "id": "old_bone",
                 "count": 10
@@ -1078,7 +1078,7 @@
           },
           {
             "if": {
-              "jobLevelMin": 40
+              "jobLevelMin": 30
             },
             "next": "fee"
           }
@@ -1086,7 +1086,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "You have promise, but not yet. Come back at job level 40 as a Acolyte.",
+        "text": "You have promise, but not yet. Come back at job level 30 as a Acolyte.",
         "choices": [
           {
             "label": "I'll be back"

@@ -3,7 +3,7 @@ import * as F from '../src/core/combat/formulas';
 import { DialogueRunner } from '../src/core/dialogue';
 import { tileDistance } from '../src/core/grid';
 import { jobLineage, type JobId } from '../src/core/jobs';
-import { derivedStats, gainXp } from '../src/core/progression';
+import { derivedStats, gainXp, jobChangeBlocker } from '../src/core/progression';
 import * as S from '../src/core/skills';
 import { World } from '../src/core/world';
 import { loadContent, START_MAP } from '../src/data/content';
@@ -18,14 +18,14 @@ function run(world: World, ms: number, until?: () => boolean): void {
   }
 }
 
-/** A character of the given first job at job level 40. */
+/** A character of the given first job at job level 30. */
 function veteran(first: JobId): World {
   const w = new World(content, town, { seed: 5 });
   gainXp(w.player, 0, 100_000);
   for (let i = 0; i < 9; i++) w.learnSkill('basic_training');
   w.applyAction({ type: 'changeJob', job: first });
   gainXp(w.player, 0, 50_000_000);
-  expect(w.player.jobLevel).toBeGreaterThanOrEqual(40);
+  expect(w.player.jobLevel).toBeGreaterThanOrEqual(30);
   return w;
 }
 
@@ -52,7 +52,7 @@ function duel(w: World, monsterId = 'sandworm') {
 }
 
 describe('second job change', () => {
-  it('needs job level 40 in the first job, and the trial item', () => {
+  it('needs job level 30 in the first job, and the trial item', () => {
     const young = new World(content, town, { seed: 1 });
     gainXp(young.player, 0, 100_000);
     for (let i = 0; i < 9; i++) young.learnSkill('basic_training');
@@ -61,7 +61,11 @@ describe('second job change', () => {
     young.events.on('notice', (e) => notices.push(e.text));
     young.applyAction({ type: 'changeJob', job: 'knight' });
     expect(young.player.jobId).toBe('swordsman');
-    expect(notices.at(-1)).toMatch(/job level 40/);
+    expect(notices.at(-1)).toMatch(/job level 30/);
+    young.player.jobLevel = 29;
+    expect(jobChangeBlocker(young.player, 'knight')).toMatch(/job level 30/);
+    young.player.jobLevel = 30;
+    expect(jobChangeBlocker(young.player, 'knight')).toBeNull();
 
     const sunspire = content.maps.get('sunspire')!;
     for (const [dialogue, first, second, item, count] of [
