@@ -141,6 +141,8 @@ export class World {
   private petHungerMs = 0;
   private petAttackMs = 0;
   private auraMs = 0;
+  /** Whether the bag was over the slow-recovery weight last tick (for a one-time notice). */
+  private wasHeavy = false;
   /** Story lines already shown for a monster (by id and kind), so each plays once. */
   private storyLinesShown = new Set<string>();
   private holyAuraMs = 0;
@@ -1695,19 +1697,26 @@ export class World {
   }
 
   private regenerate(p: Player, dt: number): void {
-    // A heavy bag stops natural recovery, which is what sends players back to town. So does poison.
-    if (this.weightRatio() >= F.WEIGHT_NO_REGEN || p.statuses.has('poison')) return;
+    // A heavy bag slows natural recovery (and a nearly full one stops it), which is what sends players back to town. So does poison.
+    const ratio = this.weightRatio();
+    const heavy = ratio >= F.WEIGHT_NO_REGEN;
+    if (heavy !== this.wasHeavy) {
+      this.wasHeavy = heavy;
+      if (heavy) this.events.emit('notice', { text: 'Your bag is over half full: HP and SP recover at half speed. Sell some loot.' });
+    }
+    if (ratio >= F.WEIGHT_NO_ATTACK || p.statuses.has('poison')) return;
+    const slow = heavy ? 0.5 : 1;
     const d = derivedStats(p);
     p.hpRegenTimer += dt;
     if (p.hpRegenTimer >= F.hpRegenIntervalMs(p.sitting)) {
       p.hpRegenTimer = 0;
       const bonus = 2 * S.skillLevel(p, 'hp_recovery');
-      p.hp = Math.min(d.maxHp, p.hp + F.hpRegenAmount(d.maxHp, effectiveStats(p).vit) + bonus);
+      p.hp = Math.min(d.maxHp, p.hp + Math.ceil((F.hpRegenAmount(d.maxHp, effectiveStats(p).vit) + bonus) * slow));
     }
     p.spRegenTimer += dt;
     if (p.spRegenTimer >= F.spRegenIntervalMs(p.sitting)) {
       p.spRegenTimer = 0;
-      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int) + S.spRecoveryBonus(S.skillLevel(p, 'sp_recovery'), d.maxSp));
+      p.sp = Math.min(d.maxSp, p.sp + Math.ceil((F.spRegenAmount(d.maxSp, effectiveStats(p).int) + S.spRecoveryBonus(S.skillLevel(p, 'sp_recovery'), d.maxSp)) * slow));
     }
   }
 

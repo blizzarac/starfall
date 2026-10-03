@@ -119,15 +119,30 @@ describe('shops, gold and weight', () => {
     expect(w.weight()).toBeLessThanOrEqual(max);
   });
 
-  it('stops natural regen at half weight and attacking at 90%', () => {
-    const w = new World(content, meadow, { seed: 1 });
-    const drop = content.items.get('jelly_drop')!;
-    w.addItem('jelly_drop', Math.ceil((w.maxWeight() * F.WEIGHT_NO_REGEN) / drop.weight));
-    w.player.hp = 5;
-    run(w, 20_000);
-    expect(w.player.hp).toBe(5);
+  it('halves natural regen from half weight, and stops it and attacking at 90%', () => {
+    const healed = (fill: number) => {
+      const w = new World(content, meadow, { seed: 1 });
+      for (const m of [...w.monsters.values()]) w.monsters.delete(m.id);
+      // Big enough recovery that halving it shows.
+      w.player.baseLevel = 40;
+      w.player.stats.vit = 40;
+      w.refreshStats();
+      const drop = content.items.get('jelly_drop')!;
+      if (fill > 0) w.addItem('jelly_drop', Math.ceil((w.maxWeight() * fill) / drop.weight));
+      w.player.hp = 5;
+      run(w, 20_000);
+      return { gained: w.player.hp - 5, w };
+    };
+    const light = healed(0).gained;
+    const half = healed(F.WEIGHT_NO_REGEN);
+    expect(half.gained).toBeGreaterThan(0);
+    expect(half.gained).toBeLessThan(light);
+    expect(half.gained).toBeGreaterThanOrEqual(Math.floor(light / 2) - 2);
+    const full = healed(F.WEIGHT_NO_ATTACK);
+    expect(full.gained).toBe(0);
 
-    w.addItem('jelly_drop', Math.ceil((w.maxWeight() * 0.45) / drop.weight));
+    const w = new World(content, meadow, { seed: 1 });
+    w.addItem('jelly_drop', Math.ceil((w.maxWeight() * F.WEIGHT_NO_ATTACK) / content.items.get('jelly_drop')!.weight));
     const notices: string[] = [];
     w.events.on('notice', (e) => notices.push(e.text));
     w.attack([...w.monsters.keys()][0]!);

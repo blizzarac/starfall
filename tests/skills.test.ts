@@ -327,7 +327,7 @@ describe('staff basic attack', () => {
 describe('Increase SP Recovery', () => {
   it('adds more SP per tick with level and with max SP, and boosts SP potions', () => {
     expect(spRecoveryBonus(0, 500)).toBe(0);
-    expect(spRecoveryBonus(5, 176)).toBe(24);
+    expect(spRecoveryBonus(5, 176)).toBe(38);
     // Grows with max SP: the same level gives more to a bigger pool.
     expect(spRecoveryBonus(10, 1800)).toBeGreaterThan(spRecoveryBonus(10, 500) + 50);
     const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });

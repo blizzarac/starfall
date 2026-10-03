@@ -180,7 +180,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     requires: [],
     spCost: () => 0,
     cooldownMs: 0,
-    describe: (lv) => `+${4 * lv} SP and +${(lv * SP_RECOVERY_SHARE * 100).toFixed(1).replace(/\.0$/, '')}% of max SP per natural recovery tick; SP potions restore ${10 * lv}% more.`,
+    describe: (lv) => `+${6 * lv} SP and +${(lv * SP_RECOVERY_SHARE * 100).toFixed(1).replace(/\.0$/, '')}% of max SP per natural recovery tick; SP potions restore ${10 * lv}% more.`,
     short: 'SP Rec',
   },
   fire_bolt: bolt('fire_bolt', 'Fire Bolt', 'fire', 'Fire'),
@@ -699,12 +699,12 @@ export function auraRadius(level: number): number {
 
 export const AURA_TICK_MS = 1000;
 
-/** Increase SP Recovery: extra SP per natural tick, as a share of max SP per level (on top of 4 per level). */
-export const SP_RECOVERY_SHARE = 0.005;
+/** Increase SP Recovery: extra SP per natural tick, as a share of max SP per level (on top of 6 per level). */
+export const SP_RECOVERY_SHARE = 0.01;
 
 /** Extra SP per natural recovery tick from Increase SP Recovery: grows with level and with max SP. */
 export function spRecoveryBonus(level: number, maxSp: number): number {
-  return level === 0 ? 0 : 4 * level + Math.floor(maxSp * SP_RECOVERY_SHARE * level);
+  return level === 0 ? 0 : 6 * level + Math.floor(maxSp * SP_RECOVERY_SHARE * level);
 }
 
 /** Holy Aura: a little holy damage each second (share of ATK)… */
