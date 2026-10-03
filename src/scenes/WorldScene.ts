@@ -976,12 +976,12 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** An energy orb flying from the player to the target, bursting on impact. */
-  private boltEffect(targets: number[], color: number): void {
+  private boltEffect(targets: number[], color: number, size = 1): void {
     const view = targets[0] !== undefined ? this.monsterViews.get(targets[0]) : undefined;
     if (!view) return;
     const from = { x: this.player.x, y: this.player.y - 40 };
     const to = { x: view.root.x, y: view.root.y - 18 };
-    const orb = this.add.sprite(from.x, from.y, 'fx-orb', '0').setScale(WORLD_PX).setTint(color).setDepth(LIGHT_DEPTH + 1).setBlendMode(Phaser.BlendModes.ADD).play('fx-orb');
+    const orb = this.add.sprite(from.x, from.y, 'fx-orb', '0').setScale(WORLD_PX * size).setTint(color).setDepth(LIGHT_DEPTH + 1).setBlendMode(Phaser.BlendModes.ADD).play('fx-orb');
     this.tweens.add({
       targets: orb,
       x: to.x,
@@ -989,7 +989,7 @@ export class WorldScene extends Phaser.Scene {
       duration: 180,
       onComplete: () => {
         orb.destroy();
-        this.playFx('fx-burst', to.x, to.y, { tint: color });
+        this.playFx('fx-burst', to.x, to.y, { tint: color, scale: WORLD_PX * size });
       },
     });
   }
@@ -1277,10 +1277,12 @@ export class WorldScene extends Phaser.Scene {
     if (!view) return;
     const dx = view.root.x - this.player.x;
     const dy = view.root.y - this.player.y;
-    // Archers don't step in; the arrow does the travelling.
-    const bow = weaponOf(this.world.player).type === 'bow';
-    this.startAttackAnim(dx, dy, !bow);
-    if (bow) this.time.delayedCall(ATTACK_ANIM_MS * 0.45, () => this.arrowEffect(targetId));
+    // Archers and staff users don't step in; the arrow or magic shot does the travelling.
+    const type = weaponOf(this.world.player).type;
+    const ranged = type === 'bow' || type === 'staff';
+    this.startAttackAnim(dx, dy, !ranged);
+    if (type === 'bow') this.time.delayedCall(ATTACK_ANIM_MS * 0.45, () => this.arrowEffect(targetId));
+    if (type === 'staff') this.time.delayedCall(ATTACK_ANIM_MS * 0.35, () => this.boltEffect([targetId], JOB_GLOW[jobOf(this.world.player).id] ?? 0x9be3ff, 0.6));
   }
 
   private flashHit(id: EntityId): void {

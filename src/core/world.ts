@@ -988,7 +988,9 @@ export class World {
   /** How far (tiles) the player's normal attacks reach: bows shoot from afar. */
   attackRange(): number {
     const p = this.player;
-    return weaponOf(p).type === 'bow' ? S.BOW_RANGE + Math.floor(S.skillLevel(p, 'vultures_eye') / 2) : PLAYER_ATTACK_RANGE;
+    const type = weaponOf(p).type;
+    if (type === 'bow') return S.BOW_RANGE + Math.floor(S.skillLevel(p, 'vultures_eye') / 2);
+    return type === 'staff' ? S.STAFF_RANGE : PLAYER_ATTACK_RANGE;
   }
 
   // ---- Inventory and trade -----------------------------------------------
@@ -1709,7 +1711,15 @@ export class World {
   }
 
   private playerAttack(target: Monster): void {
-    this.player.attackCooldown = derivedStats(this.player).attackDelayMs;
+    const d = derivedStats(this.player);
+    this.player.attackCooldown = d.attackDelayMs;
+    if (weaponOf(this.player).type === 'staff') {
+      // A staff fires a small magic shot instead of swinging: it always hits, uses MATK, and costs nothing.
+      target.hostile = true;
+      const amount = F.magicDamage(d.matk, S.STAFF_SHOT_MATK * this.cardDamageFactor(target), F.elementModifier('neutral', target.def.element), this.monsterDef(target), this.rng);
+      this.hurtMonster(target, amount, false);
+      return;
+    }
     this.playerHit(target, { modifier: 1, hitBonus: 0, element: 'neutral', canCrit: true });
   }
 

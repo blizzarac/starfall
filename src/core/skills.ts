@@ -613,6 +613,10 @@ export function endureDurationMs(lv: number): number {
 
 /** Auto-attack range with a bow, before Vulture's Eye. */
 export const BOW_RANGE = 5;
+/** A staff's basic attack is a magic shot from this far… */
+export const STAFF_RANGE = 5;
+/** …for this share of MATK: free and quick, but weaker than a bolt (100% per hit). */
+export const STAFF_SHOT_MATK = 0.6;
 
 function buffSeconds(lv: number): number {
   return 60 + 20 * lv;

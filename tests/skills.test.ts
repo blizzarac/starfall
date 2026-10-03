@@ -286,3 +286,40 @@ describe('Mage', () => {
     expect(cast).toBe(true);
   });
 });
+
+describe('staff basic attack', () => {
+  it('is a free magic shot from range, weaker than a bolt hit', () => {
+    const w = new World(content, content.maps.get('meadow-2')!, { seed: 3 });
+    gainXp(w.player, 0, 100_000);
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    w.applyAction({ type: 'changeJob', job: 'mage' });
+    w.addItem('oak_staff', 1);
+    expect(w.equip('oak_staff')).toBeNull();
+    w.player.stats.int = 40;
+    w.refreshStats();
+    expect(w.attackRange()).toBe(5);
+    const m = [...w.monsters.values()][0]!;
+    m.hp = 1e6;
+    const spot = [{ x: m.tile.x - 4, y: m.tile.y }, { x: m.tile.x + 4, y: m.tile.y }, { x: m.tile.x, y: m.tile.y - 4 }, { x: m.tile.x, y: m.tile.y + 4 }].find((t) => w.grid.isWalkable(t.x, t.y))!;
+    w.changeMap('meadow-2', spot);
+    const target = [...w.monsters.values()].find((x) => x.tile.x === m.tile.x && x.tile.y === m.tile.y) ?? [...w.monsters.values()][0]!;
+    target.hp = 1e6;
+    target.def = { ...target.def, ai: { ...target.def.ai, aggressive: false, wanderRadius: 0 }, flee: 999 };
+    const sp = w.player.sp;
+    const hits: number[] = [];
+    let misses = 0;
+    w.events.on('damage', (e) => e.targetId === target.id && hits.push(e.amount));
+    w.events.on('miss', (e) => e.sourceId === 'player' && misses++);
+    const start = { ...w.player.tile };
+    w.attack(target.id);
+    for (let t = 0; t < 6000; t += F.TICK_MS) w.tick();
+    // It fired from where it stood, never missed (even against huge FLEE), and cost no SP.
+    expect(w.player.tile).toEqual(start);
+    expect(hits.length).toBeGreaterThanOrEqual(3);
+    expect(misses).toBe(0);
+    expect(w.player.sp).toBeGreaterThanOrEqual(sp);
+    const matk = derivedStats(w.player).matk;
+    expect(Math.max(...hits)).toBeLessThan(matk * 1.1);
+    expect(Math.min(...hits)).toBeGreaterThan(0);
+  });
+});

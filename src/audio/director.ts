@@ -47,7 +47,7 @@ export function bindWorldAudio(world: World): () => void {
     ev.on('damage', (e) => {
       if (e.sourceId === 'player' && e.targetId !== 'player') {
         if (e.crit) audio.play('crit');
-        else audio.play(weaponOf(world.player).type === 'bow' ? 'arrow' : 'hit');
+        else audio.play(weaponOf(world.player).type === 'bow' || weaponOf(world.player).type === 'staff' ? 'arrow' : 'hit');
       } else if (e.targetId === 'player' && e.sourceId !== 'player') {
         audio.play('hurt');
       }
