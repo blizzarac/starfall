@@ -6,7 +6,7 @@ import { isSkillId } from '../core/skills';
 import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
-import { SAVE_SCHEMA_VERSION, type SaveDoc, type SavedPiece } from './schema';
+import { SAVE_SCHEMA_VERSION, type SaveDoc, type SavedPiece, type StorageDoc } from './schema';
 
 /** Snapshot of the player's state. Pure: reads the world, touches nothing. */
 export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): SaveDoc {
@@ -60,14 +60,8 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     statPoints: c.statPoints,
     skillPoints: c.skillPoints,
   });
-  // Gear and cards that no longer exist in the game are dropped rather than failing the load.
   const items = world.content.items;
-  const loadPiece = (s: SavedPiece): GearPiece | null => {
-    const item = items.get(s.item);
-    if (!item?.equip) return null;
-    const cards = s.cards.map((id) => items.get(id)).filter((c): c is ItemDef => !!c?.card);
-    return world.newPiece(item, Math.min(s.refine, MAX_REFINE), cards.slice(0, item.equip.slots));
-  };
+  const loadPiece = (s: SavedPiece) => restorePiece(world, s);
   p.equipment = {};
   for (const [slot, saved] of Object.entries(c.equipment)) {
     const piece = saved && loadPiece(saved);
@@ -107,6 +101,32 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   const d = derivedStats(p);
   p.hp = Math.min(Math.max(1, c.hp), d.maxHp);
   p.sp = Math.min(c.sp, d.maxSp);
+}
+
+/** Gear and cards that no longer exist in the game are dropped rather than failing the load. */
+function restorePiece(world: World, s: SavedPiece): GearPiece | null {
+  const items = world.content.items;
+  const item = items.get(s.item);
+  if (!item?.equip) return null;
+  const cards = s.cards.map((id) => items.get(id)).filter((c): c is ItemDef => !!c?.card);
+  return world.newPiece(item, Math.min(s.refine, MAX_REFINE), cards.slice(0, item.equip.slots));
+}
+
+/** Snapshot of the shared storage. */
+export function toStorageDoc(world: World): StorageDoc {
+  return { items: Object.fromEntries(world.storage.items), gear: world.storage.gear.map(savePiece) };
+}
+
+/** Fills the world's shared storage from a snapshot; unknown items are dropped. */
+export function applyStorageDoc(world: World, doc: StorageDoc): void {
+  world.storage.items.clear();
+  for (const [id, n] of Object.entries(doc.items)) {
+    const item = world.content.items.get(id);
+    if (!item) continue;
+    if (item.equip) for (let i = 0; i < n; i++) world.storage.gear.push(world.newPiece(item));
+    else world.storage.items.set(id, n);
+  }
+  world.storage.gear = doc.gear.map((s) => restorePiece(world, s)).filter((g): g is GearPiece => !!g);
 }
 
 function savePiece(piece: GearPiece): SavedPiece {

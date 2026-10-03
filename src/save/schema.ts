@@ -45,7 +45,7 @@ export const SaveDocSchema = z.object({
   /** Unequipped gear pieces. */
   gear: z.array(PieceSchema),
   gold: z.number().int().nonnegative(),
-  /** Kafra-style item storage; unused until towns exist. */
+  /** Unused: storage is shared by every slot and saved on its own (see StorageDocSchema). */
   storage: Counts,
   /** Active hunts (kills so far) and how often each hunt was completed. */
   quests: z.object({ active: z.record(z.string(), z.number().int().nonnegative()), done: z.record(z.string(), z.number().int().nonnegative()) }),
@@ -54,6 +54,13 @@ export const SaveDocSchema = z.object({
   savePoint: Place,
 });
 export type SaveDoc = z.infer<typeof SaveDocSchema>;
+
+/** The shared storage, kept once for all slots (not inside any save). */
+export const StorageDocSchema = z.object({
+  items: Counts.default({}),
+  gear: z.array(PieceSchema).default([]),
+});
+export type StorageDoc = z.infer<typeof StorageDocSchema>;
 
 /** Summary shown on the title screen without loading the whole save. */
 export interface SlotMeta {

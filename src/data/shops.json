@@ -31,5 +31,20 @@
       "prayer_beads",
       "brightstone"
     ]
+  },
+  {
+    "id": "port_market",
+    "name": "Harbor Market",
+    "items": [
+      "red_tonic",
+      "blue_tonic",
+      "green_herb",
+      "panacea",
+      "fly_wing",
+      "butterfly_wing",
+      "brightstone",
+      "sailor_boots",
+      "seafarer_coat"
+    ]
   }
 ]

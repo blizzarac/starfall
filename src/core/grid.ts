@@ -3,7 +3,7 @@ export interface Tile {
   y: number;
 }
 
-export type Terrain = 'grass' | 'path' | 'flower' | 'cobble' | 'tree' | 'rock' | 'water' | 'wall' | 'cavewall';
+export type Terrain = 'grass' | 'path' | 'flower' | 'cobble' | 'tree' | 'rock' | 'water' | 'wall' | 'cavewall' | 'sand' | 'plank';
 
 const BLOCKING: ReadonlySet<Terrain> = new Set(['tree', 'rock', 'water', 'wall', 'cavewall']);
 

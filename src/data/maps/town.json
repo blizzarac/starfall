@@ -143,6 +143,17 @@
         "body": "#f0e6cc",
         "hair": "#3a3a5a"
       }
+    },
+    {
+      "id": "courier_brightmoor",
+      "name": "Pippa",
+      "x": 16,
+      "y": 10,
+      "dialogue": "courier",
+      "look": {
+        "body": "#ff8a3d",
+        "hair": "#c24a3a"
+      }
     }
   ],
   "portals": [

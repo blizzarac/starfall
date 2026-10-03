@@ -37,6 +37,8 @@ const MONSTER_FEET: Record<MonsterDef['look']['shape'], number> = {
   mushroom: 42,
   bat: 40,
   golem: 52,
+  crab: 36,
+  bird: 42,
 };
 /** Comic sound effects for big hits, by what landed. */
 const SFX = {
@@ -191,6 +193,17 @@ export class WorldScene extends Phaser.Scene {
         }
         if (kind === 'path' && h % 2 === 0) {
           g.fillStyle(COLORS.ink, 0.28).fillCircle(cx + ((h >>> 3) % 24) - 12, cy + ((h >>> 8) % 10) - 5, 1.4);
+        }
+        if (kind === 'sand' && h % 3 === 0) {
+          g.fillStyle(0xc9a35a, 0.8).fillCircle(cx + ((h >>> 3) % 24) - 12, cy + ((h >>> 8) % 10) - 5, 1.2);
+          g.fillStyle(0xc9a35a, 0.8).fillCircle(cx + ((h >>> 6) % 20) - 10, cy + ((h >>> 11) % 8) - 4, 1);
+        }
+        if (kind === 'plank') {
+          // Boards run along one iso axis, with a dark gap between them.
+          g.lineStyle(1.2, COLORS.ink, 0.45);
+          // From the left→bottom edge to the top→right edge, parallel to the left→top edge.
+          for (const t of [1 / 3, 2 / 3]) g.lineBetween(cx - TILE_W / 2 + (t * TILE_W) / 2, cy + (t * TILE_H) / 2, cx + (t * TILE_W) / 2, cy - TILE_H / 2 + (t * TILE_H) / 2);
+          if (h % 4 === 0) g.fillStyle(COLORS.ink, 0.5).fillCircle(cx, cy, 1.2);
         }
         if (kind === 'cobble') {
           g.lineStyle(1, COLORS.ink, 0.22).lineBetween(cx - 16, cy - 8, cx + 16, cy + 8).lineBetween(cx + 16, cy - 8, cx - 16, cy + 8);

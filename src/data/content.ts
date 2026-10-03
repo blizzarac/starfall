@@ -119,6 +119,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     if (c.hasItem) needItem(c.hasItem.id, where);
     if (c.job && knownJobs.size > 0 && !knownJobs.has(c.job)) fail(`${where} checks unknown job '${c.job}'`);
     if (c.skillMin && !SKILL_IDS.has(c.skillMin.id)) fail(`${where} checks unknown skill '${c.skillMin.id}'`);
+    for (const map of [c.visited, c.notMap]) if (map && !content.maps.has(map)) fail(`${where} checks unknown map '${map}'`);
   };
   for (const dlg of content.dialogues.values()) {
     for (const [nodeId, node] of Object.entries(dlg.nodes)) {
@@ -136,6 +137,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
           if (a.type === 'openShop' && !content.shops.has(a.shop)) fail(`${where} opens unknown shop '${a.shop}'`);
           if (a.type === 'takeItem' || a.type === 'giveItem') needItem(a.id, where);
           if (a.type === 'changeJob' && knownJobs.size > 0 && !knownJobs.has(a.job)) fail(`${where} changes to unknown job '${a.job}'`);
+          if (a.type === 'warp' && !walkable(a.map, a.x, a.y)) fail(`${where} warps to a blocked or unknown spot in '${a.map}'`);
         }
       }
     }

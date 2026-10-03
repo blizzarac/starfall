@@ -14,6 +14,8 @@ export const COLORS = {
   houseRoof: 0xe8563f,
   houseRoofShade: 0xbd3f2c,
   water: [0x5fd0f5, 0x5fd0f5],
+  sand: [0xf7e3a8, 0xf7e3a8],
+  plank: [0xd69d5e, 0xd69d5e],
   tileEdge: 0x16131c,
   treeTrunk: 0x9a5f38,
   treeLeaves: [0x56c45a, 0x6ad66b, 0x43a84a],

@@ -14,6 +14,7 @@ import { DialogueBox } from '../ui/DialogueBox';
 import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
 import { QuestWindow } from '../ui/QuestWindow';
+import { StorageWindow } from '../ui/StorageWindow';
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
 import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
@@ -61,6 +62,7 @@ export class UIScene extends Phaser.Scene {
   private inventory!: InventoryWindow;
   private refineWindow!: RefineWindow;
   private questWindow!: QuestWindow;
+  private storageWindow!: StorageWindow;
   /** Active hunts under the status panel. */
   private tracker!: Phaser.GameObjects.Text;
   private skillWindow!: SkillWindow;
@@ -115,12 +117,14 @@ export class UIScene extends Phaser.Scene {
     this.shop = new ShopWindow(this, this.world);
     this.refineWindow = new RefineWindow(this, this.world);
     this.questWindow = new QuestWindow(this, this.world);
+    this.storageWindow = new StorageWindow(this, this.world);
     this.dialogue = new DialogueBox(
       this,
       this.world,
       (shopId) => this.shop.open(shopId),
       () => this.refineWindow.open(),
       () => this.questWindow.open(true),
+      () => this.storageWindow.open(),
     );
     this.tracker = this.add.text(12, 0, '', { ...WORLD_TEXT, fontSize: '11px', lineSpacing: 2 });
     this.buildButtons();
@@ -351,7 +355,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -360,6 +364,7 @@ export class UIScene extends Phaser.Scene {
     if (this.shop.panel.visible) this.shop.refresh();
     if (this.refineWindow.panel.visible) this.refineWindow.refresh();
     if (this.questWindow.panel.visible) this.questWindow.refresh();
+    if (this.storageWindow.panel.visible) this.storageWindow.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -601,6 +606,7 @@ export class UIScene extends Phaser.Scene {
         this.dialogue.close();
         this.shop.close();
         this.refineWindow.close();
+        this.storageWindow.close();
         this.showMapName();
       }),
     ];

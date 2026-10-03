@@ -43,5 +43,15 @@
   {"id": "willow_bow", "name": "Willow Bow", "type": "equipment", "price": 500, "weight": 15, "equip": {"slot": "weapon", "weaponType": "bow", "atk": 26, "twoHanded": true, "jobs": ["archer"], "slots": 2}, "description": "Light and springy. Shoots from 5 tiles away."},
   {"id": "composite_bow", "name": "Composite Bow", "type": "equipment", "price": 1800, "weight": 22, "equip": {"slot": "weapon", "weaponType": "bow", "atk": 44, "twoHanded": true, "jobs": ["archer"], "minLevel": 14, "bonus": {"dex": 1}, "slots": 1}, "description": "Horn and wood glued in layers. Hits hard."},
   {"id": "wooden_mace", "name": "Wooden Mace", "type": "equipment", "price": 450, "weight": 20, "equip": {"slot": "weapon", "weaponType": "mace", "atk": 30, "jobs": ["acolyte"], "slots": 2}, "description": "A blessed club. Same damage on every size."},
-  {"id": "prayer_beads", "name": "Prayer Beads", "type": "equipment", "price": 700, "weight": 2, "equip": {"slot": "accessory", "bonus": {"int": 1, "sp": 30}, "jobs": ["acolyte"], "slots": 1}, "description": "Worn smooth by many hands."}
+  {"id": "prayer_beads", "name": "Prayer Beads", "type": "equipment", "price": 700, "weight": 2, "equip": {"slot": "accessory", "bonus": {"int": 1, "sp": 30}, "jobs": ["acolyte"], "slots": 1}, "description": "Worn smooth by many hands."},
+  {"id": "sea_glass", "name": "Sea Glass", "type": "etc", "price": 70, "weight": 2, "description": "Frosted glass, worn smooth by the tide."},
+  {"id": "crab_shell", "name": "Crab Shell", "type": "etc", "price": 65, "weight": 7, "description": "A thick red shell. Armorers like it."},
+  {"id": "gull_feather", "name": "Gull Feather", "type": "etc", "price": 80, "weight": 1, "description": "Long and white. Fletchers pay well."},
+  {"id": "blue_tonic", "name": "Blue Tonic", "type": "consumable", "price": 350, "weight": 8, "heal": {"hp": 0, "sp": 30}, "description": "Restores 30 SP."},
+  {"id": "seafarer_coat", "name": "Seafarer's Coat", "type": "equipment", "price": 2500, "weight": 30, "equip": {"slot": "body", "def": 6, "minLevel": 20, "bonus": {"hp": 50}, "slots": 1}, "description": "Waxed canvas that shrugs off spray and claws."},
+  {"id": "sailor_boots", "name": "Sailor Boots", "type": "equipment", "price": 900, "weight": 12, "equip": {"slot": "shoes", "def": 2, "bonus": {"agi": 1}, "slots": 1}, "description": "Grippy soles for wet decks."},
+  {"id": "coral_ring", "name": "Coral Ring", "type": "equipment", "price": 1500, "weight": 1, "equip": {"slot": "accessory", "bonus": {"dex": 2}, "slots": 1}, "description": "A ring of pink coral. Steadies the hand."},
+  {"id": "brinejelly_card", "name": "Brinejelly Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shoes", "bonus": {"sp": 40}}, "description": "Shoes card: Max SP +40. Insert it from Items → Bag."},
+  {"id": "shellsnap_card", "name": "Shellsnap Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shield", "resist": {"water": 0.15}}, "description": "Shield card: 15% less damage from water monsters. Insert it from Items → Bag."},
+  {"id": "gullwing_card", "name": "Gullwing Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "accessory", "bonus": {"dex": 2}}, "description": "Accessory card: DEX +2. Insert it from Items → Bag."}
 ]

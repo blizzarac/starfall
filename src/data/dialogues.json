@@ -663,5 +663,175 @@
         ]
       }
     }
+  },
+  {
+    "id": "courier",
+    "nodes": {
+      "start": {
+        "text": "Courier Guild, at your service, {name}! We keep your things safe and get you where you're going.",
+        "choices": [
+          {
+            "label": "Open storage (30 gold)",
+            "do": [
+              {
+                "type": "openStorage",
+                "fee": 30
+              }
+            ]
+          },
+          {
+            "label": "Teleport",
+            "next": "warp"
+          },
+          {
+            "label": "Make this my return point",
+            "do": [
+              {
+                "type": "setSavePoint"
+              }
+            ],
+            "next": "saved"
+          },
+          {
+            "label": "How does storage work?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "warp": {
+        "text": "Where to? I can only send you somewhere you've already been.",
+        "choices": [
+          {
+            "label": "Brightmoor (300 gold)",
+            "if": {
+              "visited": "town",
+              "notMap": "town"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "town",
+                "x": 15,
+                "y": 21,
+                "cost": 300
+              }
+            ]
+          },
+          {
+            "label": "Saltmere (300 gold)",
+            "if": {
+              "visited": "saltmere",
+              "notMap": "saltmere"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "saltmere",
+                "x": 3,
+                "y": 13,
+                "cost": 300
+              }
+            ]
+          },
+          {
+            "label": "Whisperwood (400 gold)",
+            "if": {
+              "visited": "whisperwood",
+              "notMap": "whisperwood"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "whisperwood",
+                "x": 19,
+                "y": 22,
+                "cost": 400
+              }
+            ]
+          },
+          {
+            "label": "Glimmer Caves (600 gold)",
+            "if": {
+              "visited": "caves-1",
+              "notMap": "caves-1"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "caves-1",
+                "x": 19,
+                "y": 2,
+                "cost": 600
+              }
+            ]
+          },
+          {
+            "label": "Never mind"
+          }
+        ]
+      },
+      "saved": {
+        "text": "Done! If you faint, or use a Butterfly Wing, you'll come back here."
+      },
+      "about": {
+        "text": "One storage, shared by all of your adventurers. Store anything here and any of them can take it out at any Courier Guild office. It holds 100 different things.",
+        "choices": [
+          {
+            "label": "Got it",
+            "next": "start"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "harbor_merchant",
+    "nodes": {
+      "start": {
+        "text": "Fresh off the boats! Blue Tonics for the spell-slingers, boots for the deckhands. Have a look.",
+        "choices": [
+          {
+            "label": "Show me your wares",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "port_market"
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "dockmaster",
+    "nodes": {
+      "start": {
+        "text": "Captain Rook. My ship sails south to the desert city of Sunspire, but the crossing is rough and the sands are rougher.",
+        "choices": [
+          {
+            "label": "What's in the desert?",
+            "next": "desert"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "desert": {
+        "text": "Sun-baked ruins, scorpions the size of carts, and things that should've stayed buried. Come back when you're stronger.",
+        "choices": [
+          {
+            "label": "I will"
+          }
+        ]
+      }
+    }
   }
 ]

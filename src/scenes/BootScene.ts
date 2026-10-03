@@ -150,6 +150,27 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x7fe3ff).fillCircle(23, 11, 2.2).fillCircle(33, 11, 2.2);
     g.generateTexture('golem', 56, 56).clear();
 
+    // Crab: wide shell, two big claws, eyes on stalks. Feet at (28, 36).
+    g.fillStyle(0x2a1e2e).fillRect(10, 28, 4, 8).fillRect(17, 30, 4, 7).fillRect(35, 30, 4, 7).fillRect(42, 28, 4, 8);
+    g.fillStyle(0xffffff).fillEllipse(28, 24, 38, 20);
+    g.fillStyle(0xdddddd).fillEllipse(28, 30, 30, 8);
+    g.fillStyle(0xffffff).fillCircle(7, 16, 7).fillCircle(49, 16, 7);
+    g.fillStyle(0xdddddd).fillTriangle(2, 10, 8, 14, 4, 18).fillTriangle(54, 10, 48, 14, 52, 18);
+    g.fillStyle(0xffffff).fillRect(21, 8, 3, 9).fillRect(32, 8, 3, 9);
+    g.fillStyle(0x2a1e2e).fillCircle(22.5, 8, 3).fillCircle(33.5, 8, 3);
+    g.fillStyle(0xffffff).fillCircle(21.6, 7, 1).fillCircle(32.6, 7, 1);
+    g.lineStyle(1.5, 0x2a1e2e).beginPath().arc(28, 25, 4, 0.3, Math.PI - 0.3).strokePath();
+    g.generateTexture('crab', 56, 40).clear();
+
+    // Gull: round white body, wide wings, orange beak, hovering. Feet (shadow) at (28, 42).
+    g.fillStyle(0xdddddd).fillTriangle(2, 8, 24, 18, 18, 26).fillTriangle(54, 8, 32, 18, 38, 26);
+    g.fillStyle(0x9aa3b0).fillTriangle(2, 8, 8, 9, 6, 13).fillTriangle(54, 8, 48, 9, 50, 13);
+    g.fillStyle(0xffffff).fillEllipse(28, 21, 22, 18);
+    g.fillStyle(0xffb03a).fillTriangle(36, 19, 44, 21, 36, 23);
+    g.fillStyle(0x2a1e2e).fillCircle(33, 17, 1.8);
+    g.fillStyle(0xffb03a).fillRect(24, 29, 2, 4).fillRect(30, 29, 2, 4);
+    g.generateTexture('bird', 56, 44).clear();
+
     // Notice board on two posts, with pinned papers. Feet at (24, 54).
     g.fillStyle(0x6b4a2e).fillRect(8, 22, 4, 32).fillRect(36, 22, 4, 32);
     g.fillStyle(0x9a6b42).fillRoundedRect(2, 6, 44, 28, 3);
@@ -173,7 +194,7 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
 
     // Color-manga pass: ink outlines on everything, screentone on round shapes.
-    for (const key of ['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'tree', 'rock']) {
+    for (const key of ['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird', 'tree', 'rock']) {
       inkify(this, key, { outline: 2.5, tone: true });
     }
     for (const key of ['house', 'house-window', 'cavewall', 'board']) inkify(this, key, { outline: 2 });

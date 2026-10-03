@@ -1,5 +1,5 @@
 import type { Condition, DialogueDef, NpcDef } from '../data/schemas';
-import type { World } from './world';
+import { visitedFlag, type World } from './world';
 
 export interface DialogueView {
   speaker: string;
@@ -17,6 +17,8 @@ export function checkCondition(world: World, c: Condition | undefined): boolean 
   if (c.jobLevelMin !== undefined && p.jobLevel < c.jobLevelMin) return false;
   if (c.skillMin !== undefined && world.skillLevel(c.skillMin.id) < c.skillMin.level) return false;
   if (c.hasItem !== undefined && !world.hasItem(c.hasItem.id, c.hasItem.count)) return false;
+  if (c.visited !== undefined && !world.flags.has(visitedFlag(c.visited))) return false;
+  if (c.notMap !== undefined && world.map.id === c.notMap) return false;
   return true;
 }
 
@@ -33,6 +35,8 @@ export class DialogueRunner {
   openRefine = false;
   /** Set when the last choice asked to open the hunting board. */
   openQuests = false;
+  /** Set when the last choice opened (and paid for) storage. */
+  openStorage = false;
 
   constructor(
     private readonly world: World,
@@ -75,6 +79,7 @@ export class DialogueRunner {
       if (result.openShop) this.openShop = result.openShop;
       if (result.openRefine) this.openRefine = true;
       if (result.openQuests) this.openQuests = true;
+      if (result.openStorage) this.openStorage = true;
     }
     this.nodeId = choice.next ?? null;
     this.resolve();

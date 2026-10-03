@@ -169,5 +169,47 @@
         }
       ]
     }
+  },
+  {
+    "id": "shell_shock",
+    "name": "Shell Shock",
+    "description": "Shellsnaps keep pinching the net-menders on Saltmere Coast.",
+    "minLevel": 18,
+    "target": {
+      "monster": "shellsnap",
+      "count": 15
+    },
+    "reward": {
+      "gold": 1800,
+      "baseXp": 2600,
+      "jobXp": 1800,
+      "items": [
+        {
+          "id": "blue_tonic",
+          "count": 2
+        }
+      ]
+    }
+  },
+  {
+    "id": "gull_patrol",
+    "name": "Gull Patrol",
+    "description": "Gullwings are diving at anyone who carries fish. Thin them out.",
+    "minLevel": 20,
+    "target": {
+      "monster": "gullwing",
+      "count": 15
+    },
+    "reward": {
+      "gold": 2200,
+      "baseXp": 3200,
+      "jobXp": 2200,
+      "items": [
+        {
+          "id": "red_tonic",
+          "count": 5
+        }
+      ]
+    }
   }
 ]

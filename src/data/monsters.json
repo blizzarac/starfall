@@ -515,5 +515,152 @@
       "scale": 2.2,
       "shape": "golem"
     }
+  },
+  {
+    "id": "brinejelly",
+    "name": "Brinejelly",
+    "level": 18,
+    "hp": 520,
+    "atk": [
+      24,
+      32
+    ],
+    "def": 10,
+    "hit": 50,
+    "flee": 30,
+    "element": "water",
+    "size": "medium",
+    "attackDelayMs": 1500,
+    "attackRange": 1,
+    "moveMs": 420,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 4
+    },
+    "baseXp": 140,
+    "jobXp": 100,
+    "drops": [
+      {
+        "item": "jelly_drop",
+        "chance": 0.6
+      },
+      {
+        "item": "sea_glass",
+        "chance": 0.25
+      },
+      {
+        "item": "blue_tonic",
+        "chance": 0.03
+      },
+      {
+        "item": "brinejelly_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#6fc6e8",
+      "scale": 1.1,
+      "shape": "blob"
+    }
+  },
+  {
+    "id": "shellsnap",
+    "name": "Shellsnap",
+    "level": 21,
+    "hp": 820,
+    "atk": [
+      36,
+      46
+    ],
+    "def": 28,
+    "hit": 58,
+    "flee": 20,
+    "element": "water",
+    "size": "small",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 300,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 4
+    },
+    "baseXp": 215,
+    "jobXp": 155,
+    "drops": [
+      {
+        "item": "crab_shell",
+        "chance": 0.5
+      },
+      {
+        "item": "sea_glass",
+        "chance": 0.1
+      },
+      {
+        "item": "sailor_boots",
+        "chance": 0.01
+      },
+      {
+        "item": "shellsnap_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#f2694a",
+      "scale": 1,
+      "shape": "crab"
+    }
+  },
+  {
+    "id": "gullwing",
+    "name": "Gullwing",
+    "level": 24,
+    "hp": 560,
+    "atk": [
+      38,
+      48
+    ],
+    "def": 8,
+    "hit": 66,
+    "flee": 56,
+    "element": "wind",
+    "size": "small",
+    "attackDelayMs": 1100,
+    "attackRange": 1,
+    "moveMs": 170,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 6
+    },
+    "baseXp": 265,
+    "jobXp": 185,
+    "drops": [
+      {
+        "item": "gull_feather",
+        "chance": 0.5
+      },
+      {
+        "item": "blue_tonic",
+        "chance": 0.04
+      },
+      {
+        "item": "coral_ring",
+        "chance": 0.005
+      },
+      {
+        "item": "gullwing_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#f4f6fa",
+      "scale": 1,
+      "shape": "bird"
+    }
   }
 ]

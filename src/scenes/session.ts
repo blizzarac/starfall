@@ -4,7 +4,7 @@ import { World } from '../core/world';
 import type { SaveDb } from '../save/db';
 import { SaveManager } from '../save/manager';
 import type { SaveDoc } from '../save/schema';
-import { applySaveDoc } from '../save/serialize';
+import { applySaveDoc, applyStorageDoc } from '../save/serialize';
 
 /** Builds the world for a slot (from a save, or fresh) and switches to gameplay. */
 export async function startSession(scene: Phaser.Scene, slot: number, doc: SaveDoc | null, newName?: string): Promise<void> {
@@ -13,6 +13,7 @@ export async function startSession(scene: Phaser.Scene, slot: number, doc: SaveD
   const map = content.maps.get(doc?.position.map ?? START_MAP) ?? content.maps.get(START_MAP)!;
   const world = new World(content, map, { playerName: newName });
   if (doc) applySaveDoc(world, doc);
+  applyStorageDoc(world, await db.loadStorage());
 
   const saves = new SaveManager(db, slot, world, doc?.playtimeMs ?? 0, () => scene.game.events.emit('saved'));
   saves.attach();

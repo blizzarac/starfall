@@ -16,6 +16,7 @@ export class DialogueBox {
     private readonly onShop: (shopId: string) => void,
     private readonly onRefine: () => void,
     private readonly onQuests: () => void,
+    private readonly onStorage: () => void,
   ) {
     this.panel = new Panel(
       scene,
@@ -49,10 +50,12 @@ export class DialogueBox {
       const shop = this.runner?.openShop;
       const refine = this.runner?.openRefine;
       const quests = this.runner?.openQuests;
+      const storage = this.runner?.openStorage;
       this.close();
       if (shop) this.onShop(shop);
       if (refine) this.onRefine();
       if (quests) this.onQuests();
+      if (storage) this.onStorage();
       return;
     }
     const p = this.panel;

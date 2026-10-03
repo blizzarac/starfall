@@ -1,7 +1,7 @@
 import type { World } from '../core/world';
 import type { SaveDb } from './db';
 import { migrate } from './migrations';
-import { toSaveDoc } from './serialize';
+import { toSaveDoc, toStorageDoc } from './serialize';
 import type { SaveDoc } from './schema';
 
 export const AUTOSAVE_MS = 60_000;
@@ -88,8 +88,9 @@ export class SaveManager {
   save(): Promise<void> {
     this.sinceSave = 0;
     const doc = toSaveDoc(this.world, this.playtimeMs);
+    const storage = toStorageDoc(this.world);
     this.writing = this.writing
-      .then(() => this.db.write(this.slot, doc))
+      .then(() => this.db.write(this.slot, doc, storage))
       .then(() => {
         this.onSaved();
         return requestPersistence();

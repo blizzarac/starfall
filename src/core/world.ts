@@ -50,6 +50,7 @@ export interface WorldEvents extends Record<string, unknown> {
   jobChanged: { jobId: string };
   /** The current map was swapped for another; scenes rebuild. */
   mapChanged: { mapId: string };
+  storageChanged: Record<string, never>;
   notice: { text: string };
 }
 
@@ -69,6 +70,15 @@ const SKILL_AUTO_TARGET_RANGE = 8;
 const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
 
+/** Shared storage: one stash for every character, kept outside the save slots. */
+export interface Storage {
+  items: Map<string, number>;
+  gear: GearPiece[];
+}
+
+/** Different items (stacks plus gear pieces) the storage can hold. */
+export const STORAGE_CAPACITY = 100;
+
 /**
  * The game simulation. Holds the player and the one map they're on; other maps
  * are not simulated. Knows nothing about rendering: scenes call the intent
@@ -84,6 +94,8 @@ export class World {
   time = 0;
   /** Saved key/value state: boss respawn times, quest flags. */
   readonly flags = new Map<string, string | number | boolean>();
+  /** The shared stash; the save manager loads and saves it alongside the slot. */
+  readonly storage: Storage = { items: new Map(), gear: [] };
 
   private currentMap!: MapDef;
   private currentGrid!: Grid;
@@ -661,10 +673,67 @@ export class World {
     this.events.emit('inventoryChanged', {});
   }
 
+  // ---- Storage -------------------------------------------------------------
+
+  /** Stacks plus gear pieces in storage. */
+  storageUsed(): number {
+    return this.storage.items.size + this.storage.gear.length;
+  }
+
+  /** Moves `count` of a stackable item from the bag into storage. Returns why not, or null. */
+  store(itemId: string, count: number): string | null {
+    const have = this.player.inventory.get(itemId) ?? 0;
+    if (count < 1 || have < count) return "You don't have that many.";
+    const items = this.storage.items;
+    if (!items.has(itemId) && this.storageUsed() >= STORAGE_CAPACITY) return 'Storage is full.';
+    this.removeItem(itemId, count);
+    items.set(itemId, (items.get(itemId) ?? 0) + count);
+    this.events.emit('storageChanged', {});
+    return null;
+  }
+
+  /** Moves one gear piece from the bag into storage, refine and cards intact. */
+  storePiece(uid: number): string | null {
+    const piece = this.player.gear.find((g) => g.uid === uid);
+    if (!piece) return "You don't have that.";
+    if (this.storageUsed() >= STORAGE_CAPACITY) return 'Storage is full.';
+    this.player.gear = this.player.gear.filter((g) => g !== piece);
+    this.storage.gear.push(piece);
+    this.events.emit('inventoryChanged', {});
+    this.events.emit('storageChanged', {});
+    return null;
+  }
+
+  /** Moves `count` of a stackable item from storage into the bag. */
+  takeOut(itemId: string, count: number): string | null {
+    const items = this.storage.items;
+    const have = items.get(itemId) ?? 0;
+    const item = this.content.items.get(itemId);
+    if (!item || count < 1 || have < count) return "That isn't in storage.";
+    if (this.weight() + item.weight * count > this.maxWeight()) return "You can't carry that much.";
+    if (have === count) items.delete(itemId);
+    else items.set(itemId, have - count);
+    this.addItem(itemId, count);
+    this.events.emit('storageChanged', {});
+    return null;
+  }
+
+  /** Moves one gear piece from storage into the bag. */
+  takePiece(uid: number): string | null {
+    const piece = this.storage.gear.find((g) => g.uid === uid);
+    if (!piece) return "That isn't in storage.";
+    if (this.weight() + piece.item.weight > this.maxWeight()) return "You can't carry that much.";
+    this.storage.gear = this.storage.gear.filter((g) => g !== piece);
+    this.player.gear.push(piece);
+    this.events.emit('inventoryChanged', {});
+    this.events.emit('storageChanged', {});
+    return null;
+  }
+
   // ---- NPC services ------------------------------------------------------
 
   /** Runs one dialogue action. Returns a shop id when the action opens a shop. */
-  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean; openQuests?: boolean } {
+  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean; openQuests?: boolean; openStorage?: boolean } {
     const p = this.player;
     switch (action.type) {
       case 'setSavePoint':
@@ -692,6 +761,21 @@ export class World {
       case 'giveItem':
         this.addItem(action.id, action.count);
         return {};
+      case 'openStorage':
+        if (p.gold < action.fee) {
+          this.events.emit('notice', { text: `Storage costs ${action.fee} gold to open.` });
+          return {};
+        }
+        p.gold -= action.fee;
+        return { openStorage: true };
+      case 'warp':
+        if (p.gold < action.cost) {
+          this.events.emit('notice', { text: `You need ${action.cost} gold for that trip.` });
+          return {};
+        }
+        p.gold -= action.cost;
+        this.changeMap(action.map, { x: action.x, y: action.y });
+        return {};
       case 'changeJob': {
         const err = isJobId(action.job) ? changeJob(p, action.job) : 'Unknown job.';
         if (err) this.events.emit('notice', { text: err });
@@ -718,6 +802,7 @@ export class World {
 
   private loadMap(map: MapDef): void {
     this.currentMap = map;
+    this.flags.set(visitedFlag(map.id), true);
     this.currentGrid = buildGrid(map);
     this.monsters.clear();
     this.drops.clear();
@@ -1293,6 +1378,11 @@ export function renderPosition(m: Mover, alpha: number): { x: number; y: number 
   if (!m.next) return { x: m.tile.x, y: m.tile.y };
   const t = Math.min(1, (m.stepElapsed + alpha * F.TICK_MS) / m.stepDuration);
   return { x: m.tile.x + (m.next.x - m.tile.x) * t, y: m.tile.y + (m.next.y - m.tile.y) * t };
+}
+
+/** Flag key set once the player has been on a map (unlocks teleports there). */
+export function visitedFlag(mapId: string): string {
+  return `visited:${mapId}`;
 }
 
 /** Flag key holding a boss's respawn time (epoch ms). */

@@ -117,7 +117,7 @@ export const MonsterSchema = z.object({
   look: z.object({
     color: z.string().regex(/^#[0-9a-f]{6}$/i),
     scale: z.number().positive(),
-    shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem']).default('blob'),
+    shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird']).default('blob'),
   }),
   /** A status effect this monster's normal attacks may cause. */
   inflict: InflictSchema.optional(),
@@ -150,6 +150,8 @@ export const TERRAIN_CHARS = {
   '~': 'water',
   '#': 'wall',
   X: 'cavewall',
+  _: 'sand',
+  '+': 'plank',
 } as const;
 
 const PlaceSchema = z.object({ map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
@@ -221,6 +223,10 @@ export const ConditionSchema = z.object({
   jobLevelMin: z.number().int().optional(),
   skillMin: z.object({ id: z.string(), level: z.number().int().positive() }).optional(),
   hasItem: z.object({ id: z.string(), count: z.number().int().positive() }).optional(),
+  /** The player has been to this map before. */
+  visited: z.string().optional(),
+  /** The player is not on this map right now (hides a teleport to where you already are). */
+  notMap: z.string().optional(),
 });
 export type Condition = z.infer<typeof ConditionSchema>;
 
@@ -233,6 +239,10 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('takeItem'), id: z.string(), count: z.number().int().positive() }),
   z.object({ type: z.literal('giveItem'), id: z.string(), count: z.number().int().positive() }),
   z.object({ type: z.literal('changeJob'), job: z.string() }),
+  /** Opens the shared storage for a fee. */
+  z.object({ type: z.literal('openStorage'), fee: z.number().int().nonnegative() }),
+  /** Teleports for a fee. */
+  z.object({ type: z.literal('warp'), map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative(), cost: z.number().int().nonnegative() }),
 ]);
 export type DialogueAction = z.infer<typeof ActionSchema>;
 
