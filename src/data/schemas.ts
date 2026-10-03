@@ -27,7 +27,7 @@ export const EquipSchema = z
     /** Magic attack, for staves. */
     matk: z.number().int().nonnegative().default(0),
     def: z.number().int().nonnegative().default(0),
-    weaponType: z.enum(['dagger', 'sword', 'bow', 'staff']).optional(),
+    weaponType: z.enum(['dagger', 'sword', 'bow', 'staff', 'mace']).optional(),
     twoHanded: z.boolean().default(false),
     /** Jobs that can wear it; omit for everyone. */
     jobs: z.array(z.string()).optional(),

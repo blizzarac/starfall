@@ -16,7 +16,7 @@ import { ShopWindow } from '../ui/ShopWindow';
 import { QuestWindow } from '../ui/QuestWindow';
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
-import { SKILLS, skillLevel, type SkillDef } from '../core/skills';
+import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
 import type { Panel } from '../ui/widgets';
 
 const HOTBAR: Array<{ key: string; itemId: string }> = [
@@ -204,7 +204,7 @@ export class UIScene extends Phaser.Scene {
     const pct = (a: number, b: number) => `${((a / b) * 100).toFixed(1)}%`;
     this.statusText.setText(
       [
-        `${p.name}  ·  ${job.name}${p.sitting ? '  (sitting)' : ''}${p.buffs.has('endure') ? '  · Endure' : ''}`,
+        `${p.name}  ·  ${job.name}${p.sitting ? '  (sitting)' : ''}${[...p.buffs.keys()].map((id) => `  · ${isSkillId(id) ? SKILLS[id].short : id}`).join('')}`,
         `HP ${p.hp}/${d.maxHp}`,
         `SP ${p.sp}/${d.maxSp}`,
         `Base Lv ${p.baseLevel}  ${pct(p.baseXp, baseNeed)}`,
@@ -586,7 +586,8 @@ export class UIScene extends Phaser.Scene {
       ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
       ev.on('jobChanged', (e) => {
-        this.addLog(`You are now a ${isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId}! Open Skills to learn new skills.`);
+        const name = isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId;
+        this.addLog(`You are now ${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}! Open Skills to learn new skills.`);
         this.buildSkillButtons();
       }),
       ev.on('talk', (e) => {

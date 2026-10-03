@@ -29,7 +29,7 @@ export type Element = (typeof ELEMENTS)[number];
 export const SIZES = ['small', 'medium', 'large'] as const;
 export type Size = (typeof SIZES)[number];
 
-export type WeaponType = 'fist' | 'dagger' | 'sword' | 'bow' | 'staff';
+export type WeaponType = 'fist' | 'dagger' | 'sword' | 'bow' | 'staff' | 'mace';
 
 // ---- Progression ---------------------------------------------------------
 
@@ -115,6 +115,7 @@ const WEAPON_BASE_ASPD: Record<WeaponType, number> = {
   sword: 144,
   bow: 140,
   staff: 136,
+  mace: 142,
 };
 
 /** ASPD on a 0–190 scale, from AGI, DEX and weapon type. */
@@ -157,6 +158,7 @@ const SIZE_TABLE: Record<WeaponType, Record<Size, number>> = {
   sword: { small: 0.75, medium: 1, large: 0.75 },
   bow: { small: 1, medium: 1, large: 0.75 },
   staff: { small: 1, medium: 1, large: 1 },
+  mace: { small: 1, medium: 1, large: 1 },
 };
 
 export function sizeModifier(weapon: WeaponType, size: Size): number {

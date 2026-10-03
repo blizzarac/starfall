@@ -3,7 +3,7 @@ import type { StatName } from './combat/formulas';
 import { createMover, type Player } from './entities';
 import type { Tile } from './grid';
 import { JOBS, jobOf, NOVICE_JOB_CHANGE, type JobId } from './jobs';
-import { learnBlocker, skillLevel, type SkillId } from './skills';
+import { learnBlocker, skillLevel, skillStatBonus, type SkillId } from './skills';
 import { gearBonus, weaponOf } from './equipment';
 import { BLIND_FACTOR } from './status';
 
@@ -20,10 +20,18 @@ export interface DerivedStats {
   attackDelayMs: number;
 }
 
-/** Base stats plus gear bonuses: what every formula should use. */
+/** Base stats plus gear, passive and buff bonuses: what every formula should use. */
 export function effectiveStats(p: Player): F.Stats {
   const b = gearBonus(p);
-  return { str: p.stats.str + b.str, agi: p.stats.agi + b.agi, vit: p.stats.vit + b.vit, int: p.stats.int + b.int, dex: p.stats.dex + b.dex, luk: p.stats.luk + b.luk };
+  const k = skillStatBonus(p);
+  return {
+    str: p.stats.str + b.str + k.str,
+    agi: p.stats.agi + b.agi + k.agi,
+    vit: p.stats.vit + b.vit + k.vit,
+    int: p.stats.int + b.int + k.int,
+    dex: p.stats.dex + b.dex + k.dex,
+    luk: p.stats.luk + b.luk + k.luk,
+  };
 }
 
 export function derivedStats(p: Player): DerivedStats {
@@ -39,7 +47,7 @@ export function derivedStats(p: Player): DerivedStats {
     maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
     atk: F.statusAtk(s) + weapon.atk + mastery + gear.atk,
     matk: F.statusMatk(s.int) + weapon.matk + gear.matk,
-    hit: Math.floor((F.hit(p.baseLevel, s.dex) + gear.hit) * blind),
+    hit: Math.floor((F.hit(p.baseLevel, s.dex) + gear.hit + skillLevel(p, 'vultures_eye')) * blind),
     flee: Math.floor((F.flee(p.baseLevel, s.agi) + gear.flee) * blind),
     def: F.softDef(s.vit) + gear.def,
     crit: F.critChance(s.luk),

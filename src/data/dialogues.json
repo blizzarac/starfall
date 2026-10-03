@@ -127,7 +127,7 @@
         ]
       },
       "stronger": {
-        "text": "Every level gives stat points: open Stats to spend them. At job level 10 you can join the Swordsman Guild (Captain Harlan) or the Circle of Mages (Magister Ilse). Sell loot to Bram so your bag never gets too heavy.",
+        "text": "Every level gives stat points: open Stats to spend them. At job level 10 you can join a guild: Swordsmen (Captain Harlan), Mages (Magister Ilse), Archers (Wren) or Acolytes (Sister Maren). Sell loot to Bram so your bag never gets too heavy.",
         "choices": [
           {
             "label": "Anything else?",
@@ -439,6 +439,226 @@
           },
           {
             "label": "Leave"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "archer_guild",
+    "nodes": {
+      "start": {
+        "text": "Archer's Lodge. You walk loud, {name}. Out in the woods, that gets you eaten.",
+        "choices": [
+          {
+            "label": "I want to become an Archer",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "What does an Archer do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              },
+              "hasItem": {
+                "id": "moss_clump",
+                "count": 6
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              }
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial: bring me 6 Moss Clumps from Mossy Hollow, south of Thornfield. Mosslings hide in plain sight. Learn to spot them.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Six clumps, nice and damp. Hand them over and take the Lodge's oath?",
+        "choices": [
+          {
+            "label": "I swear it",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "moss_clump",
+                "count": 6
+              },
+              {
+                "type": "changeJob",
+                "job": "archer"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome to the Lodge, Archer {name}! Greta sells bows. With one equipped you shoot from five tiles away, so let them come to you. Learn Double Strafe in Skills."
+      },
+      "about": {
+        "text": "Archers shoot from afar with a bow. Double Strafe fires two arrows at once, Arrow Shower hits a whole pack, and Owl's Eye sharpens your aim. Raise DEX for damage and AGI for speed.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "acolyte_chapel",
+    "nodes": {
+      "start": {
+        "text": "Welcome to the chapel, {name}. Everyone who walks in is tired. Sit a while.",
+        "choices": [
+          {
+            "label": "I want to become an Acolyte",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "What does an Acolyte do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              },
+              "hasItem": {
+                "id": "sweet_apple",
+                "count": 4
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              }
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial is a kindness: bring 4 Sweet Apples for the children of the chapel. Bram sells them, or the meadow provides.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Four apples. The children will be delighted. Take the chapel's blessing?",
+        "choices": [
+          {
+            "label": "I accept",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "sweet_apple",
+                "count": 4
+              },
+              {
+                "type": "changeJob",
+                "job": "acolyte"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome, Acolyte {name}. Learn Heal in Skills and you'll never need a tonic again. Blessing and Increase AGI make you stronger and faster. Greta sells maces."
+      },
+      "about": {
+        "text": "Acolytes heal themselves, bless their body and mind, and burn the undead with Holy Light. Raise INT for stronger heals and more SP.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "Thanks"
           }
         ]
       }

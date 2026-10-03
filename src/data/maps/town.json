@@ -121,6 +121,28 @@
         "hair": "#8a5a3b"
       },
       "sprite": "board"
+    },
+    {
+      "id": "archer_wren",
+      "name": "Wren",
+      "x": 6,
+      "y": 7,
+      "dialogue": "archer_guild",
+      "look": {
+        "body": "#4f9a5a",
+        "hair": "#8a4a2a"
+      }
+    },
+    {
+      "id": "acolyte_maren",
+      "name": "Sister Maren",
+      "x": 26,
+      "y": 7,
+      "dialogue": "acolyte_chapel",
+      "look": {
+        "body": "#f0e6cc",
+        "hair": "#3a3a5a"
+      }
     }
   ],
   "portals": [

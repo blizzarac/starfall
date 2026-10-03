@@ -338,6 +338,7 @@ export class World {
     if (lv === 0 || skill.kind === 'passive') return;
     const notice = (text: string) => this.events.emit('notice', { text });
     if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) return notice("You're carrying too much to fight.");
+    if (skill.needsWeapon && weaponOf(p).type !== skill.needsWeapon) return notice(`${skill.name} needs a ${skill.needsWeapon} equipped.`);
     if ((p.cooldowns.get(id) ?? 0) > 0) return notice(`${skill.name} isn't ready yet.`);
     if (p.sp < skill.spCost(lv)) return notice('Not enough SP.');
     p.sitting = false;
@@ -385,7 +386,7 @@ export class World {
       const elem = F.elementModifier(skill.magic.element, target.def.element);
       for (let i = 0; i < skill.magic.hits(lv) && this.monsters.has(target.id); i++) {
         target.hostile = true;
-        this.hurtMonster(target, F.magicDamage(d.matk, skill.magic.perHit * this.cardDamageFactor(target), elem, target.def.def, this.rng), false);
+        this.hurtMonster(target, F.magicDamage(d.matk, skill.magic.perHit(lv) * this.cardDamageFactor(target), elem, target.def.def, this.rng), false);
       }
     } else if (id === 'bash' && target) {
       hit.push(target.id);
@@ -398,10 +399,45 @@ export class World {
         const m = this.monsters.get(mid);
         if (m) this.playerHit(m, { modifier: S.magnumModifier(lv), hitBonus: S.MAGNUM_HIT_BONUS, element: 'fire' });
       }
-    } else if (id === 'endure') {
-      p.buffs.set('endure', { level: lv, remainingMs: S.endureDurationMs(lv) });
+    } else if (id === 'double_strafe' && target) {
+      hit.push(target.id);
+      this.events.emit('skillUsed', { skillId: id, targets: hit });
+      for (let i = 0; i < 2 && this.monsters.has(target.id); i++) {
+        this.playerHit(target, { modifier: S.doubleStrafeModifier(lv), hitBonus: 0, element: 'neutral' });
+      }
+    } else if (id === 'arrow_shower' && target) {
+      for (const m of this.monsters.values()) if (tileDistance(target.tile, m.tile) <= S.ARROW_SHOWER_RADIUS) hit.push(m.id);
+      this.events.emit('skillUsed', { skillId: id, targets: hit });
+      for (const mid of hit) {
+        const m = this.monsters.get(mid);
+        if (m) this.playerHit(m, { modifier: S.arrowShowerModifier(lv), hitBonus: 0, element: 'neutral' });
+      }
+    } else if (id === 'heal') {
+      const d = derivedStats(p);
+      const hp = Math.min(S.healAmount(p.baseLevel, effectiveStats(p).int, lv), d.maxHp - p.hp);
+      p.hp += hp;
+      this.events.emit('skillUsed', { skillId: id, targets: [] });
+      this.events.emit('heal', { hp, sp: 0 });
+    } else if (skill.buffMs) {
+      p.buffs.set(id, { level: lv, remainingMs: skill.buffMs(lv) });
+      this.afterBuffChange();
       this.events.emit('skillUsed', { skillId: id, targets: [] });
     }
+  }
+
+  /** Buffs change stats and speed; keep HP and SP within the new maximums. */
+  private afterBuffChange(): void {
+    const p = this.player;
+    p.moveMs = p.buffs.has('increase_agi') ? Math.round(F.PLAYER_MOVE_MS * S.INCREASE_AGI_MOVE) : F.PLAYER_MOVE_MS;
+    const d = derivedStats(p);
+    p.hp = Math.min(p.hp, d.maxHp);
+    p.sp = Math.min(p.sp, d.maxSp);
+  }
+
+  /** How far (tiles) the player's normal attacks reach: bows shoot from afar. */
+  attackRange(): number {
+    const p = this.player;
+    return weaponOf(p).type === 'bow' ? S.BOW_RANGE + Math.floor(S.skillLevel(p, 'vultures_eye') / 2) : PLAYER_ATTACK_RANGE;
   }
 
   // ---- Inventory and trade -----------------------------------------------
@@ -775,7 +811,7 @@ export class World {
           p.casting = null;
           this.finishSkill(intent.skillId, target);
         }
-      } else if (this.approach(p, target, dt, intent.kind === 'skill' ? this.skillRange(intent.skillId) : PLAYER_ATTACK_RANGE)) {
+      } else if (this.approach(p, target, dt, intent.kind === 'skill' ? this.skillRange(intent.skillId) : this.attackRange())) {
         if (intent.kind === 'skill' && S.isSkillId(intent.skillId)) {
           const skill = S.SKILLS[intent.skillId];
           const lv = S.skillLevel(p, intent.skillId);
@@ -830,7 +866,9 @@ export class World {
   }
 
   private skillRange(id: string): number {
-    return S.isSkillId(id) ? (S.SKILLS[id].range ?? PLAYER_ATTACK_RANGE) : PLAYER_ATTACK_RANGE;
+    if (!S.isSkillId(id)) return PLAYER_ATTACK_RANGE;
+    const skill = S.SKILLS[id];
+    return skill.weaponRange ? this.attackRange() : (skill.range ?? PLAYER_ATTACK_RANGE);
   }
 
   /** Fires a targeted skill whose cast (if any) has finished, then picks what to do next. */
@@ -871,7 +909,8 @@ export class World {
       buff.remainingMs -= dt;
       if (buff.remainingMs <= 0) {
         p.buffs.delete(id);
-        if (id === 'endure') this.events.emit('notice', { text: 'Endure wore off.' });
+        this.afterBuffChange();
+        this.events.emit('notice', { text: `${S.isSkillId(id) ? S.SKILLS[id].name : id} wore off.` });
       }
     }
   }
@@ -1093,8 +1132,9 @@ export class World {
   private hurtPlayer(m: Monster, raw: number): void {
     const p = this.player;
     const endure = p.buffs.get('endure');
+    const divine = m.def.element === 'undead' || m.def.element === 'shadow' ? S.divineProtectionReduction(S.skillLevel(p, 'divine_protection')) : 0;
     // Monsters hit with their own element, so cards with matching resistance help.
-    const resist = Math.min(0.8, cardEffects(p).resist[m.def.element] ?? 0) + (endure ? S.endureReduction(endure.level) : 0);
+    const resist = Math.min(0.8, cardEffects(p).resist[m.def.element] ?? 0) + (endure ? S.endureReduction(endure.level) : 0) + divine;
     const amount = resist > 0 ? Math.max(1, Math.floor(raw * (1 - Math.min(0.9, resist)))) : raw;
     p.hp -= amount;
     p.sitting = false;
@@ -1118,6 +1158,7 @@ export class World {
     p.sitting = false;
     p.casting = null;
     p.buffs.clear();
+    this.afterBuffChange();
     p.statuses.clear();
     this.session.deaths += 1;
     const xpLost = applyDeathPenalty(p);

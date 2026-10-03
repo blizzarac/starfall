@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { feetOrigin, inkify } from './ink';
+import type { JobExtra } from '../core/jobs';
 import { COLORS } from './palette';
 
 /** Size of a chibi drawing before inking, and the row its feet stand on. */
@@ -11,7 +12,7 @@ export const CHIBI_FEET_Y = 58;
  * Draws an anime-style chibi facing right into texture `key` (once), then inks it:
  * big head, spiky hair, large glossy eyes, a jacket in the job or NPC color.
  */
-export function ensureChibi(scene: Phaser.Scene, key: string, body: number, hair: number, extra?: 'sword' | 'staff'): string {
+export function ensureChibi(scene: Phaser.Scene, key: string, body: number, hair: number, extra?: JobExtra): string {
   if (scene.textures.exists(key)) return key;
   const g = scene.make.graphics({}, false);
   const shade = Phaser.Display.Color.ValueToColor(body).darken(22).color;
@@ -36,6 +37,22 @@ export function ensureChibi(scene: Phaser.Scene, key: string, body: number, hair
     g.fillStyle(0x8a5a3b).fillRect(36, 12, 3, 46);
     g.fillStyle(0x7fe3ff).fillCircle(37.5, 10, 5.5);
     g.fillStyle(0xffffff).fillCircle(36, 8.5, 2);
+  }
+  if (extra === 'bow') {
+    // A recurve bow held upright on the right, string pulled straight.
+    g.lineStyle(3, 0x8a5a3b).beginPath().arc(30, 34, 15, -1.2, 1.2).strokePath();
+    g.lineStyle(1, 0xf4f0e6).lineBetween(30 + 15 * Math.cos(-1.2), 34 + 15 * Math.sin(-1.2), 30 + 15 * Math.cos(1.2), 34 + 15 * Math.sin(1.2));
+    g.fillStyle(0x6b4a2e).fillRect(42, 32, 3, 5);
+    // Quiver on the back.
+    g.fillStyle(0x8a5a3b).fillRoundedRect(6, 26, 6, 16, 2);
+    g.fillStyle(0xff6a5a).fillTriangle(6, 26, 9, 21, 12, 26);
+  }
+  if (extra === 'mace') {
+    g.fillStyle(0x8a5a3b).fillRect(36, 26, 3, 24);
+    g.fillStyle(0xd9dee8).fillCircle(37.5, 24, 5.5);
+    g.fillStyle(0xffd84a).fillCircle(37.5, 24, 2.2);
+    // A little cross on the robe.
+    g.fillStyle(0xffd84a).fillRect(20.5, 37, 3, 9).fillRect(18, 39.5, 8, 3);
   }
   // Head.
   g.fillStyle(COLORS.playerSkin).fillCircle(22, 19, 15);

@@ -1,6 +1,9 @@
 import type { Player } from './entities';
 
-export type JobId = 'novice' | 'swordsman' | 'mage';
+export type JobId = 'novice' | 'swordsman' | 'mage' | 'archer' | 'acolyte';
+
+/** What a job's chibi holds. */
+export type JobExtra = 'sword' | 'staff' | 'bow' | 'mace';
 
 export interface JobDef {
   id: JobId;
@@ -14,7 +17,7 @@ export interface JobDef {
   jobXpFactor: number;
   /** Jobs this one can change into. */
   next: JobId[];
-  look: { body: number; extra?: 'sword' | 'staff' };
+  look: { body: number; extra?: JobExtra };
 }
 
 export const JOBS: Record<JobId, JobDef> = {
@@ -26,7 +29,7 @@ export const JOBS: Record<JobId, JobDef> = {
     hpFactor: 1,
     spFactor: 1,
     jobXpFactor: 1,
-    next: ['swordsman', 'mage'],
+    next: ['swordsman', 'mage', 'archer', 'acolyte'],
     look: { body: 0x4f7bd9 },
   },
   swordsman: {
@@ -50,6 +53,28 @@ export const JOBS: Record<JobId, JobDef> = {
     jobXpFactor: 2.5,
     next: [],
     look: { body: 0x6a4fa0, extra: 'staff' },
+  },
+  archer: {
+    id: 'archer',
+    name: 'Archer',
+    tier: 1,
+    maxJobLevel: 50,
+    hpFactor: 1.15,
+    spFactor: 1.4,
+    jobXpFactor: 2.5,
+    next: [],
+    look: { body: 0x4f9a5a, extra: 'bow' },
+  },
+  acolyte: {
+    id: 'acolyte',
+    name: 'Acolyte',
+    tier: 1,
+    maxJobLevel: 50,
+    hpFactor: 1.25,
+    spFactor: 1.8,
+    jobXpFactor: 2.5,
+    next: [],
+    look: { body: 0xf0e6cc, extra: 'mace' },
   },
 };
 

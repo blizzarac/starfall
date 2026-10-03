@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
+import { weaponOf } from '../core/equipment';
 import { jobOf } from '../core/jobs';
 import { STATUS_INFO } from '../core/status';
 import type { MonsterDef } from '../data/schemas';
@@ -45,9 +46,19 @@ const SFX = {
   lightning_bolt: ['ZZAP!'],
   soul_strike: ['VOOM!'],
   magnum_break: ['KA-BOOM!'],
+  double_strafe: ['TWANG!', 'THWIP!'],
+  arrow_shower: ['SHHHK!'],
+  holy_light: ['SHIIN!'],
   slam: ['DOOOM!'],
   hurt: ['OOF!', 'GAH!'],
 } as const;
+/** What the player shouts when casting a buff. */
+const BUFF_SHOUTS: Record<string, string> = {
+  endure: 'ENDURE!',
+  improve_concentration: 'FOCUS!',
+  blessing: 'BLESSING!',
+  increase_agi: 'AGI UP!',
+};
 /** Pointer distance (px) within which a click counts as hitting a monster or drop. */
 const PICK_RADIUS = 24;
 /** While the button is held, re-issue the move this often so the player follows the pointer. */
@@ -616,10 +627,77 @@ export class WorldScene extends Phaser.Scene {
       this.boltEffect(targets, BOLT_COLORS[skillId]!);
       const sfx = SFX[skillId as keyof typeof SFX];
       if (target !== undefined && sfx) this.time.delayedCall(180, () => this.soundEffect(target, pick(sfx), '#' + BOLT_COLORS[skillId]!.toString(16).padStart(6, '0')));
-    } else if (skillId === 'endure') {
-      this.soundEffect('player', 'ENDURE!', '#ffe27a');
+    } else if (skillId === 'double_strafe') {
+      if (target !== undefined) {
+        this.time.delayedCall(90, () => this.arrowEffect(target));
+        this.soundEffect('player', pick(SFX.double_strafe), '#9be38f');
+      }
+    } else if (skillId === 'arrow_shower') {
+      this.arrowRain(targets);
+      if (target !== undefined) this.soundEffect(target, pick(SFX.arrow_shower), '#9be38f', true);
+    } else if (skillId === 'holy_light') {
+      if (target !== undefined) this.holyBeam(target);
+    } else if (skillId === 'heal') {
+      this.lightPillar(0x7dff9a);
+      this.soundEffect('player', 'HEAL!', '#7dff9a');
+    } else if (skillId in BUFF_SHOUTS) {
+      this.soundEffect('player', BUFF_SHOUTS[skillId]!, '#ffe27a');
+      this.lightPillar(0xffe27a);
       this.playerBody.setTint(0xffe9a8);
       this.time.delayedCall(400, () => this.playerBody.clearTint());
+    }
+  }
+
+  /** An arrow flying from the player to a monster. */
+  private arrowEffect(targetId: number): void {
+    const view = this.monsterViews.get(targetId);
+    if (!view) return;
+    const from = { x: this.player.x, y: this.player.y - 34 };
+    const to = { x: view.root.x, y: view.root.y - 18 };
+    const arrow = this.add.container(from.x, from.y, [
+      this.add.rectangle(0, 0, 22, 3, 0x16131c),
+      this.add.rectangle(-9, 0, 6, 5, 0xff6a5a).setStrokeStyle(1, 0x16131c),
+      this.add.triangle(13, 0, 0, -4, 6, 0, 0, 4, 0xe8edf5).setStrokeStyle(1, 0x16131c),
+    ]);
+    arrow.setDepth(4000).setRotation(Math.atan2(to.y - from.y, to.x - from.x));
+    this.tweens.add({ targets: arrow, x: to.x, y: to.y, duration: 140, onComplete: () => arrow.destroy() });
+  }
+
+  /** Arrows falling from the sky onto each target. */
+  private arrowRain(targets: number[]): void {
+    for (const id of targets) {
+      const view = this.monsterViews.get(id);
+      if (!view) continue;
+      for (let i = 0; i < 4; i++) {
+        const x = view.root.x + Phaser.Math.Between(-18, 18);
+        const y = view.root.y - 10 + Phaser.Math.Between(-6, 6);
+        const arrow = this.add.container(x - 30, y - 140, [
+          this.add.rectangle(0, 0, 20, 3, 0x16131c),
+          this.add.triangle(12, 0, 0, -4, 6, 0, 0, 4, 0xe8edf5).setStrokeStyle(1, 0x16131c),
+        ]);
+        arrow.setDepth(4000).setRotation(Math.atan2(140, 30));
+        this.tweens.add({ targets: arrow, x, y, delay: i * 60, duration: 160, onComplete: () => arrow.destroy() });
+      }
+    }
+  }
+
+  /** A pillar of light dropping onto a monster. */
+  private holyBeam(targetId: number): void {
+    const view = this.monsterViews.get(targetId);
+    if (!view) return;
+    const beam = this.add.rectangle(view.root.x, view.root.y - 100, 34, 200, 0xfff6c8, 0.85).setStrokeStyle(3, 0x16131c).setDepth(4000).setScale(0.2, 1);
+    this.tweens.add({ targets: beam, scaleX: 1, duration: 120, yoyo: true, hold: 120, onComplete: () => beam.destroy() });
+    speedLines(this, view.root.x, view.root.y - 30, { inner: 30, outer: 120, count: 20 });
+    this.soundEffect(targetId, pick(SFX.holy_light), '#fff6c8', true);
+  }
+
+  /** A soft column of light rising around the player, for heals and buffs. */
+  private lightPillar(color: number): void {
+    const x = this.player.x;
+    const y = this.player.y;
+    for (let i = 0; i < 8; i++) {
+      const spark = this.add.star(x + Phaser.Math.Between(-20, 20), y - Phaser.Math.Between(0, 20), 4, 2, 6, color).setStrokeStyle(1.5, 0x16131c).setDepth(4000);
+      this.tweens.add({ targets: spark, y: spark.y - 60, alpha: 0, angle: 180, delay: i * 40, duration: 600, onComplete: () => spark.destroy() });
     }
   }
 
@@ -688,6 +766,12 @@ export class WorldScene extends Phaser.Scene {
     if (!view) return;
     const dx = view.root.x - this.player.x;
     const dy = view.root.y - this.player.y;
+    if (weaponOf(this.world.player).type === 'bow') {
+      // Archers don't lunge; the arrow does the travelling.
+      this.playerBody.setFlipX(dx < 0);
+      this.arrowEffect(targetId);
+      return;
+    }
     const len = Math.hypot(dx, dy) || 1;
     this.attackDir = { x: dx / len, y: dy / len };
     this.attackAnimUntil = this.time.now + 180;

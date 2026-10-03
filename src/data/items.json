@@ -25,7 +25,7 @@
   {"id": "moss_cap", "name": "Moss Cap", "type": "equipment", "price": 400, "weight": 6, "equip": {"slot": "head", "def": 1, "bonus": {"hp": 25}, "slots": 1}, "description": "Soft, springy, oddly comforting."},
   {"id": "clover_charm", "name": "Clover Charm", "type": "equipment", "price": 600, "weight": 2, "equip": {"slot": "accessory", "bonus": {"luk": 2}, "slots": 1}, "description": "Lucky, they say."},
   {"id": "tusk_blade", "name": "Tusk Blade", "type": "equipment", "price": 1500, "weight": 30, "equip": {"slot": "weapon", "weaponType": "sword", "atk": 52, "jobs": ["swordsman"], "minLevel": 12, "slots": 0}, "description": "Carved from a Bristleboar tusk."},
-  {"id": "oak_staff", "name": "Oak Staff", "type": "equipment", "price": 450, "weight": 15, "equip": {"slot": "weapon", "weaponType": "staff", "atk": 12, "matk": 15, "jobs": ["mage"], "bonus": {"int": 1}, "slots": 1}, "description": "A plain staff that hums faintly."},
+  {"id": "oak_staff", "name": "Oak Staff", "type": "equipment", "price": 450, "weight": 15, "equip": {"slot": "weapon", "weaponType": "staff", "atk": 12, "matk": 15, "jobs": ["mage", "acolyte"], "bonus": {"int": 1}, "slots": 1}, "description": "A plain staff that hums faintly."},
   {"id": "brightstone", "name": "Brightstone", "type": "etc", "price": 300, "weight": 5, "description": "Refining ore. Greta uses one per attempt."},
   {"id": "puffcap_spore", "name": "Puffcap Spore", "type": "etc", "price": 40, "weight": 2, "description": "A puff of red spores. Alchemists want it."},
   {"id": "wolf_pelt", "name": "Wolf Pelt", "type": "etc", "price": 60, "weight": 8, "description": "Thick grey fur."},
@@ -39,5 +39,9 @@
   {"id": "stoneling_card", "name": "Stoneling Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shield", "resist": {"earth": 0.15}}, "description": "Shield card: 15% less damage from earth monsters. Insert it from Items → Bag."},
   {"id": "crystal_golem_card", "name": "Crystal Golem Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "body", "bonus": {"def": 5, "hp": 300}}, "description": "Body card: DEF +5, Max HP +300. Only the Crystal Golem carries it. Insert it from Items → Bag."},
   {"id": "green_herb", "name": "Green Herb", "type": "consumable", "price": 40, "weight": 3, "cure": ["poison"], "heal": {"hp": 5, "sp": 0}, "description": "Cures poison."},
-  {"id": "panacea", "name": "Panacea", "type": "consumable", "price": 250, "weight": 5, "cure": ["poison", "stun", "blind"], "description": "Cures poison, stun and blindness."}
+  {"id": "panacea", "name": "Panacea", "type": "consumable", "price": 250, "weight": 5, "cure": ["poison", "stun", "blind"], "description": "Cures poison, stun and blindness."},
+  {"id": "willow_bow", "name": "Willow Bow", "type": "equipment", "price": 500, "weight": 15, "equip": {"slot": "weapon", "weaponType": "bow", "atk": 26, "twoHanded": true, "jobs": ["archer"], "slots": 2}, "description": "Light and springy. Shoots from 5 tiles away."},
+  {"id": "composite_bow", "name": "Composite Bow", "type": "equipment", "price": 1800, "weight": 22, "equip": {"slot": "weapon", "weaponType": "bow", "atk": 44, "twoHanded": true, "jobs": ["archer"], "minLevel": 14, "bonus": {"dex": 1}, "slots": 1}, "description": "Horn and wood glued in layers. Hits hard."},
+  {"id": "wooden_mace", "name": "Wooden Mace", "type": "equipment", "price": 450, "weight": 20, "equip": {"slot": "weapon", "weaponType": "mace", "atk": 30, "jobs": ["acolyte"], "slots": 2}, "description": "A blessed club. Same damage on every size."},
+  {"id": "prayer_beads", "name": "Prayer Beads", "type": "equipment", "price": 700, "weight": 2, "equip": {"slot": "accessory", "bonus": {"int": 1, "sp": 30}, "jobs": ["acolyte"], "slots": 1}, "description": "Worn smooth by many hands."}
 ]
