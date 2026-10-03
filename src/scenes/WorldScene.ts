@@ -14,7 +14,7 @@ import { ensureMonster, MON_ORIGIN_Y, monsterAnimKey, WORLD_PX, type MonsterAnim
 import { paintGround } from '../render/ground';
 import { setArtRes } from '../render/art';
 import type { FxKey } from '../render/fx';
-import { cyclePhase, lightAt } from '../render/daynight';
+import { mapLight } from '../render/lighting';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
@@ -40,9 +40,9 @@ interface MonsterView {
 
 /** How red an enraged boss glows in each phase. */
 const RAGE_TINT = [0xffffff, 0xffc8b0, 0xff8a7a];
-/** Lights sit above the night overlay so they shine through it. */
+/** Lights sit above the dark overlay so they shine through it. */
 const LIGHT_DEPTH = 5000;
-/** Each job's energy color, for the glow around the player at night. */
+/** Each job's energy color, for the glow around the player in the dark. */
 const JOB_GLOW: Partial<Record<string, number>> = {
   novice: 0x6dffa8,
   swordsman: 0x4fe6ff,
@@ -130,7 +130,7 @@ export class WorldScene extends Phaser.Scene {
   private textPool: Phaser.GameObjects.Text[] = [];
   /** Trees, rocks, houses and their shadows, hidden while off screen. */
   private decor: Phaser.GameObjects.Image[] = [];
-  /** Night darkening over the world, and glows that shine through it. */
+  /** Darkening over underground maps, and glows that shine through it. */
   private nightOverlay!: Phaser.GameObjects.Rectangle;
   private lamps: Array<{ img: Phaser.GameObjects.Image; strength: number }> = [];
   private playerLight!: Phaser.GameObjects.Image;
@@ -164,6 +164,7 @@ export class WorldScene extends Phaser.Scene {
     this.textPool = [];
     this.decor = [];
     this.npcViews.clear();
+    this.night = mapLight(this.world.map.kind === 'dungeon').night;
     // The scene restarts on every map change; the old pet sprite went with the old run.
     this.petView = null;
     this.registry.set('clock', this.clock);
@@ -198,7 +199,7 @@ export class WorldScene extends Phaser.Scene {
     // Phones in portrait need to see more of the map; big screens get a closer view.
     cam.setZoom((viewSize(this).width < 500 ? 0.9 : 1) * DPR);
 
-    // Night: a multiply tint over the world (covering any zoom), with glows added on top.
+    // Underground: a multiply tint over the world (covering any zoom), with glows added on top.
     this.nightOverlay = this.add
       .rectangle(cam.width / 2, cam.height / 2, 20000, 20000, 0xffffff)
       .setScrollFactor(0)
@@ -422,7 +423,7 @@ export class WorldScene extends Phaser.Scene {
       .play({ key: animKey(key, 'F', 'idle'), startFrame: h % 4, frameRate: 4 + (h % 3) });
   }
 
-  /** A glow that shines at night: `scale` sizes it, `strength` is its brightness at full dark. */
+  /** A glow that shines in the dark: `scale` sizes it, `strength` is its brightness at full dark. */
   private lamp(x: number, y: number, color: number, scale: number, strength: number, cull = false): Phaser.GameObjects.Image {
     const img = this.add.image(x, y, 'light').setTint(color).setScale(scale).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
     this.lamps.push({ img, strength });
@@ -433,6 +434,8 @@ export class WorldScene extends Phaser.Scene {
   /** Lit windows, cave crystals, ruin glyphs, portals and the board's holo-screen. */
   private placeLamps(): void {
     this.lamps = [];
+    // Outdoors it's always daylight: nothing to light.
+    if (this.night === 0) return;
     const spots: Record<string, Array<[number, number, number]>> = {
       'house-window': [[-23, -11, 0xffd890], [23, -11, 0x6ff2ff]],
       cavewall: [[15, -7, 0x6ff2ff]],
@@ -458,7 +461,7 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Follows the clock: tints the world and brightens glows as night falls. */
+  /** Applies the map's lighting (dim underground, plain daylight outside) and keeps glows on their owners. */
   private updateLighting(delta: number): void {
     const pos = this.player;
     this.playerLight.setPosition(pos.x, pos.y - 34);
@@ -466,11 +469,10 @@ export class WorldScene extends Phaser.Scene {
     this.lightTimer -= delta;
     if (this.lightTimer > 0) return;
     this.lightTimer = 250;
-    const light = lightAt(cyclePhase(Date.now()), this.world.map.kind === 'dungeon');
+    const light = mapLight(this.world.map.kind === 'dungeon');
     this.night = light.night;
     this.nightOverlay.setVisible(light.tint !== 0xffffff).setFillStyle(light.tint);
     for (const l of this.lamps) l.img.setAlpha(l.strength * light.night);
-    this.registry.set('timeOfDay', light.label);
   }
 
   /** Hides scenery that's off screen, so the renderer skips it. Checked a few times a second. */
@@ -558,7 +560,7 @@ export class WorldScene extends Phaser.Scene {
     root.setAlpha(0);
     this.tweens.add({ targets: root, alpha: 1, duration: 400 });
     // Tech eyes and cores glow in the dark.
-    const light = quality.low ? undefined : this.lamp(0, 0, MONSTER_GLOW[m.def.look.shape] ?? 0x6ff2ff, 1.2 * Math.max(1, m.def.look.scale), 0.6);
+    const light = quality.low || this.night === 0 ? undefined : this.lamp(0, 0, MONSTER_GLOW[m.def.look.shape] ?? 0x6ff2ff, 1.2 * Math.max(1, m.def.look.scale), 0.6);
     light?.setAlpha(light ? 0.6 * this.night : 0);
     const view: MonsterView = { root, body, hpBar, lastX: 0, lastHp: m.def.hp, key, anim: 'idle', attackUntil: 0, light };
     this.monsterViews.set(m.id, view);
