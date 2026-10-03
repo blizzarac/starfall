@@ -5,7 +5,7 @@ import { audio } from '../audio/engine';
 import { loadAudioSettings } from '../audio/settings';
 import { loadQuality } from '../render/quality';
 import { makeBurstTexture } from '../render/ink';
-import { makeProps } from '../render/props';
+import { makeProps, makeUiTextures } from '../render/props';
 import { makeFx } from '../render/fx';
 
 /**
@@ -34,6 +34,7 @@ export class BootScene extends Phaser.Scene {
   private makeTextures(): void {
     makeProps(this);
     makeFx(this);
+    makeUiTextures(this);
     makeBurstTexture(this);
   }
 }

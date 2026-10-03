@@ -1,6 +1,8 @@
 import '@fontsource/bangers/latin-400.css';
-import '@fontsource/m-plus-rounded-1c/latin-500.css';
-import '@fontsource/m-plus-rounded-1c/latin-800.css';
+import '@fontsource/pixelify-sans/latin-400.css';
+import '@fontsource/pixelify-sans/latin-700.css';
+import '@fontsource/silkscreen/latin-400.css';
+import '@fontsource/silkscreen/latin-700.css';
 import Phaser from 'phaser';
 import { audio } from './audio/engine';
 import { DPR } from './render/view';
@@ -15,7 +17,7 @@ import { WorldScene } from './scenes/WorldScene';
 
 // Phaser draws text onto canvases, so the web fonts must be ready before the first scene.
 async function fontsReady(): Promise<void> {
-  const loads = ['32px Bangers', '500 14px "M PLUS Rounded 1c"', '800 14px "M PLUS Rounded 1c"'].map((f) => document.fonts.load(f));
+  const loads = ['32px Bangers', '400 14px "Pixelify Sans"', '700 14px "Pixelify Sans"', '400 14px Silkscreen', '700 14px Silkscreen'].map((f) => document.fonts.load(f));
   await Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, 3000))]);
 }
 await fontsReady();

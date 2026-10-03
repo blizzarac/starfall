@@ -8,7 +8,7 @@ import { derivedStats, effectiveStats, formatDeltas, previewStatRaise } from '..
 import type { World } from '../core/world';
 import { downloadSave, type SaveManager } from '../save/manager';
 import { endSession } from './session';
-import { COLORS, IMPACT_FONT, TEXT, TONE, WORLD_TEXT } from '../render/palette';
+import { COLORS, TITLE_FONT, TEXT, TONE, WORLD_TEXT } from '../render/palette';
 import { DialogueBox } from '../ui/DialogueBox';
 import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
@@ -28,7 +28,8 @@ import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings'
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
 import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
-import type { Panel } from '../ui/widgets';
+import { makeButton, type Panel } from '../ui/widgets';
+import { drawPixelBox, PX } from '../ui/pixelui';
 
 const LOG_LINES = 7;
 /** Log lines stay this long (ms), fading out over the last LOG_FADE_MS. */
@@ -40,6 +41,7 @@ const MENU_ROW = 41;
 const BUTTON_R = 26;
 const BUTTON_GAP = 8;
 const SKILL_R = 22;
+const MENU_BTN_W = 78;
 const SKILL_KEYS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'];
 /** Below this width the log moves above the button row. */
 const NARROW = 700;
@@ -49,7 +51,9 @@ const STATUS_H = 70;
 
 interface HudButton {
   root: Phaser.GameObjects.Container;
-  face: Phaser.GameObjects.Arc;
+  face: Phaser.GameObjects.Image;
+  /** Gold ring shown while the button's toggle is on. */
+  ring: Phaser.GameObjects.Image;
   badge: Phaser.GameObjects.Text;
   /** Badge text, whether the button is lit (active toggle), and whether it is usable. */
   state: () => { badge: string; lit: boolean; enabled: boolean };
@@ -75,7 +79,7 @@ export class UIScene extends Phaser.Scene {
   private statSummary!: Phaser.GameObjects.Text;
   private debugText!: Phaser.GameObjects.Text;
   private deathText!: Phaser.GameObjects.Text;
-  private menuButton!: Phaser.GameObjects.Text;
+  private menuButton!: Phaser.GameObjects.Container;
   private savedText!: Phaser.GameObjects.Text;
   private menu!: Phaser.GameObjects.Container;
   private menuDim!: Phaser.GameObjects.Rectangle;
@@ -95,7 +99,7 @@ export class UIScene extends Phaser.Scene {
   private skillWindow!: SkillWindow;
   /** Learned active skills, one round button each, above the main row. */
   /** Quick-bar buttons: a skill or a consumable item each. */
-  private skillButtons: Array<{ id: string; skill: SkillDef | null; root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Arc; cd: Phaser.GameObjects.Text; badge: Phaser.GameObjects.Text }> = [];
+  private skillButtons: Array<{ id: string; skill: SkillDef | null; root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; ring: Phaser.GameObjects.Image; cd: Phaser.GameObjects.Text; badge: Phaser.GameObjects.Text }> = [];
   private shop!: ShopWindow;
   private dialogue!: DialogueBox;
   private mapBanner!: Phaser.GameObjects.Text;
@@ -115,14 +119,7 @@ export class UIScene extends Phaser.Scene {
 
     // Compact status panel: name line, HP/SP bars with their numbers inside, thin XP bars, gold/weight.
     this.swallowTaps(this.add.zone(8, 8, STATUS_W, STATUS_H).setOrigin(0));
-    this.add
-      .graphics()
-      .fillStyle(COLORS.ink)
-      .fillRect(12, 12, STATUS_W, STATUS_H)
-      .fillStyle(COLORS.paper)
-      .fillRect(8, 8, STATUS_W, STATUS_H)
-      .lineStyle(2.5, COLORS.ink)
-      .strokeRect(8, 8, STATUS_W, STATUS_H);
+    drawPixelBox(this.add.graphics(), 8, 8, STATUS_W, STATUS_H, COLORS.paper);
     this.bars = this.add.graphics();
     this.statusText = this.add.text(14, 11, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold' });
     this.statusFoot = this.add.text(14, 62, '', { ...TEXT, fontSize: '10px', fontStyle: 'bold' });
@@ -135,14 +132,14 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setVisible(false);
     this.deathText = this.add
-      .text(0, 0, '', { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: '30px', align: 'center', fontStyle: 'normal', strokeThickness: 7 })
+      .text(0, 0, '', { ...WORLD_TEXT, fontFamily: TITLE_FONT, fontSize: '22px', align: 'center', fontStyle: 'normal', strokeThickness: 7 })
       .setOrigin(0.5)
       .setVisible(false);
     this.bossBar = this.add.graphics();
     this.bossText = this.add.text(0, 0, '', { ...WORLD_TEXT, fontSize: '12px' }).setOrigin(0.5, 0);
     // Manga caption box: black box, white impact lettering.
     this.mapBanner = this.add
-      .text(0, 0, '', { fontFamily: IMPACT_FONT, fontSize: '28px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 16, y: 6 } })
+      .text(0, 0, '', { fontFamily: TITLE_FONT, fontSize: '20px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 16, y: 6 } })
       .setOrigin(0.5)
       .setAlpha(0);
     this.buildStatWindow();
@@ -210,9 +207,9 @@ export class UIScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = viewSize(this);
     const narrow = width < NARROW;
-    this.menuButton.setPosition(width - 10, 10);
+    this.menuButton.setPosition(width - 10 - MENU_BTN_W, 10);
     this.minimap.root.setPosition(width - 14 - this.minimap.width, 50);
-    this.savedText.setPosition(width - 18 - this.menuButton.width, 18);
+    this.savedText.setPosition(width - 18 - MENU_BTN_W, 18);
     this.menuDim.setSize(width, height);
     this.menuPanel.setPosition(width / 2, height / 2);
     this.buttons.forEach((b, i) => {
@@ -324,32 +321,40 @@ export class UIScene extends Phaser.Scene {
   }
 
   private addButton(label: string, key: string, color: number, onPress: () => void, state: HudButton['state']): void {
-    const shadow = this.add.circle(3, 4, BUTTON_R, COLORS.ink);
-    const face = this.add.circle(0, 0, BUTTON_R, color).setStrokeStyle(3, COLORS.ink);
-    const text = this.add.text(0, 0, label, { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: '17px', fontStyle: 'normal' }).setOrigin(0.5);
+    const { shadow, face, ring } = this.orb(BUTTON_R, color, 4);
+    const text = this.add.text(0, 0, label, { ...WORLD_TEXT, fontFamily: TITLE_FONT, fontSize: '12px', fontStyle: 'normal' }).setOrigin(0.5);
     const badge = this.add
       .text(BUTTON_R - 4, -BUTTON_R + 4, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 4, y: 1 } })
       .setOrigin(0.5);
-    const children: Phaser.GameObjects.GameObject[] = [shadow, face, text, badge];
+    const children: Phaser.GameObjects.GameObject[] = [shadow, face, ring, text, badge];
     if (!this.isTouch()) {
       children.push(this.add.text(0, BUTTON_R - 9, key, { ...WORLD_TEXT, fontSize: '9px', strokeThickness: 3 }).setOrigin(0.5));
     }
     const root = this.add.container(0, 0, children);
-    face.setInteractive({ useHandCursor: true });
     face.on('pointerdown', () => {
       root.setScale(0.9);
       onPress();
     });
     face.on('pointerup', () => root.setScale(1));
     face.on('pointerout', () => root.setScale(1));
-    this.buttons.push({ root, face, badge, state });
+    this.buttons.push({ root, face, ring, badge, state });
+  }
+
+  /** A round pixel button face of radius `r` in `color`, its drop shadow, and its "on" ring. */
+  private orb(r: number, color: number, drop: number): { shadow: Phaser.GameObjects.Image; face: Phaser.GameObjects.Image; ring: Phaser.GameObjects.Image } {
+    const scale = (r * 2) / 26;
+    const shadow = this.add.image(drop - 1, drop, 'ui-orb').setScale(scale).setTintFill(COLORS.ink);
+    const face = this.add.image(0, 0, 'ui-orb').setScale(scale).setTint(color);
+    face.setInteractive({ hitArea: new Phaser.Geom.Circle(13, 13, 13), hitAreaCallback: Phaser.Geom.Circle.Contains, useHandCursor: true });
+    const ring = this.add.image(0, 0, 'ui-orb-ring').setScale(((r + 4) * 2) / 30).setVisible(false);
+    return { shadow, face, ring };
   }
 
   private drawButtons(): void {
     for (const b of this.buttons) {
       const st = b.state();
       b.badge.setText(st.badge).setVisible(st.badge !== '');
-      b.face.setStrokeStyle(st.lit ? 5 : 3, st.lit ? 0xffd84a : COLORS.ink);
+      b.ring.setVisible(st.lit);
       b.root.setAlpha(st.enabled ? 1 : 0.45);
     }
   }
@@ -380,25 +385,23 @@ export class UIScene extends Phaser.Scene {
     this.skillButtons = p.hotbar.slice(0, SKILL_KEYS.length).map((id, i) => {
       const skill = isSkillId(id) ? SKILLS[id] : null;
       const item = skill ? null : this.world.content.items.get(id);
-      const shadow = this.add.circle(3, 3, SKILL_R, COLORS.ink);
-      const face = this.add.circle(0, 0, SKILL_R, skill ? 0xa77cf0 : 0xff9aa8).setStrokeStyle(3, COLORS.ink);
+      const { shadow, face, ring } = this.orb(SKILL_R, skill ? 0xa77cf0 : 0xff9aa8, 3);
       const short = skill ? skill.short : shortItemName(item?.name ?? id);
-      const label = this.add.text(0, -2, short, { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: short.length > 6 ? '13px' : '15px', fontStyle: 'normal' }).setOrigin(0.5);
+      const label = this.add.text(0, -2, short, { ...WORLD_TEXT, fontFamily: TITLE_FONT, fontSize: short.length > 6 ? '9px' : '11px', fontStyle: 'normal' }).setOrigin(0.5);
       const cd = this.add.text(0, 11, '', { ...WORLD_TEXT, fontSize: '10px', color: '#ffe27a', strokeThickness: 3 }).setOrigin(0.5);
       const badge = this.add
         .text(SKILL_R - 2, -SKILL_R + 2, '', { ...TEXT, fontSize: '10px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 3, y: 0 } })
         .setOrigin(0.5);
-      const children: Phaser.GameObjects.GameObject[] = [shadow, face, label, cd, badge];
+      const children: Phaser.GameObjects.GameObject[] = [shadow, face, ring, label, cd, badge];
       if (!this.isTouch()) children.push(this.add.text(0, SKILL_R - 6, SKILL_KEYS[i]!, { ...WORLD_TEXT, fontSize: '8px', strokeThickness: 2 }).setOrigin(0.5));
       const root = this.add.container(0, 0, children);
-      face.setInteractive({ useHandCursor: true });
       face.on('pointerdown', () => {
         root.setScale(0.9);
         this.world.useHotbar(i);
       });
       face.on('pointerup', () => root.setScale(1));
       face.on('pointerout', () => root.setScale(1));
-      return { id, skill, root, face, cd, badge };
+      return { id, skill, root, face, ring, cd, badge };
     });
     this.layout();
   }
@@ -420,7 +423,7 @@ export class UIScene extends Phaser.Scene {
       b.badge.setText(`${cost}`);
       b.cd.setText(cdMs > 0 ? `${Math.ceil(cdMs / 1000)}s` : buff ? `${Math.ceil(buff.remainingMs / 1000)}s` : '');
       b.root.setAlpha(p.sp >= cost && cdMs === 0 && !p.dead ? 1 : 0.45);
-      b.face.setStrokeStyle(buff ? 5 : 3, buff ? 0xffd84a : COLORS.ink);
+      b.ring.setVisible(!!buff);
     }
   }
 
@@ -510,17 +513,8 @@ export class UIScene extends Phaser.Scene {
   private buildStatWindow(): void {
     const W = STAT_W;
     const H = 46 + STAT_NAMES.length * STAT_ROW + 74;
-    const bg = this.add
-      .graphics()
-      .fillStyle(COLORS.ink)
-      .fillRect(5, 5, W, H)
-      .fillStyle(COLORS.paper)
-      .fillRect(0, 0, W, H)
-      .lineStyle(3, COLORS.ink)
-      .strokeRect(0, 0, W, H)
-      .fillStyle(COLORS.ink)
-      .fillRect(0, 0, W, 30);
-    const title = this.add.text(10, 3, 'STATS', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '20px', color: '#ffffff' });
+    const bg = drawPixelBox(this.add.graphics(), 0, 0, W, H, COLORS.paper).fillStyle(COLORS.ink).fillRect(PX, PX, W - PX * 2, 30 - PX);
+    const title = this.add.text(10, 3, 'STATS', { ...TEXT, fontFamily: TITLE_FONT, fontSize: '14px', color: '#ffffff' });
     this.statPoints = this.add.text(W - 10, 6, '', { ...TEXT, fontSize: '13px', fontStyle: 'bold', color: '#ffd84a' }).setOrigin(1, 0);
     const children: Phaser.GameObjects.GameObject[] = [this.swallowTaps(this.add.zone(0, 0, W, H).setOrigin(0)), bg, title, this.statPoints];
     STAT_NAMES.forEach((stat, i) => {
@@ -591,11 +585,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildMenu(): void {
-    this.menuButton = this.add
-      .text(0, 0, 'MENU', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '20px', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 12, y: 6 } })
-      .setOrigin(1, 0)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.toggleMenu());
+    const menuBtn = makeButton(this, 0, 0, MENU_BTN_W, 32, 'MENU', () => this.toggleMenu(), 0xffd84a);
+    menuBtn.label.setFontFamily(TITLE_FONT).setFontSize(14);
+    this.menuButton = menuBtn.root;
     this.savedText = this.add.text(0, 0, 'Saved', { ...WORLD_TEXT, fontSize: '12px', color: '#9be38f' }).setOrigin(1, 0).setAlpha(0);
     const onSaved = () => {
       this.tweens.killTweensOf(this.savedText);
@@ -625,24 +617,19 @@ export class UIScene extends Phaser.Scene {
       ['Close', () => this.toggleMenu()],
     ];
     const h = 44 + entries.length * MENU_ROW;
+    const chrome = drawPixelBox(this.add.graphics(), -w / 2, -h / 2, w, h, COLORS.paper).fillStyle(COLORS.ink).fillRect(-w / 2 + PX, -h / 2 + PX, w - PX * 2, 34 - PX);
     const panelChildren: Phaser.GameObjects.GameObject[] = [
-      this.add.rectangle(6, 6, w, h, COLORS.ink),
-      this.add.rectangle(0, 0, w, h, COLORS.paper).setStrokeStyle(3, COLORS.ink).setInteractive(),
-      this.add.rectangle(0, -h / 2 + 17, w, 34, COLORS.ink),
-      this.add.text(0, -h / 2 + 4, 'MENU', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5, 0),
+      chrome,
+      this.add.rectangle(0, 0, w, h, COLORS.paper, 0).setInteractive(),
+      this.add.text(0, -h / 2 + 4, 'MENU', { ...TEXT, fontFamily: TITLE_FONT, fontSize: '16px', color: '#ffffff' }).setOrigin(0.5, 0),
     ];
     entries.forEach(([label, fn], i) => {
       const y = -h / 2 + 60 + i * MENU_ROW;
-      const text = this.add.text(0, y, typeof label === 'string' ? label : label(), { ...TEXT, fontSize: '13px', fontStyle: 'bold' }).setOrigin(0.5);
-      const refreshLabel = () => typeof label !== 'string' && text.setText(label());
-      const bg = this.add
-        .rectangle(0, y, w - 28, 34, 0xffffff)
-        .setStrokeStyle(2.5, COLORS.ink)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => bg.setFillStyle(0xffe27a))
-        .on('pointerout', () => bg.setFillStyle(0xffffff))
-        .on('pointerup', () => (bg.setFillStyle(0xffffff), audio.play('tap'), fn(), refreshLabel()));
-      panelChildren.push(this.add.rectangle(3, y + 3, w - 28, 34, COLORS.ink), bg, text);
+      const btn = makeButton(this, -(w - 28) / 2, y - 17, w - 28, 34, typeof label === 'string' ? label : label(), () => {
+        fn();
+        if (typeof label !== 'string') btn.label.setText(label());
+      });
+      panelChildren.push(btn.root);
     });
     this.menuPanel = this.add.container(0, 0, panelChildren);
     this.menu = this.add.container(0, 0, [this.menuDim, this.menuPanel]).setVisible(false).setDepth(100);

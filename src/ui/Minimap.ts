@@ -3,6 +3,7 @@ import type { Terrain } from '../core/grid';
 import type { World } from '../core/world';
 import { COLORS } from '../render/palette';
 import { quality } from '../render/quality';
+import { drawPixelBox } from './pixelui';
 
 /** Width (px) of the map diamond inside the frame. */
 const SIZE = 84;
@@ -37,6 +38,7 @@ export class Minimap {
   private readonly dots: Phaser.GameObjects.Graphics;
   private readonly frame: Phaser.GameObjects.Rectangle;
   private readonly shadow: Phaser.GameObjects.Rectangle;
+  private readonly chrome: Phaser.GameObjects.Graphics;
   private k = 1;
   private ox = 0;
   private sinceDraw = REFRESH_MS;
@@ -46,12 +48,13 @@ export class Minimap {
     private readonly world: World,
     onTap: () => void,
   ) {
-    this.shadow = scene.add.rectangle(4, 4, 10, 10, COLORS.ink).setOrigin(0);
-    this.frame = scene.add.rectangle(0, 0, 10, 10, COLORS.paper).setOrigin(0).setStrokeStyle(2.5, COLORS.ink);
+    this.shadow = scene.add.rectangle(4, 4, 10, 10, COLORS.ink, 0).setOrigin(0);
+    this.frame = scene.add.rectangle(0, 0, 10, 10, COLORS.paper, 0).setOrigin(0);
+    this.chrome = scene.add.graphics();
     this.frame.setInteractive({ useHandCursor: true }).on('pointerup', onTap);
     this.ground = scene.add.image(PAD, PAD, '__DEFAULT').setOrigin(0);
     this.dots = scene.add.graphics();
-    this.root = scene.add.container(0, 0, [this.shadow, this.frame, this.ground, this.dots]);
+    this.root = scene.add.container(0, 0, [this.shadow, this.chrome, this.frame, this.ground, this.dots]);
     this.rebuild();
   }
 
@@ -93,6 +96,8 @@ export class Minimap {
     this.ground.setTexture(key);
     this.frame.setSize(texW + PAD * 2, texH + PAD * 2);
     this.shadow.setSize(texW + PAD * 2, texH + PAD * 2);
+    this.frame.input?.hitArea.setTo(0, 0, texW + PAD * 2, texH + PAD * 2);
+    drawPixelBox(this.chrome.clear(), 0, 0, texW + PAD * 2, texH + PAD * 2, COLORS.paper);
     this.frame.input?.hitArea.setTo(0, 0, texW + PAD * 2, texH + PAD * 2);
     this.sinceDraw = REFRESH_MS;
   }

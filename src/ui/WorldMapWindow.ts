@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { mapLevelRange, nextGoal } from '../core/goals';
 import { visitedFlag, type World } from '../core/world';
-import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
+import { COLORS, TITLE_FONT, TEXT, TONE } from '../render/palette';
 import { Panel } from './widgets';
 
 /**
@@ -127,7 +127,7 @@ export class WorldMapWindow {
       if (here) {
         p.add(
           this.scene.add
-            .text(c.x, c.y - BOX_H / 2 - 2, 'YOU', { fontFamily: IMPACT_FONT, fontSize: '13px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 5, y: 1 } })
+            .text(c.x, c.y - BOX_H / 2 - 2, 'YOU', { fontFamily: TITLE_FONT, fontSize: '9px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 5, y: 1 } })
             .setOrigin(0.5, 1),
         );
       }

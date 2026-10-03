@@ -50,8 +50,11 @@ export const TONE: Record<'ink' | 'muted' | 'accent' | 'gold' | 'good' | 'bad' |
   disabled: '#a5a1ab',
 };
 
-export const BODY_FONT = '"M PLUS Rounded 1c", "Trebuchet MS", Verdana, sans-serif';
-/** Comic display face for titles, damage numbers and sound effects. */
+/** Pixel-art body text. */
+export const BODY_FONT = '"Pixelify Sans", "Trebuchet MS", Verdana, sans-serif';
+/** Blocky pixel capitals for window titles and button labels. */
+export const TITLE_FONT = 'Silkscreen, "Pixelify Sans", monospace';
+/** Comic display face, kept as an accent for damage numbers and sound effects in the world. */
 export const IMPACT_FONT = 'Bangers, "Arial Black", Impact, sans-serif';
 
 /** Ink on paper: panel and window text. */

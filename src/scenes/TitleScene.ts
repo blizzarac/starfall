@@ -5,8 +5,9 @@ import type { SlotMeta } from '../save/schema';
 import { JOBS } from '../core/jobs';
 import { chibiOrigin, playerChibi, PORTRAIT_FRAME } from '../render/chibi';
 import { DEFAULT_APPEARANCE } from '../core/appearance';
-import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
+import { COLORS, TITLE_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton } from '../ui/widgets';
+import { drawPixelBox } from '../ui/pixelui';
 import { screenCamera, viewSize } from '../render/view';
 import { startSession } from './session';
 import { audio } from '../audio/engine';
@@ -40,12 +41,12 @@ export class TitleScene extends Phaser.Scene {
     this.backdrop = this.add.graphics();
     // Manga cover lettering: big, tilted, yellow with a heavy ink outline.
     this.heading = this.add
-      .text(0, 0, 'STARFALL', { fontFamily: IMPACT_FONT, fontSize: '64px', color: '#ffd84a', stroke: '#16131c', strokeThickness: 10 })
+      .text(0, 0, 'STARFALL', { fontFamily: TITLE_FONT, fontSize: '46px', color: '#ffd84a', stroke: '#16131c', strokeThickness: 10 })
       .setOrigin(0.5, 0)
       .setAngle(-4)
       .setShadow(5, 5, '#16131c', 0, true, true);
     this.sub = this.add
-      .text(0, 0, 'CHOOSE YOUR HERO', { fontFamily: IMPACT_FONT, fontSize: '18px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 12, y: 4 } })
+      .text(0, 0, 'CHOOSE YOUR HERO', { fontFamily: TITLE_FONT, fontSize: '13px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 12, y: 4 } })
       .setOrigin(0.5, 0);
     this.status = this.add
       .text(0, 0, '', { ...TEXT, fontSize: '13px', align: 'center', wordWrap: { width: 340 } })
@@ -53,7 +54,7 @@ export class TitleScene extends Phaser.Scene {
     // Music starts with the first tap (browsers block sound until then).
     audio.setTheme('title');
     this.soundToggle = this.add
-      .text(0, 0, '', { fontFamily: IMPACT_FONT, fontSize: '16px', color: '#16131c', backgroundColor: '#ffffff', padding: { x: 10, y: 5 } })
+      .text(0, 0, '', { fontFamily: TITLE_FONT, fontSize: '12px', color: '#16131c', backgroundColor: '#ffffff', padding: { x: 10, y: 5 } })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerup', () => {
@@ -98,12 +99,11 @@ export class TitleScene extends Phaser.Scene {
     this.cards = SLOT_IDS.map((id) => {
       const meta = this.slots.get(id);
       const lit = meta && id === last;
-      // Each slot is a comic panel; the last-played one gets a thick border and a tag.
-      const shadow = this.add.rectangle(5, 5, w, CARD_H, COLORS.ink).setOrigin(0.5, 0);
+      // Each slot is a pixel panel; the last-played one is framed in gold and tagged.
+      const shadow = drawPixelBox(this.add.graphics(), -w / 2, 0, w, CARD_H, lit ? 0xfff2c8 : COLORS.paper, { border: lit ? 0xb8860b : COLORS.ink });
       const bg = this.add
-        .rectangle(0, 0, w, CARD_H, COLORS.paper)
+        .rectangle(0, 0, w, CARD_H, COLORS.paper, 0)
         .setOrigin(0.5, 0)
-        .setStrokeStyle(lit ? 5 : 3, COLORS.ink)
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => void this.play(id));
       const job = meta ? Object.values(JOBS).find((j) => j.name === meta.jobName) : undefined;
@@ -112,7 +112,7 @@ export class TitleScene extends Phaser.Scene {
       if (lit) {
         children.push(
           this.add
-            .text(w / 2 - 8, -10, 'LAST PLAYED', { fontFamily: IMPACT_FONT, fontSize: '14px', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 6, y: 1 } })
+            .text(w / 2 - 8, -10, 'LAST PLAYED', { fontFamily: TITLE_FONT, fontSize: '10px', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 6, y: 1 } })
             .setOrigin(1, 0)
             .setAngle(3),
         );
@@ -123,7 +123,7 @@ export class TitleScene extends Phaser.Scene {
       }
       if (meta) {
         children.push(
-          this.add.text(left, 10, `${meta.name}`, { fontFamily: IMPACT_FONT, fontSize: '24px', color: '#16131c' }),
+          this.add.text(left, 10, `${meta.name}`, { fontFamily: TITLE_FONT, fontSize: '17px', color: '#16131c' }),
           this.add.text(left, 34, `${meta.jobName}  ·  Base Lv ${meta.baseLevel}  ·  Job Lv ${meta.jobLevel}`, { ...TEXT, fontSize: '12px' }),
           this.add.text(left, 52, `${formatPlaytime(meta.playtimeMs)} played  ·  saved ${formatAgo(meta.savedAt)}`, {
             ...TEXT,

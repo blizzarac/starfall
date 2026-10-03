@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { audio } from '../audio/engine';
 import { viewSize } from '../render/view';
-import { COLORS, IMPACT_FONT, TEXT } from '../render/palette';
+import { COLORS, TITLE_FONT, TEXT } from '../render/palette';
+import { drawPixelBox, PX } from './pixelui';
 
 /** Fill while a button is held down. */
 const PRESSED = 0xffe27a;
@@ -24,21 +25,24 @@ export function makeButton(
   onTap: () => void,
   color = 0xffffff,
 ): Button {
-  // Comic button: flat fill, ink border, hard shadow that the face presses down onto.
-  const shadow = scene.add.rectangle(3, 3, w, h, COLORS.ink).setOrigin(0);
-  const bg = scene.add.rectangle(0, 0, w, h, color).setOrigin(0).setStrokeStyle(2.5, COLORS.ink).setInteractive({ useHandCursor: true });
+  // Pixel button: notched ink border, bevelled face, hard shadow the face presses down onto.
+  const shadow = drawPixelBox(scene.add.graphics(), 0, 0, w, h, COLORS.ink, { border: COLORS.ink }).setAlpha(1);
+  const look = scene.add.graphics();
+  const paint = (fill: number, pressed: boolean) => drawPixelBox(look.clear(), 0, 0, w, h, fill, { shadow: false, pressed });
+  paint(color, false);
+  const bg = scene.add.rectangle(0, 0, w, h, color, 0).setOrigin(0).setInteractive({ useHandCursor: true });
   const label = scene.add
-    .text(w / 2, h / 2, text, { ...TEXT, fontSize: '13px', fontStyle: 'bold', align: 'center', wordWrap: { width: w - 12 } })
+    .text(w / 2, h / 2, text, { ...TEXT, fontSize: '14px', fontStyle: 'bold', align: 'center', wordWrap: { width: w - 12 } })
     .setOrigin(0.5);
-  const face = scene.add.container(0, 0, [bg, label]);
+  const face = scene.add.container(0, 0, [look, bg, label]);
   const root = scene.add.container(x, y, [shadow, face]);
   let enabled = true;
-  const press = (down: boolean) => face.setPosition(down ? 2 : 0, down ? 2 : 0);
-  bg.on('pointerdown', () => enabled && (press(true), bg.setFillStyle(PRESSED)));
-  bg.on('pointerout', () => (press(false), bg.setFillStyle(color)));
+  const press = (down: boolean) => face.setPosition(down ? PX : 0, down ? PX : 0);
+  bg.on('pointerdown', () => enabled && (press(true), paint(PRESSED, true)));
+  bg.on('pointerout', () => (press(false), paint(color, false)));
   bg.on('pointerup', () => {
     press(false);
-    bg.setFillStyle(color);
+    paint(color, false);
     if (!enabled) return;
     audio.play('tap');
     onTap();
@@ -64,8 +68,8 @@ export class Panel {
   readonly root: Phaser.GameObjects.Container;
   readonly body: Phaser.GameObjects.Container;
   private readonly frame: Phaser.GameObjects.Rectangle;
-  private readonly shadow: Phaser.GameObjects.Rectangle;
-  private readonly titleBar: Phaser.GameObjects.Rectangle;
+  /** The pixel-art window chrome, redrawn when the size changes. */
+  private readonly chrome: Phaser.GameObjects.Graphics;
   private readonly dim: Phaser.GameObjects.Rectangle | null;
   private readonly title: Phaser.GameObjects.Text;
   private readonly closeBtn: Phaser.GameObjects.Text;
@@ -80,18 +84,17 @@ export class Panel {
     modal = false,
   ) {
     this.dim = modal ? scene.add.rectangle(0, 0, 10, 10, COLORS.ink, 0.35).setOrigin(0).setInteractive() : null;
-    // A manga panel: paper, thick ink border, a hard shadow offset down-right.
-    this.shadow = scene.add.rectangle(6, 6, 10, 10, COLORS.ink).setOrigin(0);
-    this.frame = scene.add.rectangle(0, 0, 10, 10, COLORS.paper).setOrigin(0).setStrokeStyle(3, COLORS.ink).setInteractive();
-    this.titleBar = scene.add.rectangle(0, 0, 10, 34, COLORS.ink).setOrigin(0);
-    this.title = scene.add.text(12, 5, title, { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '22px', color: '#ffffff', fontStyle: 'normal' });
+    // A pixel window: paper, notched ink border, bevel, a dark title strip and a hard shadow.
+    this.chrome = scene.add.graphics();
+    this.frame = scene.add.rectangle(0, 0, 10, 10, COLORS.paper, 0).setOrigin(0).setInteractive();
+    this.title = scene.add.text(12, 8, title, { ...TEXT, fontFamily: TITLE_FONT, fontSize: '16px', color: '#ffffff', fontStyle: 'bold' });
     this.closeBtn = scene.add
       .text(0, 0, '×', { ...TEXT, fontSize: '26px', fontStyle: 'bold', color: '#ffffff', padding: { x: 10, y: 0 } })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerup', onClose);
     this.body = scene.add.container(0, 0);
-    const win = scene.add.container(0, 0, [this.shadow, this.frame, this.titleBar, this.title, this.closeBtn, this.body]);
+    const win = scene.add.container(0, 0, [this.chrome, this.frame, this.title, this.closeBtn, this.body]);
     this.root = scene.add.container(0, 0, this.dim ? [this.dim, win] : [win]).setDepth(50).setVisible(false);
     this.layout();
   }
@@ -119,8 +122,12 @@ export class Panel {
     const win = this.root.list[this.root.list.length - 1] as Phaser.GameObjects.Container;
     win.setPosition(s.x, s.y);
     this.frame.setSize(s.w, s.h);
-    this.shadow.setSize(s.w, s.h);
-    this.titleBar.setSize(s.w, 34);
+    if (changed || this.chrome.commandBuffer.length === 0) {
+      const g = drawPixelBox(this.chrome.clear(), 0, 0, s.w, s.h, COLORS.paper);
+      // Title strip with a pixel highlight line.
+      g.fillStyle(COLORS.ink, 1).fillRect(PX, PX, s.w - PX * 2, 34 - PX);
+      g.fillStyle(0x3a3450, 1).fillRect(PX * 2, PX * 2, s.w - PX * 4, PX);
+    }
     this.frame.input?.hitArea.setTo(0, 0, s.w, s.h);
     this.closeBtn.setX(s.w);
     return changed;

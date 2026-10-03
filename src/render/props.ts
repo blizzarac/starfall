@@ -237,3 +237,40 @@ function diamondEdge(p: Pix, c: number): void {
     p.set(16 + hw - 2, y, c);
   }
 }
+
+/** Round pixel button faces (tinted per button) and the gold ring for "on" buttons. */
+export function makeUiTextures(scene: Phaser.Scene): void {
+  const make = (key: string, paint: (p: Pix) => void, size: number) => {
+    if (scene.textures.exists(key)) return;
+    const p = new Pix(size, size);
+    paint(p);
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    p.blit(canvas.getContext('2d')!, 0, 0);
+    scene.textures.addCanvas(key, canvas)!.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  };
+  // Drawn in greys so a tint gives each button its color; the ink stays dark.
+  make(
+    'ui-orb',
+    (p) => {
+      p.ellipse(13, 13, 13, 13, INK);
+      p.ellipse(13, 13, 11.6, 11.6, 0xb4b4c4);
+      p.ellipse(12.4, 12.2, 10.6, 10.6, 0xe6e6ee);
+      p.ellipse(10.5, 9.5, 5, 3.5, 0xffffff);
+      p.set(7, 7, 0xffffff);
+    },
+    26,
+  );
+  make(
+    'ui-orb-ring',
+    (p) => {
+      p.ellipse(15, 15, 15, 15, 0xffd84a, (x, y) => {
+        const d = Math.hypot(x + 0.5 - 15, y + 0.5 - 15);
+        return d > 12.6;
+      });
+      p.outline(INK);
+    },
+    30,
+  );
+}

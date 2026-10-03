@@ -4,7 +4,7 @@ import { jobOf } from '../core/jobs';
 import type { World } from '../core/world';
 import { chibiOrigin, playerChibi } from '../render/chibi';
 import { animKey } from '../render/knight';
-import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
+import { COLORS, TITLE_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton, Panel } from './widgets';
 
 const SWATCH_R = 15;
@@ -60,7 +60,7 @@ export class AppearanceWindow {
 
     let y = 222;
     const heading = (label: string) => {
-      p.add(this.scene.add.text(14, y, label, { fontFamily: IMPACT_FONT, fontSize: '17px', color: TONE.ink }));
+      p.add(this.scene.add.text(14, y, label, { fontFamily: TITLE_FONT, fontSize: '12px', color: TONE.ink }));
       y += 24;
     };
 
