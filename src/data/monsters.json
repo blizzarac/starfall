@@ -478,8 +478,8 @@
     "boss": true,
     "special": {
       "kind": "slam",
-      "everyMs": 7000,
-      "windupMs": 1200,
+      "everyMs": 9000,
+      "windupMs": 2000,
       "radius": 2,
       "modifier": 1.6,
       "inflict": {
@@ -957,7 +957,7 @@
     "special": {
       "kind": "slam",
       "everyMs": 7000,
-      "windupMs": 1400,
+      "windupMs": 1800,
       "radius": 2,
       "modifier": 2.2,
       "inflict": {
@@ -1260,7 +1260,7 @@
     "special": {
       "kind": "slam",
       "everyMs": 7000,
-      "windupMs": 1400,
+      "windupMs": 1800,
       "radius": 2,
       "modifier": 2.2,
       "inflict": {

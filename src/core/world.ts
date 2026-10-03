@@ -1559,7 +1559,8 @@ export class World {
       m.windup = null;
       m.specialTimer = sp.everyMs;
       this.events.emit('slam', { monsterId: m.id, tile, radius: sp.radius });
-      if (!p.dead && tileDistance(tile, p.tile) <= sp.radius) {
+      // Mid-step counts as already there, so a dodge started in time always works.
+      if (!p.dead && tileDistance(tile, p.next ?? p.tile) <= sp.radius) {
         const atk = ((m.def.atk[0] + m.def.atk[1]) / 2) * sp.modifier;
         this.hurtPlayer(m, F.damage({ atk, def: derivedStats(p).def }, this.rng));
         if (sp.inflict) this.inflict(sp.inflict.status, sp.inflict.chance, sp.inflict.durationMs);
@@ -1567,7 +1568,8 @@ export class World {
       return true;
     }
     m.specialTimer -= dt;
-    if (m.specialTimer <= 0 && !m.next && tileDistance(m.tile, p.tile) <= sp.radius + 1) {
+    // Never while the player is stunned: they couldn't step out of it.
+    if (m.specialTimer <= 0 && !m.next && !this.stunned() && tileDistance(m.tile, p.tile) <= sp.radius + 1) {
       m.windup = { remainingMs: sp.windupMs, tile: { ...m.tile } };
       m.path = [];
       this.events.emit('telegraph', { monsterId: m.id, tile: { ...m.tile }, radius: sp.radius, ms: sp.windupMs });

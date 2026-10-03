@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICK_MS } from '../src/core/combat/formulas';
+import { derivedStats } from '../src/core/progression';
 import { bossFlag, World } from '../src/core/world';
 import { loadContent } from '../src/data/content';
 import { migrate } from '../src/save/migrations';
@@ -30,16 +31,56 @@ describe('Crystal Golem', () => {
     expect(w.bossRespawnAt()).toBeNull();
   });
 
+  /** A Lv 1 test player would fall before the slam: heal them every tick. */
+  const keepAlive = (w: World) => w.events.on('damage', (e) => e.targetId === 'player' && (w.player.hp = derivedStats(w.player).maxHp));
+
   it('telegraphs its slam before it lands', () => {
     const { w } = bossWorld();
     const g = golem(w)!;
     w.changeMap(hall.id, { x: g.tile.x + 1, y: g.tile.y });
-    w.player.hp = 1e9;
+    keepAlive(w);
     const order: string[] = [];
     w.events.on('telegraph', () => order.push('telegraph'));
     w.events.on('slam', () => order.push('slam'));
+    w.attack(g.id);
     run(w, 20_000, () => order.length >= 2);
     expect(order.slice(0, 2)).toEqual(['telegraph', 'slam']);
+  });
+
+  it('gives time to step out of the slam, even after a slow reaction', () => {
+    const { w } = bossWorld();
+    const g = golem(w)!;
+    w.changeMap(hall.id, { x: g.tile.x + 1, y: g.tile.y });
+    keepAlive(w);
+    let at: { x: number; y: number } | null = null;
+    let slamAt = -1;
+    let hitBySlam = false;
+    w.events.on('telegraph', (e) => (at = e.tile));
+    w.events.on('slam', () => (slamAt = w.time));
+    w.events.on('damage', (e) => e.targetId === 'player' && w.time === slamAt && (hitBySlam = true));
+    w.attack(g.id);
+    run(w, 20_000, () => at !== null);
+    expect(at).not.toBeNull();
+    const r = g.def.special!.radius;
+    // A player on a phone needs a moment to notice and tap.
+    run(w, 700);
+    w.moveTo({ x: at!.x + r + 1, y: at!.y });
+    run(w, 5000, () => slamAt >= 0);
+    expect(slamAt).toBeGreaterThan(0);
+    expect(hitBySlam).toBe(false);
+  });
+
+  it('never starts a slam while the player is stunned', () => {
+    const { w } = bossWorld();
+    const g = golem(w)!;
+    w.changeMap(hall.id, { x: g.tile.x + 1, y: g.tile.y });
+    w.player.hp = 1e9;
+    let warned = false;
+    w.events.on('telegraph', () => (warned = true));
+    g.specialTimer = 0;
+    w.inflict('stun', 1, 3000);
+    run(w, 1000);
+    expect(warned).toBe(false);
   });
 
   it('stays dead for its respawn time, across map changes and saves', () => {

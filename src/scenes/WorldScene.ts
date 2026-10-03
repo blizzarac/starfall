@@ -787,7 +787,7 @@ export class WorldScene extends Phaser.Scene {
       ev.on('telegraph', (e) => this.telegraph(e.tile, e.radius, e.ms)),
       ev.on('slam', (e) => {
         const at = tileToWorld(e.tile.x, e.tile.y);
-        const burst = this.add.ellipse(at.x, at.y, TILE_W * (e.radius * 2 + 1), TILE_H * (e.radius * 2 + 1), 0xffb15a, 0.5).setDepth(3);
+        const burst = this.add.polygon(at.x, at.y, this.slamArea(e.radius), 0xffb15a, 0.5).setDepth(3);
         this.tweens.add({ targets: burst, alpha: 0, scale: 1.15, duration: 350, onComplete: () => burst.destroy() });
         this.camFx('shake', 220, 0.01);
         this.soundEffect(e.monsterId, pick(SFX.slam), '#ff9a4a', true);
@@ -825,11 +825,20 @@ export class WorldScene extends Phaser.Scene {
   /** A red circle on the ground that fills up until an area attack lands. */
   private telegraph(tile: Tile, radius: number, ms: number): void {
     const at = tileToWorld(tile.x, tile.y);
+    const diamond = this.slamArea(radius);
+    // Above the night and cave darkness, so the warning is always bright.
+    const ring = this.add.polygon(at.x, at.y, diamond).setStrokeStyle(4, 0xff5a4a, 1).setDepth(LIGHT_DEPTH + 1);
+    const fill = this.add.polygon(at.x, at.y, diamond, 0xff4a3a, 0.28).setDepth(LIGHT_DEPTH + 1).setScale(0.05);
+    // The outline pulses while the boss winds up.
+    this.tweens.add({ targets: ring, alpha: 0.35, duration: 160, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: fill, scale: 1, duration: ms, onComplete: () => (this.tweens.killTweensOf(ring), ring.destroy(), fill.destroy()) });
+  }
+
+  /** The tiles a slam hits (every tile within `radius` steps), as one diamond on screen. */
+  private slamArea(radius: number): number[] {
     const w = TILE_W * (radius * 2 + 1);
     const h = TILE_H * (radius * 2 + 1);
-    const ring = this.add.ellipse(at.x, at.y, w, h).setStrokeStyle(3, 0xff4a4a, 0.9).setDepth(3);
-    const fill = this.add.ellipse(at.x, at.y, w, h, 0xff4a4a, 0.25).setDepth(3).setScale(0.05);
-    this.tweens.add({ targets: fill, scale: 1, duration: ms, onComplete: () => (ring.destroy(), fill.destroy()) });
+    return [w / 2, 0, w, h / 2, w / 2, h, 0, h / 2];
   }
 
   /** A streak from the caster to the target for each bolt. */
