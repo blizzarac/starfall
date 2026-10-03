@@ -1,0 +1,101 @@
+{
+  "id": "meadow-3",
+  "name": "Mossy Hollow",
+  "kind": "field",
+  "grass": [
+    "#6fae58",
+    "#68a552"
+  ],
+  "width": 40,
+  "height": 40,
+  "rows": [
+    "TTTTTTTTTTTTTTTTTTT==TTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTT==TTTTTTTTTTTTTTTTTTT",
+    "TTTT.TT..TTTT.TT...==..TT..TTTT.TT.TTTTT",
+    "TTT...............,==................TTT",
+    "TTT.RR.....T.......==..RTT.T.........TTT",
+    "TTT..T..T.R...R....==....R..T......T.TTT",
+    "TTT.........T...,.,==........,.......TTT",
+    "TTT....,...........==.R....T.....T....TT",
+    "TTT...........T....==......T....,.,..TTT",
+    "TTT..........RTT...==................TTT",
+    "TTT.R..............==.......R..,..T..TTT",
+    "TTT...............T==...T............TTT",
+    "TTT.......R.R..RTT.==.T.......TT.T.R.TTT",
+    "TTT.,.R.........T..==.........T......TTT",
+    "TTT,......,.....T..==.RR,.T.TT.TTR...TTT",
+    "TTT..R....R...R..R.==...TR...........TTT",
+    "TTT.,......R..,....==T......,..R.....TTT",
+    "TTT..T.....,...T...==.....T.,......T.TTT",
+    "TTT......T......,R.==T.......T.......TTT",
+    "TT....T..........,.==,...RT....R,....TTT",
+    "TTT.......T.,......==....T.R..T......TTT",
+    "TTT...,.....TT.....==.............,...TT",
+    "TTT..T...............T.,...........T,TTT",
+    "TTT..T.......T.T....,.,TT.T........T.TTT",
+    "TTT......R.T~........RT.T............TTT",
+    "TTT......~~~~~~~......T..R...T.....T,TTT",
+    "TTT..T..~~~~~~~~~.,,.T.........T..,..TTT",
+    "TTT....T~~~~~~~~~.......,..T...T.....TTT",
+    "TT...,.~~~~~~~~~~~,...T....T..RTT.....TT",
+    "TTT.....~~~~~~~~~.........T........T.TTT",
+    "TTT.....~~~~~~~~~...,...........T.....TT",
+    "TTT..T...~~~~~~~T.....,..............TTT",
+    "TTT,.T...,R.~.......T..T..,.,..R.R...TTT",
+    "TTT...T........T......T......,...T...TTT",
+    "TTT.T,..T..T.............T....,......TTT",
+    "TT......T............T......R....T....TT",
+    "TTT...................,....,..........TT",
+    "TT..TTT.TTTTTTTTT.T.TT.TT.T..TTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+  ],
+  "playerStart": {
+    "x": 19,
+    "y": 3
+  },
+  "savePoint": {
+    "x": 19,
+    "y": 3
+  },
+  "spawns": [
+    {
+      "monster": "mossling",
+      "count": 12,
+      "respawnMs": 8000,
+      "area": {
+        "x": 4,
+        "y": 8,
+        "w": 32,
+        "h": 14
+      }
+    },
+    {
+      "monster": "bristleboar",
+      "count": 7,
+      "respawnMs": 12000,
+      "area": {
+        "x": 6,
+        "y": 22,
+        "w": 30,
+        "h": 14
+      }
+    }
+  ],
+  "npcs": [],
+  "portals": [
+    {
+      "area": {
+        "x": 19,
+        "y": 0,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "meadow-2",
+        "x": 19,
+        "y": 37
+      }
+    }
+  ]
+}

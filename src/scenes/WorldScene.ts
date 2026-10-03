@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
+import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
@@ -16,6 +17,13 @@ interface MonsterView {
 }
 
 const DROP_TINT: Record<string, number> = { etc: 0xc9d4e6, consumable: 0xff7a7a, card: 0xffd84a, equipment: 0x9be38f };
+/** Feet position (origin Y) of each monster texture. */
+const MONSTER_LOOKS: Record<MonsterDef['look']['shape'], { feet: number }> = {
+  blob: { feet: 38 / 40 },
+  beetle: { feet: 36 / 40 },
+  sprout: { feet: 40 / 44 },
+  boar: { feet: 40 / 44 },
+};
 /** Pointer distance (px) within which a click counts as hitting a monster or drop. */
 const PICK_RADIUS = 24;
 /** While the button is held, re-issue the move this often so the player follows the pointer. */
@@ -110,7 +118,9 @@ export class WorldScene extends Phaser.Scene {
       for (let x = 0; x < width; x++) {
         const terrain = this.world.grid.terrainAt(x, y)!;
         const kind = terrain === 'tree' || terrain === 'rock' ? 'grass' : terrain;
-        const shade = COLORS[kind][(x + y) % 2]!;
+        const grass = this.world.map.grass;
+        const shade =
+          grass && (kind === 'grass' || kind === 'flower') ? hexColor(grass[(x + y) % 2]!) : COLORS[kind][(x + y) % 2]!;
         const c = tileToWorld(x, y);
         const cx = c.x + ox;
         const cy = c.y + oy;
@@ -269,7 +279,8 @@ export class WorldScene extends Phaser.Scene {
 
   private createMonsterView(m: Monster): MonsterView {
     const color = Phaser.Display.Color.HexStringToColor(m.def.look.color).color;
-    const body = this.add.image(0, 0, 'blob').setOrigin(0.5, 38 / 40).setTint(color);
+    const look = MONSTER_LOOKS[m.def.look.shape];
+    const body = this.add.image(0, 0, m.def.look.shape).setOrigin(0.5, look.feet).setTint(color);
     const hpBar = this.add.graphics();
     const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.9), body, hpBar]);
     root.setAlpha(0);

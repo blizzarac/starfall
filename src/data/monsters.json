@@ -23,6 +23,81 @@
       { "item": "sticky_resin", "chance": 0.01 },
       { "item": "jellop_card", "chance": 0.0005 }
     ],
-    "look": { "color": "#ff8fb8", "scale": 1 }
+    "look": { "color": "#ff8fb8", "scale": 1, "shape": "blob" }
+  },
+  {
+    "id": "thornbeetle",
+    "name": "Thornbeetle",
+    "level": 6,
+    "hp": 120,
+    "atk": [9, 14],
+    "def": 4,
+    "hit": 22,
+    "flee": 14,
+    "element": "earth",
+    "size": "small",
+    "attackDelayMs": 1500,
+    "attackRange": 1,
+    "moveMs": 300,
+    "ai": { "aggressive": true, "aggroRange": 5, "chaseRange": 10, "wanderRadius": 4 },
+    "baseXp": 28,
+    "jobXp": 20,
+    "drops": [
+      { "item": "beetle_shell", "chance": 0.55 },
+      { "item": "sweet_apple", "chance": 0.1 },
+      { "item": "red_tonic", "chance": 0.04 },
+      { "item": "thornbeetle_card", "chance": 0.0005 }
+    ],
+    "look": { "color": "#b08a4a", "scale": 0.9, "shape": "beetle" }
+  },
+  {
+    "id": "mossling",
+    "name": "Mossling",
+    "level": 9,
+    "hp": 190,
+    "atk": [12, 18],
+    "def": 6,
+    "hit": 28,
+    "flee": 16,
+    "element": "earth",
+    "size": "small",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 420,
+    "ai": { "aggressive": false, "aggroRange": 0, "chaseRange": 10, "wanderRadius": 3 },
+    "baseXp": 42,
+    "jobXp": 30,
+    "drops": [
+      { "item": "moss_clump", "chance": 0.6 },
+      { "item": "sweet_apple", "chance": 0.15 },
+      { "item": "red_tonic", "chance": 0.05 },
+      { "item": "mossling_card", "chance": 0.0005 }
+    ],
+    "look": { "color": "#7fcf63", "scale": 1, "shape": "sprout" }
+  },
+  {
+    "id": "bristleboar",
+    "name": "Bristleboar",
+    "level": 12,
+    "hp": 320,
+    "atk": [18, 26],
+    "def": 10,
+    "hit": 36,
+    "flee": 18,
+    "element": "earth",
+    "size": "medium",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 260,
+    "ai": { "aggressive": true, "aggroRange": 6, "chaseRange": 12, "wanderRadius": 5 },
+    "baseXp": 70,
+    "jobXp": 50,
+    "drops": [
+      { "item": "boar_tusk", "chance": 0.45 },
+      { "item": "red_tonic", "chance": 0.06 },
+      { "item": "butterfly_wing", "chance": 0.01 },
+      { "item": "bristleboar_card", "chance": 0.0005 }
+    ],
+    "look": { "color": "#a8724f", "scale": 1.15, "shape": "boar" }
   }
 ]

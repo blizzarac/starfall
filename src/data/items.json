@@ -1,9 +1,15 @@
 [
-  { "id": "jelly_drop", "name": "Jelly Drop", "type": "etc", "price": 6, "weight": 4, "description": "A wobbly drop of jelly. Merchants buy it." },
-  { "id": "sweet_apple", "name": "Sweet Apple", "type": "consumable", "price": 15, "weight": 5, "heal": { "hp": 16, "sp": 0 }, "description": "Restores 16 HP." },
-  { "id": "red_tonic", "name": "Red Tonic", "type": "consumable", "price": 50, "weight": 8, "heal": { "hp": 45, "sp": 0 }, "description": "Restores 45 HP." },
-  { "id": "sticky_resin", "name": "Sticky Resin", "type": "etc", "price": 40, "weight": 3, "description": "Rare, sticky and worth a little gold." },
-  { "id": "jellop_card", "name": "Jellop Card", "type": "card", "price": 20, "weight": 1, "description": "A collectible card. Cards will slot into gear later." },
-  { "id": "fly_wing", "name": "Fly Wing", "type": "consumable", "price": 60, "weight": 5, "effect": "teleport", "description": "Teleports you to a random spot on this map." },
-  { "id": "butterfly_wing", "name": "Butterfly Wing", "type": "consumable", "price": 300, "weight": 5, "effect": "return", "description": "Returns you to your save point." }
+  {"id": "jelly_drop", "name": "Jelly Drop", "type": "etc", "price": 6, "weight": 4, "description": "A wobbly drop of jelly. Merchants buy it."},
+  {"id": "sweet_apple", "name": "Sweet Apple", "type": "consumable", "price": 15, "weight": 5, "heal": {"hp": 16, "sp": 0}, "description": "Restores 16 HP."},
+  {"id": "red_tonic", "name": "Red Tonic", "type": "consumable", "price": 50, "weight": 8, "heal": {"hp": 45, "sp": 0}, "description": "Restores 45 HP."},
+  {"id": "sticky_resin", "name": "Sticky Resin", "type": "etc", "price": 40, "weight": 3, "description": "Rare, sticky and worth a little gold."},
+  {"id": "jellop_card", "name": "Jellop Card", "type": "card", "price": 20, "weight": 1, "description": "A collectible card. Cards will slot into gear later."},
+  {"id": "fly_wing", "name": "Fly Wing", "type": "consumable", "price": 60, "weight": 5, "effect": "teleport", "description": "Teleports you to a random spot on this map."},
+  {"id": "butterfly_wing", "name": "Butterfly Wing", "type": "consumable", "price": 300, "weight": 5, "effect": "return", "description": "Returns you to your save point."},
+  {"id": "beetle_shell", "name": "Beetle Shell", "type": "etc", "price": 18, "weight": 6, "description": "A hard, glossy shell. Sells for a fair price."},
+  {"id": "moss_clump", "name": "Moss Clump", "type": "etc", "price": 22, "weight": 3, "description": "Soft, damp moss. Herbalists pay for it."},
+  {"id": "boar_tusk", "name": "Boar Tusk", "type": "etc", "price": 45, "weight": 10, "description": "A heavy curved tusk. Valuable but bulky."},
+  {"id": "thornbeetle_card", "name": "Thornbeetle Card", "type": "card", "price": 20, "weight": 1, "description": "A collectible card. Cards will slot into gear later."},
+  {"id": "mossling_card", "name": "Mossling Card", "type": "card", "price": 20, "weight": 1, "description": "A collectible card. Cards will slot into gear later."},
+  {"id": "bristleboar_card", "name": "Bristleboar Card", "type": "card", "price": 20, "weight": 1, "description": "A collectible card. Cards will slot into gear later."}
 ]

@@ -52,6 +52,8 @@ tests/         Vitest suites
 
 Scenes send intents to `World` (`moveTo`, `attack`, `pickUp`, `useItem`, ...) and draw from its state and events. Content is validated against the zod schemas on load, and `tests/content.test.ts` runs the same check in CI.
 
+The world so far: **Brightmoor** (town) → **Southern Meadow** (Jellops, passive) → **Thornfield** (Thornbeetles attack on sight) → **Mossy Hollow** (Mosslings, and aggressive Bristleboars).
+
 Maps are a row-per-line terrain grid (`.` grass, `,` flowers, `=` path, `:` cobblestone, `T` tree, `R` rock, `~` water, `#` building) plus spawns, NPCs and edge portals. Every map file in `src/data/maps/` is loaded automatically, and the content check fails the build if a portal, NPC dialogue, shop or drop points at something that doesn't exist.
 
 NPC conversations live in `src/data/dialogues.json`: nodes with text and choices, optional conditions (job, job level, skill level, items held) and actions (set save point, heal, open a shop, take or give items, change job).

@@ -46,7 +46,11 @@ export const MonsterSchema = z.object({
   jobXp: z.number().int().nonnegative(),
   drops: z.array(DropSchema),
   /** Placeholder look until sprite sheets exist. */
-  look: z.object({ color: z.string().regex(/^#[0-9a-f]{6}$/i), scale: z.number().positive() }),
+  look: z.object({
+    color: z.string().regex(/^#[0-9a-f]{6}$/i),
+    scale: z.number().positive(),
+    shape: z.enum(['blob', 'beetle', 'sprout', 'boar']).default('blob'),
+  }),
 });
 export type MonsterDef = z.infer<typeof MonsterSchema>;
 
@@ -88,6 +92,8 @@ export const MapSchema = z
     id: z.string(),
     name: z.string(),
     kind: z.enum(['town', 'field']),
+    /** Two alternating grass shades, so each field has its own feel. */
+    grass: z.tuple([z.string().regex(/^#[0-9a-f]{6}$/i), z.string().regex(/^#[0-9a-f]{6}$/i)]).optional(),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     rows: z.array(z.string()),

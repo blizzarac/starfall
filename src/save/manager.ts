@@ -54,6 +54,8 @@ export class SaveManager {
     private readonly onSaved: () => void = () => {},
   ) {
     setLastSlot(slot);
+    // The design doc's autosave points: every map change, plus the timer and page hide below.
+    world.events.on('mapChanged', () => void this.save());
   }
 
   private readonly onHide = () => {
