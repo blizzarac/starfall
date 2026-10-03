@@ -224,8 +224,9 @@ export class TitleScene extends Phaser.Scene {
 
   private importSlot(slot: number): Promise<void> {
     return this.guarded(async () => {
-      const text = await pickFile();
-      if (text === null) return;
+      // If the file picker gives nothing back (some phones can't hand over the file), the save text can be pasted instead.
+      const text = (await pickFile()) ?? window.prompt('No file? Paste the text of a Starfall save here instead:')?.trim() ?? '';
+      if (!text) return;
       const doc = parseSaveFile(text);
       const existing = this.slots.get(slot);
       if (existing && !window.confirm(`Replace ${existing.name} (Lv ${existing.baseLevel}) in slot ${slot} with ${doc.character.name} (Lv ${doc.character.baseLevel})?`)) {

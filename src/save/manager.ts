@@ -145,13 +145,27 @@ export function pickFile(): Promise<string | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'application/json,.json';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) return resolve(null);
-      file.text().then(resolve, () => resolve(null));
+    // iOS stores saves as JSON or plain text depending on how they were downloaded; accept both.
+    input.accept = '.json,application/json,text/plain';
+    // iOS Safari only reports the chosen file for an input that's part of the page.
+    input.style.cssText = 'position:fixed;left:-1000px;top:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(input);
+    let done = false;
+    const finish = (text: string | null) => {
+      if (done) return;
+      done = true;
+      input.remove();
+      resolve(text);
     };
-    input.oncancel = () => resolve(null);
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) return finish(null);
+      const reader = new FileReader();
+      reader.onload = () => finish(typeof reader.result === 'string' ? reader.result : null);
+      reader.onerror = () => finish(null);
+      reader.readAsText(file);
+    });
+    input.addEventListener('cancel', () => finish(null));
     input.click();
   });
 }
