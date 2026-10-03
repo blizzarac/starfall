@@ -46,6 +46,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     position: p.dead ? { ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
     savePoint: { ...p.savePoint },
     pets: p.pets.map((pet) => ({ ...pet, xp: Math.floor(pet.xp), gear: pet.gear?.id ?? null })),
+    lure: p.lure,
     hotbar: [...p.hotbar],
     appearance: { ...p.appearance },
   };
@@ -100,6 +101,8 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     : [...p.skills.keys()].filter((id) => isSkillId(id) && SKILLS[id].kind !== 'passive').slice(0, HOTBAR_SIZE);
   // Pets whose species can no longer be tamed are let go. Older saves had a single pet.
   const saved = doc.pets ?? (doc.pet ? [doc.pet] : []);
+  const lure = doc.lure ? world.content.items.get(doc.lure) : undefined;
+  p.lure = lure?.effect === 'tame' ? lure.id : null;
   p.pets = saved
     .filter((pet) => PET_SPECIES[pet.species] && world.content.monsters.has(pet.species))
     .slice(0, MAX_PETS)

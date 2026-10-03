@@ -175,10 +175,8 @@ export function newPet(species: string, name: string): Pet {
   return { species, name, intimacy: START_INTIMACY, hunger: START_HUNGER, level: 1, xp: 0, gear: null };
 }
 
-/** Chance a lure works: better the more the monster is worn down. */
-export function tameChance(hp: number, maxHp: number): number {
-  return 0.2 + 0.6 * (1 - Math.max(0, Math.min(1, hp / maxHp)));
-}
+/** With a lure readied, a matching monster worn down to this share of its HP is tamed. */
+export const TAME_HP = 0.25;
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));

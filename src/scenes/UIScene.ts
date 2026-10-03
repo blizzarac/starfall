@@ -276,7 +276,7 @@ export class UIScene extends Phaser.Scene {
 
     const pct = (a: number, b: number) => `${((a / b) * 100).toFixed(1)}%`;
     const buffs = [...p.buffs.keys()].map((id) => (isSkillId(id) ? SKILLS[id].short : id));
-    this.statusText.setText(`${p.name} · ${job.name} · Lv ${p.baseLevel}/${p.jobLevel}${p.sitting ? ' · sit' : ''}${buffs.length ? ` · ${buffs.join(' ')}` : ''}`);
+    this.statusText.setText(`${p.name} · ${job.name} · Lv ${p.baseLevel}/${p.jobLevel}${p.sitting ? ' · sit' : ''}${buffs.length ? ` · ${buffs.join(' ')}` : ''}${p.lure ? ' · lure' : ''}`);
     this.hpText.setText(`HP ${p.hp}/${d.maxHp}`);
     this.spText.setText(`SP ${p.sp}/${d.maxSp}`);
     this.statusFoot.setText(
@@ -696,7 +696,7 @@ export class UIScene extends Phaser.Scene {
       ev.on('hotbarChanged', () => this.buildSkillButtons()),
       ev.on('autoChanged', (e) => this.addLog(e.on ? 'Auto on: fighting nearby monsters and picking up loot. Tap the map to take over.' : 'Auto off.')),
       ev.on('petTamed', (e) => this.addLog(`You tamed a ${e.name}! Tap it to see how it's doing.`)),
-      ev.on('tameFailed', (e) => this.addLog(`The ${e.name} wasn't fooled. Wear it down and try again.`)),
+      ev.on('lureReady', (e) => this.addLog(`Lure ready. Fight a ${e.name} down to a quarter of its HP to tame it.`)),
       ev.on('petRanAway', (e) => this.addLog(`${e.name} got too hungry and ran away…`)),
       ev.on('petLevelUp', (e) => this.addLog(`${e.name} reached level ${e.level}!`)),
       ev.on('storyLine', (e) => this.storyLine(e.text)),

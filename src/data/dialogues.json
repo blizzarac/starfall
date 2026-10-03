@@ -974,7 +974,7 @@
         ]
       },
       "how": {
-        "text": "Buy the lure for the monster you want, walk within 6 tiles of one and use the lure from your bag. Wear it down a bit first: a tired monster is much easier to win over.",
+        "text": "Buy the lure for the monster you want and use it from your bag: it's ready until it works. Then fight one of them. Once it's down to a quarter of its strength, it stops fighting and comes with you.",
         "choices": [
           {
             "label": "And then?",

@@ -72,7 +72,8 @@ export interface WorldEvents extends Record<string, unknown> {
   appearanceChanged: Record<string, never>;
   autoChanged: { on: boolean };
   petTamed: { name: string };
-  tameFailed: { name: string };
+  /** A lure was readied: wear this monster down to tame it. */
+  lureReady: { name: string };
   petFed: { delta: number; pet: number };
   petRanAway: { name: string };
   /** The pet was renamed, released, replaced or changed gear. */
@@ -270,7 +271,7 @@ export class World {
     const item = this.content.items.get(itemId);
     const count = p.inventory.get(itemId) ?? 0;
     if (p.dead || !item || item.type !== 'consumable' || count <= 0) return;
-    if (item.effect === 'tame') return this.tame(item);
+    if (item.effect === 'tame') return this.readyLure(item);
     if (item.heal) {
       const d = derivedStats(p);
       const boost = 1 + 0.1 * S.skillLevel(p, 'hp_recovery');
@@ -486,26 +487,34 @@ export class World {
     });
   }
 
-  /** Throws a lure at the nearest monster it works on. Fails without using it if none is near. */
-  private tame(lure: ItemDef): void {
+  /** Readies a lure: the next monster it works on that you wear down far enough is tamed. */
+  private readyLure(lure: ItemDef): void {
     const p = this.player;
     const notice = (text: string) => this.events.emit('notice', { text });
     const def = this.content.monsters.get(lure.tames ?? '');
     if (!def) return;
     if (p.pets.length >= Pets.MAX_PETS) return notice(`You already have ${Pets.MAX_PETS} pets. Release one first (tap a pet).`);
-    let target: Monster | null = null;
-    for (const m of this.monsters.values()) {
-      if (m.def.id !== def.id || tileDistance(m.tile, p.tile) > 6) continue;
-      if (!target || tileDistance(m.tile, p.tile) < tileDistance(target.tile, p.tile)) target = m;
+    if (p.lure) {
+      const ready = this.content.monsters.get(this.content.items.get(p.lure)?.tames ?? '');
+      return notice(`A lure is already out. Wear down a ${ready?.name ?? 'monster'} first.`);
     }
-    if (!target) return notice(`No ${def.name} close enough. Get within 6 tiles.`);
     this.removeItem(lure.id, 1);
     this.events.emit('itemUsed', { item: lure });
-    if (this.rng() >= Pets.tameChance(target.hp, def.hp)) {
-      target.hostile = true;
-      this.events.emit('tameFailed', { name: def.name });
-      return;
-    }
+    p.lure = lure.id;
+    this.events.emit('lureReady', { name: def.name });
+  }
+
+  /** The monster species the readied lure tames, if any. */
+  lureTarget(): string | null {
+    const lure = this.player.lure;
+    return lure ? (this.content.items.get(lure)?.tames ?? null) : null;
+  }
+
+  /** Tames a worn-down monster for the readied lure. */
+  private tame(target: Monster): void {
+    const p = this.player;
+    const def = target.def;
+    p.lure = null;
     // The tamed monster leaves the map; a wild one respawns as usual, with no loot or XP.
     this.monsters.delete(target.id);
     this.respawns.push({ spawnIndex: target.spawnIndex, at: this.time + this.map.spawns[target.spawnIndex]!.respawnMs });
@@ -1807,7 +1816,8 @@ export class World {
     if (source === 'pet') this.events.emit('petAttack', { targetId: target.id, amount, pet: this.biter });
     else if (source === 'aura' || source === 'holy') this.events.emit('auraHit', { targetId: target.id, amount, holy: source === 'holy' });
     else this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
-    if (target.hp <= 0) this.killMonster(target);
+    if (target.hp <= target.def.hp * Pets.TAME_HP && this.lureTarget() === target.def.id && !target.summoned && this.player.pets.length < Pets.MAX_PETS) this.tame(target);
+    else if (target.hp <= 0) this.killMonster(target);
     else if (target.def.phases.length > 0) this.checkPhase(target);
   }
 

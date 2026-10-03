@@ -76,6 +76,8 @@ export const SaveDocSchema = z.object({
   hotbar: z.array(z.string()).max(8).optional(),
   /** Pets out with you (up to three). Older saves kept a single `pet` instead. */
   pets: z.array(PetSaveSchema).max(3).optional(),
+  /** The readied lure (item id). Absent in older saves. */
+  lure: z.string().nullable().optional(),
   /** The tamed pet, in saves from before you could keep several. */
   pet: PetSaveSchema.nullable().optional(),
 });

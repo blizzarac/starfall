@@ -103,6 +103,7 @@ export function createPlayer(name: string, start: Tile): Player {
     bounty: 0,
     savePoint: { map: '', ...start },
     pets: [],
+    lure: null,
     hotbar: [],
     appearance: { ...DEFAULT_APPEARANCE },
   };

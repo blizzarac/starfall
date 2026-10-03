@@ -36,6 +36,8 @@ export interface Player extends Mover {
   jobId: JobId;
   /** Learned skill levels by skill id. */
   skills: Map<string, number>;
+  /** The lure readied for taming (an item id), or null: the next monster it works on that you wear down is tamed. */
+  lure: string | null;
   /** Active timed buffs by skill id. */
   buffs: Map<string, { level: number; remainingMs: number; /** Remaining strength, for barriers. */ value?: number }>;
   /** Milliseconds until each skill can be used again. */

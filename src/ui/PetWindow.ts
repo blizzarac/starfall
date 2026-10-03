@@ -53,7 +53,7 @@ export class PetWindow {
     if (!pet) {
       p.setTitle('Pet');
       text(12, 46, "You don't have a pet yet.", 15, TONE.ink, true);
-      text(12, 74, `Mabel in Brightmoor sells lures. Use one from your bag near the right monster (wear it down first) to tame it. Up to ${MAX_PETS} pets can follow you.`, 13, TONE.muted);
+      text(12, 74, `Mabel in Brightmoor sells lures. Use one from your bag, then fight that monster down to a quarter of its HP to tame it. Up to ${MAX_PETS} pets can follow you.`, 13, TONE.muted);
       return;
     }
     const species = PET_SPECIES[pet.species]!;

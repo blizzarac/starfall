@@ -18,24 +18,29 @@ function run(world: World, ms: number, until?: () => boolean): void {
   }
 }
 
-/** A player next to a nearly beaten Jellop, holding lures. */
+/** A sturdy player next to a Jellop, holding lures. */
 function readyToTame(seed = 1) {
   const w = new World(content, meadow, { seed });
-  const m = [...w.monsters.values()][0]!;
+  const m = [...w.monsters.values()].find((x) => x.def.id === 'jellop')!;
   w.changeMap('meadow-1', { x: m.tile.x, y: m.tile.y - 1 });
-  const jellop = [...w.monsters.values()].sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
-  jellop.hp = 1;
+  const jellop = [...w.monsters.values()].filter((x) => x.def.id === 'jellop').sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
+  w.player.hp = 1e9;
   w.addItem('wobbly_pudding', 10);
   return { w, jellop };
 }
 
+/** Fights a monster until it's gone (defeated or tamed). */
+function fight(w: World, id: number) {
+  w.attack(id);
+  run(w, 60_000, () => !w.monsters.has(id));
+}
+
 function tamed(): World {
-  for (let seed = 1; seed < 50; seed++) {
-    const { w } = readyToTame(seed);
-    for (let i = 0; i < 10 && w.player.pets.length === 0; i++) w.useItem('wobbly_pudding');
-    if (w.player.pets.length) return w;
-  }
-  throw new Error('never tamed');
+  const { w, jellop } = readyToTame();
+  w.useItem('wobbly_pudding');
+  fight(w, jellop.id);
+  if (!w.player.pets.length) throw new Error('never tamed');
+  return w;
 }
 
 describe('pet rules', () => {
@@ -67,11 +72,6 @@ describe('pet rules', () => {
     expect(Pets.petBonus(pet)).toEqual({ atk: 20, agi: 2 });
   });
 
-  it('worn-down monsters are easier to tame', () => {
-    expect(Pets.tameChance(100, 100)).toBeCloseTo(0.2);
-    expect(Pets.tameChance(1, 100)).toBeGreaterThan(0.75);
-  });
-
   it('every lure tames a pet species', () => {
     const lures = [...content.items.values()].filter((i) => i.effect === 'tame');
     expect(lures.map((l) => l.tames).sort()).toEqual(Object.keys(Pets.PET_SPECIES).sort());
@@ -79,14 +79,47 @@ describe('pet rules', () => {
 });
 
 describe('taming and caring', () => {
-  it('needs the right monster nearby, and keeps the lure otherwise', () => {
-    const w = new World(content, content.maps.get('town')!, { seed: 1 });
-    w.addItem('wobbly_pudding', 1);
+  it('a readied lure tames the right monster once it is worn down, with no XP or loot', () => {
+    const { w, jellop } = readyToTame();
+    // Without a lure out, a Jellop is just defeated.
+    const xp = w.player.baseXp;
+    fight(w, jellop.id);
+    expect(w.player.pets).toHaveLength(0);
+    expect(w.player.baseXp).toBeGreaterThan(xp);
+    // Readying uses the lure up; a second can't be readied while one is out.
     const notices: string[] = [];
     w.events.on('notice', (e) => notices.push(e.text));
     w.useItem('wobbly_pudding');
-    expect(notices.at(-1)).toMatch(/No Jellop/);
-    expect(w.itemCount('wobbly_pudding')).toBe(1);
+    expect(w.player.lure).toBe('wobbly_pudding');
+    expect(w.itemCount('wobbly_pudding')).toBe(9);
+    w.useItem('wobbly_pudding');
+    expect(notices.at(-1)).toMatch(/already out/);
+    expect(w.itemCount('wobbly_pudding')).toBe(9);
+    // The lure waits through other fights and saves.
+    w.changeMap('meadow-2', content.maps.get('meadow-2')!.playerStart);
+    const other = [...w.monsters.values()].find((m) => m.def.id !== 'jellop' && !m.def.boss)!;
+    w.changeMap('meadow-2', { x: other.tile.x, y: other.tile.y - 1 });
+    const near = [...w.monsters.values()].filter((m) => m.def.id === other.def.id).sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
+    fight(w, near.id);
+    expect(w.player.pets).toHaveLength(0);
+    w.changeMap('meadow-1', meadow.playerStart);
+    const loaded = new World(content, meadow, { seed: 3 });
+    applySaveDoc(loaded, migrate(JSON.parse(JSON.stringify(toSaveDoc(w, 0)))));
+    expect(loaded.player.lure).toBe('wobbly_pudding');
+    // Wear a Jellop down: it's tamed at a quarter of its HP instead of defeated.
+    const j = [...loaded.monsters.values()].find((m) => m.def.id === 'jellop')!;
+    loaded.changeMap('meadow-1', { x: j.tile.x, y: j.tile.y - 1 });
+    const target = [...loaded.monsters.values()].filter((m) => m.def.id === 'jellop').sort((a, b) => tileDistance(a.tile, loaded.player.tile) - tileDistance(b.tile, loaded.player.tile))[0]!;
+    loaded.player.hp = 1e9;
+    let lowest = target.hp;
+    loaded.events.on('damage', (e) => e.targetId === target.id && (lowest = target.hp));
+    const before = loaded.player.baseXp;
+    fight(loaded, target.id);
+    expect(loaded.player.pets.map((p) => p.species)).toEqual(['jellop']);
+    expect(loaded.player.lure).toBeNull();
+    expect(lowest).toBeLessThanOrEqual(target.def.hp * Pets.TAME_HP);
+    expect(loaded.player.baseXp).toBe(before);
+    expect(loaded.drops.size).toBe(0);
   });
 
   it('a tamed Jellop follows the player and leaves the map as a wild monster', () => {
@@ -265,6 +298,7 @@ describe('several pets', () => {
     w.events.on('notice', (e) => notices.push(e.text));
     w.useItem('wobbly_pudding');
     expect(notices.at(-1)).toMatch(/already have 3 pets/);
+    expect(w.player.lure).toBeNull();
     expect(w.player.pets).toHaveLength(Pets.MAX_PETS);
     expect(w.itemCount('wobbly_pudding')).toBe(lures + 1);
     // Feeding and releasing touch only the chosen pet.

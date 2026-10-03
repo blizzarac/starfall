@@ -838,7 +838,7 @@ export class WorldScene extends Phaser.Scene {
         this.lines(this.player.x, this.player.y - 30, { inner: 40, outer: 180, count: 30, color: 0xff5a8a });
         this.time.delayedCall(50, () => this.hearts(5));
       }),
-      ev.on('tameFailed', () => this.floatText('player', 'It got away…', '#ffb8d8', 15, 1000)),
+      ev.on('lureReady', () => this.floatText('player', 'Lure ready!', '#ffb8d8', 15, 1000)),
       ev.on('petAttack', (e) => {
         this.damageNumber(e.targetId, String(e.amount), '#ffb8d8', 20);
         this.hitSpark(e.targetId, false);

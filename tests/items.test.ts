@@ -11,7 +11,7 @@ describe('item descriptions', () => {
     expect(info('blue_tonic')).toMatch(/restores 30 SP/);
     expect(info('fly_wing')).toMatch(/teleports you/);
     expect(info('panacea')).toMatch(/cures poison, stun, blind/);
-    expect(info('wobbly_pudding')).toMatch(/tames a Jellop/);
+    expect(info('wobbly_pudding')).toMatch(/to tame it/);
   });
 
   it('says loot sells for gold and what a tinkerer makes from it', () => {
