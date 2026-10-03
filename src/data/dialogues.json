@@ -427,10 +427,10 @@
     "id": "hunting_board",
     "nodes": {
       "start": {
-        "text": "BRIGHTMOOR HUNTING BOARD. Bounties posted by the town. Take up to three at a time and come back here to collect.",
+        "text": "HUNTING BOARD. Hunts posted by the town: take up to three at a time, each pays once. Every monster you defeat also earns a standing bounty, paid out here.",
         "choices": [
           {
-            "label": "Read the bounties",
+            "label": "Read the hunts and collect bounty",
             "do": [
               {
                 "type": "openQuests"

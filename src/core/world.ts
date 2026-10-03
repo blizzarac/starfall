@@ -14,7 +14,7 @@ import * as S from './skills';
 import * as St from './status';
 import * as Pets from './pets';
 import { cleanAppearance, type Appearance } from './appearance';
-import { MAX_ACTIVE_QUESTS, questState } from './quests';
+import { bountyFor, MAX_ACTIVE_QUESTS, questState } from './quests';
 import type { Element } from './combat/formulas';
 import { createRng, randInt, type Rng } from './rng';
 
@@ -70,6 +70,7 @@ export interface WorldEvents extends Record<string, unknown> {
   petAttack: { targetId: number; amount: number };
   /** Battle Aura (or Holy Aura, `holy`) burned a monster. */
   auraHit: { targetId: number; amount: number; holy?: boolean };
+  bountyCollected: { gold: number };
   /** Holy Aura just weakened a monster's DEF. */
   weakened: { targetId: number };
   petLevelUp: { name: string; level: number };
@@ -683,6 +684,7 @@ export class World {
     const p = this.player;
     if (!q) return 'Unknown quest.';
     const state = questState(p, q);
+    if (state === 'done') return "You've already finished that hunt.";
     if (state === 'locked') return `Requires base level ${q.minLevel}.`;
     if (state !== 'available') return "You're already on that hunt.";
     if (p.quests.active.size >= MAX_ACTIVE_QUESTS) return `You can only take ${MAX_ACTIVE_QUESTS} hunts at a time.`;
@@ -709,8 +711,21 @@ export class World {
     return null;
   }
 
+  /** Pays out the kill bounty at a hunting board. Returns the gold collected. */
+  collectBounty(): number {
+    const p = this.player;
+    const gold = p.bounty;
+    if (gold <= 0) return 0;
+    p.gold += gold;
+    p.bounty = 0;
+    this.events.emit('bountyCollected', { gold });
+    return gold;
+  }
+
   private trackKill(m: Monster): void {
     const p = this.player;
+    // Every monster defeated adds to the standing bounty, quest or not.
+    p.bounty += bountyFor(m.def);
     for (const [id, progress] of p.quests.active) {
       const q = this.content.quests.get(id);
       if (!q || q.target.monster !== m.def.id || progress >= q.target.count) continue;

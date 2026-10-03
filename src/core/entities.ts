@@ -68,6 +68,8 @@ export interface Player extends Mover {
   /** Unequipped gear, one entry per piece. */
   gear: GearPiece[];
   gold: number;
+  /** Bounty gold earned from kills, waiting to be collected at a hunting board. */
+  bounty: number;
   savePoint: Place;
   /** The tamed monster following the player, if any. */
   pet: Pet | null;

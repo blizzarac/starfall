@@ -6,7 +6,7 @@ import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 const ROW_H = 74;
-const STATE_ORDER: Record<QuestState, number> = { ready: 0, active: 1, available: 2, locked: 3 };
+const STATE_ORDER: Record<QuestState, number> = { ready: 0, active: 1, available: 2, locked: 3, done: 4 };
 
 /**
  * The hunting board. At the board you can take and hand in hunts; opened
@@ -48,17 +48,35 @@ export class QuestWindow {
     p.setTitle(this.atBoard ? 'Hunting Board' : 'Quest Log');
     const active = w.player.quests.active.size;
     p.add(
-      this.scene.add.text(12, 40, `Active hunts ${active}/${MAX_ACTIVE_QUESTS}${this.atBoard ? '' : '  ·  hand in at the board in Brightmoor'}`, {
+      this.scene.add.text(12, 40, `Active hunts ${active}/${MAX_ACTIVE_QUESTS}${this.atBoard ? '' : '  ·  hand in at a hunting board'}`, {
         ...TEXT,
         fontSize: '12px',
         color: TONE.gold,
       }),
     );
+    // The standing bounty: gold for every monster defeated, no hunt needed.
+    const bounty = w.player.bounty;
+    p.add(
+      this.scene.add.text(12, 58, `Bounty earned: ${bounty} gold${this.atBoard ? '' : ' (collect at a hunting board)'}`, {
+        ...TEXT,
+        fontSize: '12px',
+        color: bounty > 0 ? TONE.good : TONE.muted,
+      }),
+    );
+    if (this.atBoard) {
+      p.add(
+        makeButton(this.scene, p.w - 112, 38, 100, 34, 'Collect', () => {
+          const gold = w.collectBounty();
+          this.message = gold > 0 ? `Collected ${gold} gold in bounties.` : 'No bounty to collect yet. Defeat some monsters!';
+          this.refresh();
+        }, 0x9be38f).setEnabled(bounty > 0).root,
+      );
+    }
     const quests = [...w.content.quests.values()]
       .filter((q) => this.atBoard || w.player.quests.active.has(q.id))
       .sort((a, b) => STATE_ORDER[questState(w.player, a)] - STATE_ORDER[questState(w.player, b)] || a.minLevel - b.minLevel);
-    if (quests.length === 0) p.add(this.scene.add.text(12, 70, 'No hunts in progress.', { ...TEXT, fontSize: '13px', color: TONE.muted }));
-    this.page = pagedList(p, quests, this.page, 64, 34, ROW_H, (q, y, pw) => this.row(q, y, pw), (pg) => {
+    if (quests.length === 0) p.add(this.scene.add.text(12, 84, 'No hunts in progress.', { ...TEXT, fontSize: '13px', color: TONE.muted }));
+    this.page = pagedList(p, quests, this.page, 82, 34, ROW_H, (q, y, pw) => this.row(q, y, pw), (pg) => {
       this.page = pg;
       this.refresh();
     });
@@ -71,8 +89,9 @@ export class QuestWindow {
     const monster = w.content.monsters.get(q.target.monster)!;
     const progress = w.player.quests.active.get(q.id) ?? 0;
     const done = w.player.quests.done.get(q.id) ?? 0;
-    const color = state === 'locked' ? TONE.disabled : state === 'ready' ? TONE.good : TONE.ink;
-    this.panel.add(this.scene.add.text(12, y, `${q.name}${done ? `  ×${done}` : ''}`, { ...TEXT, fontSize: '13px', fontStyle: 'bold', color }));
+    const color = state === 'locked' || state === 'done' ? TONE.disabled : state === 'ready' ? TONE.good : TONE.ink;
+    const tag = state === 'done' ? '  ✓ Done' : done > 1 ? `  ×${done}` : '';
+    this.panel.add(this.scene.add.text(12, y, `${q.name}${tag}`, { ...TEXT, fontSize: '13px', fontStyle: 'bold', color }));
     const goal = state === 'active' || state === 'ready' ? `${progress}/${q.target.count}` : `${q.target.count}`;
     this.panel.add(
       this.scene.add.text(12, y + 18, `Defeat ${goal} ${monster.name} · Lv ${q.minLevel}+`, { ...TEXT, fontSize: '11px', color: TONE.muted }),

@@ -340,7 +340,7 @@ export const QuestSchema = z.object({
   name: z.string(),
   description: z.string(),
   minLevel: z.number().int().min(1).default(1),
-  repeatable: z.boolean().default(true),
+  repeatable: z.boolean().default(false),
   target: z.object({ monster: z.string(), count: z.number().int().positive() }),
   reward: z.object({
     gold: z.number().int().nonnegative().default(0),

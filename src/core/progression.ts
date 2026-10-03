@@ -100,6 +100,7 @@ export function createPlayer(name: string, start: Tile): Player {
     inventory: new Map(),
     gear: [],
     gold: 0,
+    bounty: 0,
     savePoint: { map: '', ...start },
     pet: null,
     hotbar: [],

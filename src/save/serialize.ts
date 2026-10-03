@@ -39,6 +39,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     inventory: Object.fromEntries(p.inventory),
     gear: p.gear.map(savePiece),
     gold: p.gold,
+    bounty: p.bounty,
     storage: {},
     quests: { active: Object.fromEntries(p.quests.active), done: Object.fromEntries(p.quests.done) },
     flags: Object.fromEntries(world.flags),
@@ -82,6 +83,7 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     else p.inventory.set(id, n);
   }
   p.gold = doc.gold;
+  p.bounty = doc.bounty ?? 0;
   // Hunts that no longer exist are dropped.
   const known = (id: string) => world.content.quests.has(id);
   p.quests = {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as F from '../src/core/combat/formulas';
 import { DialogueRunner } from '../src/core/dialogue';
 import { gainXp, derivedStats } from '../src/core/progression';
-import { questState, MAX_ACTIVE_QUESTS } from '../src/core/quests';
+import { bountyFor, questState, MAX_ACTIVE_QUESTS } from '../src/core/quests';
 import { World } from '../src/core/world';
 import { loadContent, START_MAP } from '../src/data/content';
 import { migrate } from '../src/save/migrations';
@@ -10,6 +10,7 @@ import { applySaveDoc, toSaveDoc } from '../src/save/serialize';
 
 const content = loadContent();
 const town = content.maps.get(START_MAP)!;
+const meadowMap = () => content.maps.get('meadow-1')!;
 
 function run(w: World, ms: number, until?: () => boolean) {
   for (let t = 0; t < ms; t += F.TICK_MS) {
@@ -42,7 +43,30 @@ describe('hunting quests', () => {
     expect(w.player.gold).toBe(gold + q.reward.gold);
     expect(w.session.baseXp - xpBefore).toBe(q.reward.baseXp);
     expect(w.player.quests.done.get(q.id)).toBe(1);
-    expect(questState(w.player, q)).toBe('available'); // repeatable
+    // Each hunt pays once: afterwards it's done and can't be taken again.
+    expect(questState(w.player, q)).toBe('done');
+    expect(w.acceptQuest(q.id)).toMatch(/already finished/);
+  });
+
+  it('every kill adds to a bounty, collected at the board and kept in saves', () => {
+    const w = new World(content, meadowMap(), { seed: 2 });
+    expect(w.player.bounty).toBe(0);
+    const target = [...w.monsters.values()][0]!;
+    target.hp = 1;
+    w.attack(target.id);
+    run(w, 30_000, () => !w.monsters.has(target.id));
+    expect(w.player.bounty).toBe(bountyFor(target.def));
+    const doc = migrate(JSON.parse(JSON.stringify(toSaveDoc(w, 0))));
+    const loaded = new World(content, meadowMap(), { seed: 3 });
+    applySaveDoc(loaded, doc);
+    expect(loaded.player.bounty).toBe(w.player.bounty);
+    const gold = w.player.gold;
+    expect(w.collectBounty()).toBe(bountyFor(target.def));
+    expect(w.player.gold).toBe(gold + bountyFor(target.def));
+    expect(w.player.bounty).toBe(0);
+    expect(w.collectBounty()).toBe(0);
+    // Bosses pay much more than regular monsters.
+    expect(bountyFor({ level: 30, boss: true })).toBeGreaterThan(bountyFor({ level: 30 }) * 10);
   });
 
   it('enforces level and the active-hunt limit', () => {

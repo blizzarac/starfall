@@ -46,6 +46,8 @@ export const SaveDocSchema = z.object({
   /** Unequipped gear pieces. */
   gear: z.array(PieceSchema),
   gold: z.number().int().nonnegative(),
+  /** Uncollected kill bounty. Absent in older saves. */
+  bounty: z.number().int().nonnegative().optional(),
   /** Unused: storage is shared by every slot and saved on its own (see StorageDocSchema). */
   storage: Counts,
   /** Active hunts (kills so far) and how often each hunt was completed. */
