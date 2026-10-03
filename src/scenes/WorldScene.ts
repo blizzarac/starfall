@@ -7,8 +7,9 @@ import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
-import { CHIBI_FEET_Y, CHIBI_H, ensureChibi, hexColor } from '../render/chibi';
-import { COLORS, TEXT } from '../render/palette';
+import { chibiOrigin, ensureChibi, hexColor } from '../render/chibi';
+import { feetOrigin, speedLines, starburst } from '../render/ink';
+import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
 import { depthFor, TILE_H, TILE_W, tileToWorld, worldToTile } from '../render/iso';
 
 interface MonsterView {
@@ -25,17 +26,28 @@ const BOLT_COLORS: Record<string, number> = {
   lightning_bolt: 0xfff27a,
   soul_strike: 0xd9b8ff,
 };
-/** Feet position (origin Y) of each monster texture. */
-const MONSTER_LOOKS: Record<MonsterDef['look']['shape'], { feet: number }> = {
-  blob: { feet: 38 / 40 },
-  beetle: { feet: 36 / 40 },
-  sprout: { feet: 40 / 44 },
-  boar: { feet: 40 / 44 },
-  wolf: { feet: 40 / 44 },
-  mushroom: { feet: 42 / 44 },
-  bat: { feet: 40 / 44 },
-  golem: { feet: 52 / 56 },
+/** Pixel row each monster drawing stands on (before inking). */
+const MONSTER_FEET: Record<MonsterDef['look']['shape'], number> = {
+  blob: 38,
+  beetle: 36,
+  sprout: 40,
+  boar: 40,
+  wolf: 40,
+  mushroom: 42,
+  bat: 40,
+  golem: 52,
 };
+/** Comic sound effects for big hits, by what landed. */
+const SFX = {
+  hit: ['BAM!', 'WHAM!', 'POW!', 'KRAK!', 'DOKA!'],
+  fire_bolt: ['FWOOSH!'],
+  cold_bolt: ['KSSHH!'],
+  lightning_bolt: ['ZZAP!'],
+  soul_strike: ['VOOM!'],
+  magnum_break: ['KA-BOOM!'],
+  slam: ['DOOOM!'],
+  hurt: ['OOF!', 'GAH!'],
+} as const;
 /** Pointer distance (px) within which a click counts as hitting a monster or drop. */
 const PICK_RADIUS = 24;
 /** While the button is held, re-issue the move this often so the player follows the pointer. */
@@ -77,7 +89,7 @@ export class WorldScene extends Phaser.Scene {
     this.npcViews.clear();
     this.registry.set('clock', this.clock);
 
-    this.cameras.main.setBackgroundColor(this.world.map.kind === 'dungeon' ? '#1d1b22' : '#2f5d3a');
+    this.cameras.main.setBackgroundColor(this.world.map.kind === 'dungeon' ? '#16131c' : '#3e7a45');
     this.drawGround();
     this.placeObstacles();
     this.placePortals();
@@ -86,9 +98,10 @@ export class WorldScene extends Phaser.Scene {
     this.hover = this.add.image(0, 0, 'tile-outline').setDepth(2).setAlpha(0.6);
     this.debugGfx = this.add.graphics().setDepth(5000);
 
-    this.playerBody = this.add.image(0, 0, this.playerTexture()).setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H);
+    const playerKey = this.playerTexture();
+    this.playerBody = this.add.image(0, 0, playerKey).setOrigin(0.5, chibiOrigin(this, playerKey));
     this.castBar = this.add.graphics();
-    this.statusLabel = this.add.text(0, -66, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold' }).setOrigin(0.5, 1);
+    this.statusLabel = this.add.text(0, -66, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
 
     const cam = this.cameras.main;
@@ -130,37 +143,76 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     const g = this.make.graphics({}, false);
+    const grid = this.world.grid;
+    const dungeon = this.world.map.kind === 'dungeon';
+    const grass = this.world.map.grass;
+    // Terrain classes: an ink line is drawn wherever two different classes meet.
+    const classOf = (x: number, y: number): string => {
+      const t = grid.terrainAt(x, y);
+      if (t === undefined) return 'void';
+      if (t === 'tree' || t === 'rock' || t === 'flower') return 'grass';
+      return t === 'wall' ? 'cobble' : t;
+    };
+    const V = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const terrain = this.world.grid.terrainAt(x, y)!;
-        const kind = terrain === 'tree' || terrain === 'rock' ? 'grass' : terrain;
-        const grass = this.world.map.grass;
-        const shade =
-          grass && (kind === 'grass' || kind === 'flower') ? hexColor(grass[(x + y) % 2]!) : COLORS[kind][(x + y) % 2]!;
+        const terrain = grid.terrainAt(x, y)!;
+        const kind = classOf(x, y) as keyof typeof COLORS;
+        const base = grass && kind === 'grass' ? hexColor(grass[0]!) : (COLORS[kind] as readonly number[])[0]!;
         const c = tileToWorld(x, y);
         const cx = c.x + ox;
         const cy = c.y + oy;
-        g.fillStyle(shade).fillPoints(
-          [
-            new Phaser.Math.Vector2(cx, cy - TILE_H / 2),
-            new Phaser.Math.Vector2(cx + TILE_W / 2, cy),
-            new Phaser.Math.Vector2(cx, cy + TILE_H / 2),
-            new Phaser.Math.Vector2(cx - TILE_W / 2, cy),
-          ],
-          true,
-        );
+        const h = hash(x, y);
+        g.fillStyle(base).fillPoints([V(cx, cy - TILE_H / 2), V(cx + TILE_W / 2, cy), V(cx, cy + TILE_H / 2), V(cx - TILE_W / 2, cy)], true);
+
+        // Hand-drawn texture marks, sparse so the ground stays calm.
+        if (kind === 'grass' && !dungeon && h % 3 === 0) {
+          g.lineStyle(1.3, COLORS.ink, 0.45);
+          const tx = cx + ((h >>> 4) % 30) - 15;
+          const ty = cy + ((h >>> 9) % 12) - 6;
+          g.lineBetween(tx - 3, ty - 4, tx, ty).lineBetween(tx, ty, tx + 3, ty - 5);
+        }
+        if (kind === 'grass' && dungeon && h % 4 === 0) {
+          g.lineStyle(1.2, COLORS.ink, 0.5);
+          const tx = cx + ((h >>> 4) % 26) - 13;
+          const ty = cy + ((h >>> 9) % 10) - 5;
+          g.lineBetween(tx - 6, ty, tx, ty + 2).lineBetween(tx, ty + 2, tx + 5, ty - 1);
+        }
+        if (kind === 'path' && h % 2 === 0) {
+          g.fillStyle(COLORS.ink, 0.28).fillCircle(cx + ((h >>> 3) % 24) - 12, cy + ((h >>> 8) % 10) - 5, 1.4);
+        }
+        if (kind === 'cobble') {
+          g.lineStyle(1, COLORS.ink, 0.22).lineBetween(cx - 16, cy - 8, cx + 16, cy + 8).lineBetween(cx + 16, cy - 8, cx - 16, cy + 8);
+        }
+        if (kind === 'water' && h % 2 === 0) {
+          g.lineStyle(2, 0xffffff, 0.9);
+          const wx = cx + ((h >>> 5) % 16) - 8;
+          g.beginPath().arc(wx, cy + 4, 6, Math.PI * 1.15, Math.PI * 1.85).strokePath();
+        }
         if (terrain === 'flower') {
-          const h = hash(x, y);
           const petals = [0xffffff, 0xffd84a, 0xff8fb8, 0xb9a4ff];
-          for (let i = 0; i < 3; i++) {
+          for (let i = 0; i < 2; i++) {
             const px = cx + (((h >>> (i * 4)) & 15) - 7.5) * 2.4;
             const py = cy + (((h >>> (i * 4 + 2)) & 7) - 3.5) * 1.6;
-            g.fillStyle(petals[(h >>> (i * 3)) % petals.length]!).fillCircle(px, py, 2.2);
+            g.fillStyle(petals[(h >>> (i * 3)) % petals.length]!).fillCircle(px, py, 3);
+            g.lineStyle(1.2, COLORS.ink).strokeCircle(px, py, 3);
+            g.fillStyle(0xffd84a).fillCircle(px, py, 1);
           }
         }
-        if (terrain === 'water') {
-          g.fillStyle(0xffffff, 0.25).fillEllipse(cx - 6 + (hash(x, y) % 12), cy, 10, 2);
-        }
+      }
+    }
+    // Ink borders between different kinds of ground.
+    g.lineStyle(2, COLORS.ink, 0.85);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const c = tileToWorld(x, y);
+        const cx = c.x + ox;
+        const cy = c.y + oy;
+        const here = classOf(x, y);
+        if (classOf(x + 1, y) !== here) g.lineBetween(cx + TILE_W / 2, cy, cx, cy + TILE_H / 2);
+        if (classOf(x, y + 1) !== here) g.lineBetween(cx - TILE_W / 2, cy, cx, cy + TILE_H / 2);
+        if (x === 0 || classOf(x - 1, y) !== here) g.lineBetween(cx - TILE_W / 2, cy, cx, cy - TILE_H / 2);
+        if (y === 0 || classOf(x, y - 1) !== here) g.lineBetween(cx + TILE_W / 2, cy, cx, cy - TILE_H / 2);
       }
     }
     const texW = (width + height) * (TILE_W / 2);
@@ -179,16 +231,19 @@ export class WorldScene extends Phaser.Scene {
         const p = tileToWorld(x, y);
         let img: Phaser.GameObjects.Image;
         if (t === 'tree') {
-          img = this.add.image(p.x, p.y + 4, 'tree').setOrigin(0.5, 88 / 96).setScale(0.9 + (hash(x, y) % 5) * 0.05);
+          this.add.image(p.x, p.y + 4, 'shadow').setScale(1.3).setDepth(1);
+          img = this.add.image(p.x, p.y + 4, 'tree').setOrigin(0.5, feetOrigin(this, 'tree', 88)).setScale(0.9 + (hash(x, y) % 5) * 0.05);
           this.trees.push({ img, tile: { x, y } });
         } else if (t === 'wall') {
-          img = this.add.image(p.x, p.y, hash(x, y) % 3 === 0 ? 'house-window' : 'house').setOrigin(0.5, 56 / 72);
+          const key = hash(x, y) % 3 === 0 ? 'house-window' : 'house';
+          img = this.add.image(p.x, p.y, key).setOrigin(0.5, feetOrigin(this, key, 56));
           this.trees.push({ img, tile: { x, y } });
         } else if (t === 'cavewall') {
-          img = this.add.image(p.x, p.y, 'cavewall').setOrigin(0.5, 56 / 72);
+          img = this.add.image(p.x, p.y, 'cavewall').setOrigin(0.5, feetOrigin(this, 'cavewall', 56));
           this.trees.push({ img, tile: { x, y } });
         } else {
-          img = this.add.image(p.x, p.y + 2, 'rock').setOrigin(0.5, 28 / 32);
+          this.add.image(p.x, p.y + 2, 'shadow').setDepth(1);
+          img = this.add.image(p.x, p.y + 2, 'rock').setOrigin(0.5, feetOrigin(this, 'rock', 28));
         }
         img.setDepth(depthFor(p.y));
       }
@@ -218,13 +273,13 @@ export class WorldScene extends Phaser.Scene {
       const p = tileToWorld(npc.x, npc.y);
       const body =
         npc.sprite === 'board'
-          ? this.add.image(0, 0, 'board').setOrigin(0.5, 54 / 58)
+          ? this.add.image(0, 0, 'board').setOrigin(0.5, feetOrigin(this, 'board', 54))
           : this.add
               .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), hexColor(npc.look.hair)))
-              .setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H)
+              .setOrigin(0.5, chibiOrigin(this, `npc-${npc.id}`))
               .setFlipX(hash(npc.x, npc.y) % 2 === 0);
       const label = this.add
-        .text(0, -62, npc.name, { ...TEXT, fontSize: '12px', color: '#ffe9a8' })
+        .text(0, -66, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
         .setOrigin(0.5, 1);
       const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
       this.tweens.add({ targets: body, scaleY: { from: 1, to: 0.97 }, yoyo: true, repeat: -1, duration: 1200 + (hash(npc.x, npc.y) % 400) });
@@ -322,8 +377,8 @@ export class WorldScene extends Phaser.Scene {
 
   private createMonsterView(m: Monster): MonsterView {
     const color = Phaser.Display.Color.HexStringToColor(m.def.look.color).color;
-    const look = MONSTER_LOOKS[m.def.look.shape];
-    const body = this.add.image(0, 0, m.def.look.shape).setOrigin(0.5, look.feet).setTint(color);
+    const shape = m.def.look.shape;
+    const body = this.add.image(0, 0, shape).setOrigin(0.5, feetOrigin(this, shape, MONSTER_FEET[shape])).setTint(color);
     const hpBar = this.add.graphics();
     const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.9), body, hpBar]);
     root.setAlpha(0);
@@ -344,7 +399,7 @@ export class WorldScene extends Phaser.Scene {
       const w = tileToWorld(drop.tile.x, drop.tile.y);
       const img = this.add
         .image(w.x, w.y, 'drop')
-        .setOrigin(0.5, 0.9)
+        .setOrigin(0.5, feetOrigin(this, 'drop', 18))
         .setTint(DROP_TINT[item.type] ?? 0xffffff)
         .setDepth(depthFor(w.y) - 1);
       this.tweens.add({ targets: img, y: { from: w.y - 18, to: w.y }, duration: 350, ease: 'Bounce.easeOut' });
@@ -467,13 +522,16 @@ export class WorldScene extends Phaser.Scene {
       ev.on('mapChanged', () => this.scene.restart()),
       ev.on('damage', (e) => {
         const crit = e.crit;
-        const color = e.targetId === 'player' ? '#ff6b6b' : crit ? '#ffd84a' : '#ffffff';
-        this.floatText(e.targetId, String(e.amount), color, crit ? 22 : 16);
+        const toPlayer = e.targetId === 'player';
+        const color = toPlayer ? '#ff5a4a' : crit ? '#ffd84a' : '#ffffff';
+        this.damageNumber(e.targetId, String(e.amount), color, crit ? 30 : 22);
+        if (crit) this.soundEffect(e.targetId, pick(SFX.hit), '#ffd84a', true);
+        else if (toPlayer && e.sourceId !== 'player' && e.amount >= this.world.player.hp * 0.5) this.soundEffect('player', pick(SFX.hurt), '#ff5a4a');
         if (e.sourceId === 'player') this.playAttack(e.targetId);
         this.flashHit(e.targetId);
       }),
       ev.on('miss', (e) => {
-        this.floatText(e.targetId, 'Miss', '#8fd0ff', 14);
+        this.damageNumber(e.targetId, 'MISS', '#8fd0ff', 18);
         if (e.sourceId === 'player') this.playAttack(e.targetId);
       }),
       ev.on('heal', (e) => {
@@ -481,7 +539,8 @@ export class WorldScene extends Phaser.Scene {
       }),
       ev.on('jobChanged', () => {
         this.playerBody.setTexture(this.playerTexture());
-        this.floatText('player', 'JOB CHANGE!', '#ffe27a', 20, 1600);
+        this.soundEffect('player', 'JOB CHANGE!!', '#ffe27a', true);
+        speedLines(this, this.player.x, this.player.y - 30, { inner: 50, outer: 220, count: 40 });
         this.cameras.main.flash(300, 255, 240, 180);
       }),
       ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets)),
@@ -491,6 +550,8 @@ export class WorldScene extends Phaser.Scene {
         const burst = this.add.ellipse(at.x, at.y, TILE_W * (e.radius * 2 + 1), TILE_H * (e.radius * 2 + 1), 0xffb15a, 0.5).setDepth(3);
         this.tweens.add({ targets: burst, alpha: 0, scale: 1.15, duration: 350, onComplete: () => burst.destroy() });
         this.cameras.main.shake(220, 0.01);
+        this.soundEffect(e.monsterId, pick(SFX.slam), '#ff9a4a', true);
+        speedLines(this, at.x, at.y, { inner: 60, outer: 200, count: 34 });
       }),
       ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('refined', (e) => {
@@ -499,7 +560,8 @@ export class WorldScene extends Phaser.Scene {
         if (!e.success) this.cameras.main.shake(200, 0.008);
       }),
       ev.on('levelUp', (e) => {
-        this.floatText('player', e.kind === 'base' ? 'LEVEL UP!' : 'JOB LEVEL UP!', '#ffe27a', 20, 1400);
+        this.soundEffect('player', e.kind === 'base' ? 'LEVEL UP!!' : 'JOB UP!!', '#ffe27a', true);
+        speedLines(this, this.player.x, this.player.y - 30, { inner: 45, outer: 200, count: 36 });
         this.cameras.main.flash(200, 255, 240, 180);
       }),
     ];
@@ -538,8 +600,9 @@ export class WorldScene extends Phaser.Scene {
 
   private skillEffect(skillId: string, targets: number[]): void {
     const at = { x: this.player.x, y: this.player.y };
+    const target = targets[0];
     if (skillId === 'bash') {
-      this.floatText('player', 'Bash!', '#ffb15a', 15, 600);
+      if (target !== undefined) this.soundEffect(target, pick(SFX.hit), '#ffb15a', true);
       this.cameras.main.shake(90, 0.004);
     } else if (skillId === 'magnum_break') {
       const ring = this.add.ellipse(at.x, at.y, 40, 20).setStrokeStyle(6, 0xff7a3a, 0.9).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
@@ -547,10 +610,14 @@ export class WorldScene extends Phaser.Scene {
       // Radius 2 tiles: 5 tiles across in iso space.
       this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * 5) / 40, scaleY: (TILE_H * 5) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
       this.cameras.main.shake(150, 0.006);
+      this.soundEffect('player', pick(SFX.magnum_break), '#ff7a3a', true);
+      speedLines(this, at.x, at.y - 20, { inner: 50, outer: 190 });
     } else if (skillId in BOLT_COLORS) {
       this.boltEffect(targets, BOLT_COLORS[skillId]!);
+      const sfx = SFX[skillId as keyof typeof SFX];
+      if (target !== undefined && sfx) this.time.delayedCall(180, () => this.soundEffect(target, pick(sfx), '#' + BOLT_COLORS[skillId]!.toString(16).padStart(6, '0')));
     } else if (skillId === 'endure') {
-      this.floatText('player', 'Endure', '#ffe27a', 15, 900);
+      this.soundEffect('player', 'ENDURE!', '#ffe27a');
       this.playerBody.setTint(0xffe9a8);
       this.time.delayedCall(400, () => this.playerBody.clearTint());
     }
@@ -566,7 +633,7 @@ export class WorldScene extends Phaser.Scene {
     const at = this.anchorOf(id);
     if (!at) return;
     const label = this.add
-      .text(at.x + Phaser.Math.Between(-6, 6), at.y, text, { ...TEXT, fontSize: `${size}px`, color, fontStyle: 'bold' })
+      .text(at.x + Phaser.Math.Between(-6, 6), at.y, text, { ...WORLD_TEXT, fontSize: `${size}px`, color })
       .setOrigin(0.5)
       .setDepth(6000);
     this.tweens.add({
@@ -577,6 +644,42 @@ export class WorldScene extends Phaser.Scene {
       duration,
       onComplete: () => label.destroy(),
     });
+  }
+
+  /** Comic damage number: impact font, heavy ink outline, pops in tilted then floats up. */
+  private damageNumber(id: EntityId, text: string, color: string, size: number): void {
+    const at = this.anchorOf(id);
+    if (!at) return;
+    const label = this.add
+      .text(at.x + Phaser.Math.Between(-10, 10), at.y, text, {
+        fontFamily: IMPACT_FONT,
+        fontSize: `${size}px`,
+        color,
+        stroke: '#16131c',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setAngle(Phaser.Math.Between(-12, 12))
+      .setScale(1.6)
+      .setDepth(6000);
+    this.tweens.add({ targets: label, scale: 1, duration: 120, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: label, y: at.y - 42, alpha: { from: 1, to: 0 }, delay: 250, duration: 650, ease: 'Cubic.easeIn', onComplete: () => label.destroy() });
+  }
+
+  /** Onomatopoeia ("BAM!") in a starburst next to whoever got hit. */
+  private soundEffect(id: EntityId, text: string, color: string, burst = false): void {
+    const at = this.anchorOf(id);
+    if (!at) return;
+    const x = at.x + Phaser.Math.Between(-24, 24);
+    const y = at.y - 18;
+    const label = this.add
+      .text(0, 0, text, { fontFamily: IMPACT_FONT, fontSize: '26px', color, stroke: '#16131c', strokeThickness: 7 })
+      .setOrigin(0.5);
+    const parts: Phaser.GameObjects.GameObject[] = [label];
+    if (burst) parts.unshift(starburst(this.add.graphics(), Math.max(34, label.width * 0.75), 12, 0xffffff));
+    const fx = this.add.container(x, y, parts).setDepth(6100).setAngle(Phaser.Math.Between(-15, 15)).setScale(0.3);
+    this.tweens.add({ targets: fx, scale: 1, duration: 140, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: fx, alpha: 0, delay: 600, duration: 300, onComplete: () => fx.destroy() });
   }
 
   private playAttack(targetId: EntityId): void {
@@ -639,4 +742,8 @@ function hash(x: number, y: number): number {
   let h = (x * 374761393 + y * 668265263) >>> 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
   return (h ^ (h >>> 16)) >>> 0;
+}
+
+function pick<T>(list: readonly T[]): T {
+  return list[Math.floor(Math.random() * list.length)]!;
 }

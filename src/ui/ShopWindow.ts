@@ -3,7 +3,7 @@ import { sellPrice } from '../core/combat/formulas';
 import { describeGear, isPlain, pieceName, type GearPiece } from '../core/equipment';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
-import { TEXT } from '../render/palette';
+import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 type Tab = 'buy' | 'sell';
@@ -49,10 +49,10 @@ export class ShopWindow {
     p.clear();
     p.setTitle(shop.name);
     const tabW = (p.w - 30) / 2;
-    p.add(makeButton(this.scene, 12, 40, tabW, 32, 'Buy', () => this.setTab('buy'), this.tab === 'buy' ? 0x5a7bb8 : 0x3a4a63).root);
-    p.add(makeButton(this.scene, 18 + tabW, 40, tabW, 32, 'Sell', () => this.setTab('sell'), this.tab === 'sell' ? 0x5a7bb8 : 0x3a4a63).root);
+    p.add(makeButton(this.scene, 12, 40, tabW, 32, 'Buy', () => this.setTab('buy'), this.tab === 'buy' ? 0xffd84a : 0xffffff).root);
+    p.add(makeButton(this.scene, 18 + tabW, 40, tabW, 32, 'Sell', () => this.setTab('sell'), this.tab === 'sell' ? 0xffd84a : 0xffffff).root);
     p.add(
-      this.scene.add.text(12, 80, `Gold ${w.player.gold}    Weight ${w.weight()} / ${w.maxWeight()}`, { ...TEXT, fontSize: '12px', color: '#ffe27a' }),
+      this.scene.add.text(12, 80, `Gold ${w.player.gold}    Weight ${w.weight()} / ${w.maxWeight()}`, { ...TEXT, fontSize: '12px', color: TONE.gold }),
     );
 
     const items: SellRow[] =
@@ -68,7 +68,7 @@ export class ShopWindow {
         }).setEnabled(total > 0).root,
       );
     }
-    if (items.length === 0) p.add(this.scene.add.text(12, 110, 'Nothing to sell.', { ...TEXT, fontSize: '13px', color: '#c4cfdf' }));
+    if (items.length === 0) p.add(this.scene.add.text(12, 110, 'Nothing to sell.', { ...TEXT, fontSize: '13px', color: TONE.muted }));
 
     this.page = pagedList(
       p,
@@ -83,7 +83,7 @@ export class ShopWindow {
         this.refresh();
       },
     );
-    p.add(this.scene.add.text(12, p.h - 30, this.message, { ...TEXT, fontSize: '12px', color: '#9be38f', wordWrap: { width: p.w - 24 } }));
+    p.add(this.scene.add.text(12, p.h - 30, this.message, { ...TEXT, fontSize: '12px', color: TONE.good, wordWrap: { width: p.w - 24 } }));
   }
 
   /** Stackables, then each unequipped piece of gear on its own row. */
@@ -103,7 +103,7 @@ export class ShopWindow {
       this.scene.add.text(12, y + 20, `${sellPrice(piece.item.price)} gold · wt ${piece.item.weight}${warn}`, {
         ...TEXT,
         fontSize: '11px',
-        color: isPlain(piece) ? '#c4cfdf' : '#ffb15a',
+        color: isPlain(piece) ? TONE.muted : TONE.warn,
       }),
     );
     this.panel.add(
@@ -121,11 +121,11 @@ export class ShopWindow {
     const price = this.tab === 'buy' ? item.price : sellPrice(item.price);
     this.panel.add(this.scene.add.text(12, y + 4, item.name, { ...TEXT, fontSize: '13px' }));
     this.panel.add(
-      this.scene.add.text(12, y + 20, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: '#c4cfdf' }),
+      this.scene.add.text(12, y + 20, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: TONE.muted }),
     );
     if (item.equip) {
       this.panel.add(
-        this.scene.add.text(12, y + 35, describeGear(item.equip), { ...TEXT, fontSize: '10px', color: '#9fb4d6', wordWrap: { width: pw - 150 } }),
+        this.scene.add.text(12, y + 35, describeGear(item.equip), { ...TEXT, fontSize: '10px', color: TONE.accent, wordWrap: { width: pw - 150 } }),
       );
     }
     const act = (count: number) => () => {

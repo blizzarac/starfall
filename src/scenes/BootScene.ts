@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { loadContent } from '../data/content';
 import { SaveDb } from '../save/db';
 import { ensureChibi } from '../render/chibi';
+import { inkify } from '../render/ink';
 import { COLORS } from '../render/palette';
 
 /**
@@ -25,26 +26,31 @@ export class BootScene extends Phaser.Scene {
 
   private makeTextures(): void {
     const g = this.make.graphics({}, false);
+    const V = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
 
-    // Soft ground shadow under everything that stands on the map.
-    g.fillStyle(COLORS.shadow, 0.22).fillEllipse(20, 8, 40, 16);
+    // Flat, hard-edged manga shadow under everything that stands on the map.
+    g.fillStyle(COLORS.shadow, 0.3).fillEllipse(20, 8, 40, 14);
     g.generateTexture('shadow', 40, 16).clear();
 
-    // Tree: trunk and three leaf clumps, feet at (32, 88).
-    g.fillStyle(COLORS.shadow, 0.2).fillEllipse(32, 88, 46, 16);
-    g.fillStyle(COLORS.treeTrunk).fillRoundedRect(27, 54, 10, 34, 3);
+    // Tree: trunk and puffy leaf clumps with ink curls, feet at (32, 88).
+    g.fillStyle(COLORS.treeTrunk).fillPoints([V(27, 88), V(29, 54), V(35, 54), V(37, 88)], true);
+    g.fillStyle(0x6e4226).fillRect(33, 56, 3, 32);
     const [l1, l2, l3] = COLORS.treeLeaves;
-    g.fillStyle(l3).fillCircle(32, 40, 26);
-    g.fillStyle(l1).fillCircle(22, 34, 17).fillCircle(42, 36, 16);
-    g.fillStyle(l2).fillCircle(32, 22, 16);
-    g.fillStyle(0xffffff, 0.18).fillCircle(26, 18, 7);
+    g.fillStyle(l3).fillCircle(32, 42, 24).fillCircle(14, 40, 12).fillCircle(50, 40, 12);
+    g.fillStyle(l1).fillCircle(20, 30, 16).fillCircle(44, 32, 15);
+    g.fillStyle(l2).fillCircle(32, 18, 15).fillCircle(22, 22, 9);
+    g.fillStyle(0xffffff, 0.35).fillEllipse(26, 12, 10, 4);
+    g.lineStyle(1.6, COLORS.ink, 0.85);
+    for (const [cx, cy] of [[24, 34], [40, 38], [32, 22], [16, 44], [46, 48]] as const) {
+      g.beginPath().arc(cx, cy, 5, Math.PI * 0.15, Math.PI * 0.85).strokePath();
+    }
     g.generateTexture('tree', 64, 96).clear();
 
     // Rock, feet at (24, 28).
-    g.fillStyle(COLORS.shadow, 0.2).fillEllipse(24, 28, 42, 12);
     g.fillStyle(COLORS.rockShade).fillEllipse(24, 20, 40, 22);
     g.fillStyle(COLORS.rock).fillEllipse(22, 16, 34, 18);
-    g.fillStyle(0xffffff, 0.25).fillEllipse(16, 12, 10, 5);
+    g.fillStyle(0xffffff, 0.6).fillEllipse(16, 12, 10, 4);
+    g.lineStyle(1.5, COLORS.ink, 0.8).lineBetween(26, 12, 31, 20).lineBetween(31, 20, 29, 25);
     g.generateTexture('rock', 48, 32).clear();
 
     // Blob monster, drawn light so a tint gives it its color. Feet at (24, 38).
@@ -86,14 +92,12 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('boar', 60, 44).clear();
 
     // Loot bag, tinted per item type.
-    g.fillStyle(COLORS.shadow, 0.25).fillEllipse(10, 18, 16, 5);
     g.fillStyle(0xffffff).fillCircle(10, 11, 7).fillRect(7, 2, 6, 5);
-    g.lineStyle(1.5, 0x333333, 0.6).strokeCircle(10, 11, 7);
-    g.fillStyle(0xffffff, 0.6).fillCircle(7, 9, 2);
+    g.fillStyle(0xdddddd).fillRect(6, 5, 8, 2);
+    g.fillStyle(0xffffff, 0.9).fillCircle(7, 9, 2);
     g.generateTexture('drop', 20, 20).clear();
 
     // House block: an isometric cube whose neighbors merge into buildings. Ground center at (32, 56).
-    const V = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
     for (const windows of [false, true]) {
       g.fillStyle(COLORS.houseWall).fillPoints([V(0, 56), V(32, 72), V(32, 34), V(0, 18)], true);
       g.fillStyle(COLORS.houseShade).fillPoints([V(32, 72), V(64, 56), V(64, 18), V(32, 34)], true);
@@ -147,7 +151,6 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('golem', 56, 56).clear();
 
     // Notice board on two posts, with pinned papers. Feet at (24, 54).
-    g.fillStyle(COLORS.shadow, 0.2).fillEllipse(24, 54, 40, 10);
     g.fillStyle(0x6b4a2e).fillRect(8, 22, 4, 32).fillRect(36, 22, 4, 32);
     g.fillStyle(0x9a6b42).fillRoundedRect(2, 6, 44, 28, 3);
     g.fillStyle(0xf4ead2).fillRect(7, 10, 11, 13).fillRect(21, 12, 10, 12).fillRect(34, 9, 8, 10);
@@ -168,5 +171,12 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('tile-outline', 64, 32).clear();
 
     g.destroy();
+
+    // Color-manga pass: ink outlines on everything, screentone on round shapes.
+    for (const key of ['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'tree', 'rock']) {
+      inkify(this, key, { outline: 2.5, tone: true });
+    }
+    for (const key of ['house', 'house-window', 'cavewall', 'board']) inkify(this, key, { outline: 2 });
+    inkify(this, 'drop', { outline: 2 });
   }
 }

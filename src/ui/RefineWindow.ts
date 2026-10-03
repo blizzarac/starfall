@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { refineChance, refineCost, REFINE_ORE } from '../core/combat/formulas';
 import { MAX_REFINE, pieceName, type GearPiece } from '../core/equipment';
 import type { World } from '../core/world';
-import { TEXT } from '../render/palette';
+import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 const ROW_H = 54;
@@ -12,7 +12,7 @@ export class RefineWindow {
   readonly panel: Panel;
   private page = 0;
   private message = '';
-  private messageColor = '#9be38f';
+  private messageColor = TONE.good;
   /** Piece awaiting confirmation of a risky attempt. */
   private confirming: number | null = null;
 
@@ -41,13 +41,13 @@ export class RefineWindow {
     p.clear();
     const ore = w.content.items.get(REFINE_ORE)!;
     p.add(
-      this.scene.add.text(12, 40, `Gold ${w.player.gold}    ${ore.name} ×${w.itemCount(REFINE_ORE)}`, { ...TEXT, fontSize: '12px', color: '#ffe27a' }),
+      this.scene.add.text(12, 40, `Gold ${w.player.gold}    ${ore.name} ×${w.itemCount(REFINE_ORE)}`, { ...TEXT, fontSize: '12px', color: TONE.gold }),
     );
     p.add(
       this.scene.add.text(12, 58, 'Up to +4 is safe. Above that a failed attempt destroys the piece.', {
         ...TEXT,
         fontSize: '11px',
-        color: '#c4cfdf',
+        color: TONE.muted,
         wordWrap: { width: p.w - 24 },
       }),
     );
@@ -65,7 +65,7 @@ export class RefineWindow {
     const next = piece.refine + 1;
     this.panel.add(this.scene.add.text(12, y + 2, `${pieceName(piece)}${worn ? ' (worn)' : ''}`, { ...TEXT, fontSize: '13px' }));
     if (next > MAX_REFINE) {
-      this.panel.add(this.scene.add.text(12, y + 20, 'Fully refined.', { ...TEXT, fontSize: '11px', color: '#9be38f' }));
+      this.panel.add(this.scene.add.text(12, y + 20, 'Fully refined.', { ...TEXT, fontSize: '11px', color: TONE.good }));
       return;
     }
     const chance = refineChance(next);
@@ -74,7 +74,7 @@ export class RefineWindow {
       this.scene.add.text(12, y + 20, `→ +${next}: ${Math.round(chance * 100)}% · ${refineCost(next)} gold + 1 ore${risky ? ' · may break' : ''}`, {
         ...TEXT,
         fontSize: '11px',
-        color: risky ? '#ffb15a' : '#c4cfdf',
+        color: risky ? TONE.warn : TONE.muted,
       }),
     );
     const confirming = this.confirming === piece.uid;
@@ -84,7 +84,7 @@ export class RefineWindow {
         if (risky && !confirming) {
           this.confirming = piece.uid;
           this.message = `Tap Sure? to risk ${pieceName(piece)} (${Math.round(chance * 100)}% to succeed).`;
-          this.messageColor = '#ffb15a';
+          this.messageColor = TONE.warn;
           this.refresh();
           return;
         }
@@ -93,16 +93,16 @@ export class RefineWindow {
         const result = w.refine(piece.uid);
         if ('error' in result) {
           this.message = result.error;
-          this.messageColor = '#ff9a7a';
+          this.messageColor = TONE.bad;
         } else if (result.success) {
           this.message = `Success! ${pieceName(piece)}.`;
-          this.messageColor = '#9be38f';
+          this.messageColor = TONE.good;
         } else {
           this.message = `${name} shattered.`;
-          this.messageColor = '#ff6b6b';
+          this.messageColor = TONE.bad;
         }
         this.refresh();
-      }, confirming ? 0xb0573f : 0x3a4a63).setEnabled(!blocker).root,
+      }, confirming ? 0xff7a5a : 0xffffff).setEnabled(!blocker).root,
     );
   }
 }

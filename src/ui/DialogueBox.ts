@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { DialogueRunner } from '../core/dialogue';
 import type { World } from '../core/world';
 import type { NpcDef } from '../data/schemas';
-import { TEXT } from '../render/palette';
+import { COLORS, TEXT } from '../render/palette';
 import { makeButton, Panel } from './widgets';
 
 /** Conversation window: NPC text plus one button per choice. */
@@ -59,7 +59,16 @@ export class DialogueBox {
     p.layout();
     p.clear();
     p.setTitle(view.speaker);
-    const text = p.add(this.scene.add.text(12, 40, view.text, { ...TEXT, fontSize: '14px', lineSpacing: 4, wordWrap: { width: p.w - 24 } }));
+    // Speech-bubble tail rising from the name box toward the speaker.
+    p.add(
+      this.scene.add
+        .graphics()
+        .fillStyle(COLORS.ink)
+        .fillTriangle(28, 1, 64, 1, 34, -22),
+    );
+    const text = p.add(
+      this.scene.add.text(14, 46, view.text, { ...TEXT, fontSize: '15px', fontStyle: 'bold', lineSpacing: 5, wordWrap: { width: p.w - 28 } }),
+    );
     const choices = view.choices.length > 0 ? view.choices : ['Goodbye'];
     const btnH = 36;
     let y = Math.max(text.y + text.height + 14, p.h - 12 - choices.length * (btnH + 6));

@@ -12,6 +12,8 @@
     "check": "npm run typecheck && npm run test"
   },
   "dependencies": {
+    "@fontsource/bangers": "^5.3.0",
+    "@fontsource/m-plus-rounded-1c": "^5.3.0",
     "dexie": "^4.4.6",
     "phaser": "^3.90.0",
     "zod": "^4.6.5"

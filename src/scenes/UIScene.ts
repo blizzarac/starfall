@@ -9,7 +9,7 @@ import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
 import { downloadSave, type SaveManager } from '../save/manager';
 import { endSession } from './session';
-import { COLORS, TEXT } from '../render/palette';
+import { COLORS, IMPACT_FONT, TEXT, WORLD_TEXT } from '../render/palette';
 import { DialogueBox } from '../ui/DialogueBox';
 import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
@@ -83,21 +83,32 @@ export class UIScene extends Phaser.Scene {
     this.buttons = [];
 
     this.swallowTaps(this.add.zone(8, 8, 236, 142).setOrigin(0));
-    this.add.graphics().fillStyle(COLORS.ui, 0.82).fillRoundedRect(8, 8, 236, 142, 8).lineStyle(1, COLORS.uiBorder, 0.6).strokeRoundedRect(8, 8, 236, 142, 8);
+    this.add
+      .graphics()
+      .fillStyle(COLORS.ink)
+      .fillRect(13, 13, 236, 142)
+      .fillStyle(COLORS.paper)
+      .fillRect(8, 8, 236, 142)
+      .lineStyle(3, COLORS.ink)
+      .strokeRect(8, 8, 236, 142);
     this.bars = this.add.graphics();
-    this.statusText = this.add.text(18, 14, '', { ...TEXT, fontSize: '12px', lineSpacing: 6 });
-    this.logText = this.add.text(12, 0, '', { ...TEXT, fontSize: '12px', lineSpacing: 2 }).setOrigin(0, 1);
+    this.statusText = this.add.text(18, 14, '', { ...TEXT, fontSize: '12px', fontStyle: 'bold', lineSpacing: 6 });
+    this.logText = this.add.text(12, 0, '', { ...WORLD_TEXT, fontSize: '12px', lineSpacing: 2 }).setOrigin(0, 1);
     this.debugText = this.add
       .text(0, 12, '', { ...TEXT, fontFamily: 'Menlo, Consolas, monospace', fontSize: '11px', backgroundColor: '#000000aa', padding: { x: 8, y: 6 } })
       .setOrigin(1, 0)
       .setVisible(false);
     this.deathText = this.add
-      .text(0, 0, '', { ...TEXT, fontSize: '22px', align: 'center', fontStyle: 'bold' })
+      .text(0, 0, '', { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: '30px', align: 'center', fontStyle: 'normal', strokeThickness: 7 })
       .setOrigin(0.5)
       .setVisible(false);
     this.bossBar = this.add.graphics();
-    this.bossText = this.add.text(0, 0, '', { ...TEXT, fontSize: '12px', fontStyle: 'bold' }).setOrigin(0.5, 0);
-    this.mapBanner = this.add.text(0, 0, '', { ...TEXT, fontSize: '22px', fontStyle: 'bold', strokeThickness: 5 }).setOrigin(0.5).setAlpha(0);
+    this.bossText = this.add.text(0, 0, '', { ...WORLD_TEXT, fontSize: '12px' }).setOrigin(0.5, 0);
+    // Manga caption box: black box, white impact lettering.
+    this.mapBanner = this.add
+      .text(0, 0, '', { fontFamily: IMPACT_FONT, fontSize: '28px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 16, y: 6 } })
+      .setOrigin(0.5)
+      .setAlpha(0);
     this.buildStatWindow();
     this.inventory = new InventoryWindow(this, this.world);
     this.skillWindow = new SkillWindow(this, this.world);
@@ -111,7 +122,7 @@ export class UIScene extends Phaser.Scene {
       () => this.refineWindow.open(),
       () => this.questWindow.open(true),
     );
-    this.tracker = this.add.text(12, 0, '', { ...TEXT, fontSize: '11px', lineSpacing: 2 });
+    this.tracker = this.add.text(12, 0, '', { ...WORLD_TEXT, fontSize: '11px', lineSpacing: 2 });
     this.buildButtons();
     this.buildMenu();
     this.buildSkillButtons();
@@ -172,9 +183,13 @@ export class UIScene extends Phaser.Scene {
     const d = derivedStats(p);
     const g = this.bars.clear();
     const bar = (y: number, frac: number, color: number) => {
-      g.fillStyle(COLORS.barBack).fillRoundedRect(128, y, 106, 9, 3);
+      g.fillStyle(COLORS.barBack).fillRect(128, y, 106, 10);
       const w = Math.max(0, Math.min(1, frac)) * 106;
-      if (w >= 1) g.fillStyle(color).fillRoundedRect(128, y, w, 9, Math.min(3, w / 2));
+      if (w >= 1) {
+        g.fillStyle(color).fillRect(128, y, w, 10);
+        g.fillStyle(0xffffff, 0.45).fillRect(128, y + 1, w, 3);
+      }
+      g.lineStyle(2, COLORS.ink).strokeRect(128, y, 106, 10);
     };
     const baseNeed = F.baseXpToNext(p.baseLevel);
     const job = jobOf(p);
@@ -218,40 +233,41 @@ export class UIScene extends Phaser.Scene {
       { ...HOTBAR[0]!, label: 'Tonic' },
       { ...HOTBAR[1]!, label: 'Apple' },
     ]) {
-      this.addButton(label, key, 0xc94a5a, () => this.world.useItem(itemId), () => {
+      this.addButton(label, key, 0xff5a6a, () => this.world.useItem(itemId), () => {
         const n = inv().get(itemId) ?? 0;
         return { badge: String(n), lit: false, enabled: n > 0 };
       });
     }
-    this.addButton('Sit', 'Z', 0x3f8f6a, () => this.world.toggleSit(), () => ({
+    this.addButton('Sit', 'Z', 0x3fcf8a, () => this.world.toggleSit(), () => ({
       badge: '',
       lit: this.world.player.sitting,
       enabled: !this.world.player.dead,
     }));
-    this.addButton('Items', 'I', 0xb0873f, () => this.toggleInventory(), () => ({
+    this.addButton('Items', 'I', 0xffb52e, () => this.toggleInventory(), () => ({
       badge: '',
       lit: this.inventory.panel.visible,
       enabled: true,
     }));
-    this.addButton('Skills', 'S', 0x8a5fc0, () => this.toggleSkills(), () => {
+    this.addButton('Skills', 'S', 0xa77cf0, () => this.toggleSkills(), () => {
       const pts = this.world.player.skillPoints;
       return { badge: pts > 0 ? String(pts) : '', lit: this.skillWindow.panel.visible, enabled: true };
     });
-    this.addButton('Stats', 'A', 0x4f6fb0, () => this.toggleStats(), () => {
+    this.addButton('Stats', 'A', 0x4f8ff0, () => this.toggleStats(), () => {
       const pts = this.world.player.statPoints;
       return { badge: pts > 0 ? String(pts) : '', lit: this.statWindow.visible, enabled: true };
     });
   }
 
   private addButton(label: string, key: string, color: number, onPress: () => void, state: HudButton['state']): void {
-    const face = this.add.circle(0, 0, BUTTON_R, color, 0.92).setStrokeStyle(2, 0xffffff, 0.5);
-    const text = this.add.text(0, 0, label, { ...TEXT, fontSize: '12px', fontStyle: 'bold' }).setOrigin(0.5);
+    const shadow = this.add.circle(3, 4, BUTTON_R, COLORS.ink);
+    const face = this.add.circle(0, 0, BUTTON_R, color).setStrokeStyle(3, COLORS.ink);
+    const text = this.add.text(0, 0, label, { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: '17px', fontStyle: 'normal' }).setOrigin(0.5);
     const badge = this.add
-      .text(BUTTON_R - 4, -BUTTON_R + 4, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold', backgroundColor: '#141a24', padding: { x: 4, y: 1 } })
+      .text(BUTTON_R - 4, -BUTTON_R + 4, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 4, y: 1 } })
       .setOrigin(0.5);
-    const children: Phaser.GameObjects.GameObject[] = [face, text, badge];
+    const children: Phaser.GameObjects.GameObject[] = [shadow, face, text, badge];
     if (!this.isTouch()) {
-      children.push(this.add.text(0, BUTTON_R - 9, key, { ...TEXT, fontSize: '9px', color: '#d6deea' }).setOrigin(0.5));
+      children.push(this.add.text(0, BUTTON_R - 9, key, { ...WORLD_TEXT, fontSize: '9px', strokeThickness: 3 }).setOrigin(0.5));
     }
     const root = this.add.container(0, 0, children);
     face.setInteractive({ useHandCursor: true });
@@ -268,7 +284,7 @@ export class UIScene extends Phaser.Scene {
     for (const b of this.buttons) {
       const st = b.state();
       b.badge.setText(st.badge).setVisible(st.badge !== '');
-      b.face.setStrokeStyle(st.lit ? 3 : 2, st.lit ? 0xffe27a : 0xffffff, st.lit ? 1 : 0.5);
+      b.face.setStrokeStyle(st.lit ? 5 : 3, st.lit ? 0xffd84a : COLORS.ink);
       b.root.setAlpha(st.enabled ? 1 : 0.45);
     }
   }
@@ -298,14 +314,15 @@ export class UIScene extends Phaser.Scene {
     const p = this.world.player;
     const actives = Object.values(SKILLS).filter((s) => s.kind !== 'passive' && skillLevel(p, s.id) > 0);
     this.skillButtons = actives.slice(0, SKILL_KEYS.length).map((skill, i) => {
-      const face = this.add.circle(0, 0, SKILL_R, 0x6a4fa0, 0.92).setStrokeStyle(2, 0xffffff, 0.5);
-      const label = this.add.text(0, -2, skill.short, { ...TEXT, fontSize: '11px', fontStyle: 'bold' }).setOrigin(0.5);
-      const cd = this.add.text(0, 10, '', { ...TEXT, fontSize: '10px', color: '#ffe27a' }).setOrigin(0.5);
+      const shadow = this.add.circle(3, 3, SKILL_R, COLORS.ink);
+      const face = this.add.circle(0, 0, SKILL_R, 0xa77cf0).setStrokeStyle(3, COLORS.ink);
+      const label = this.add.text(0, -2, skill.short, { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: '15px', fontStyle: 'normal' }).setOrigin(0.5);
+      const cd = this.add.text(0, 11, '', { ...WORLD_TEXT, fontSize: '10px', color: '#ffe27a', strokeThickness: 3 }).setOrigin(0.5);
       const badge = this.add
-        .text(SKILL_R - 2, -SKILL_R + 2, '', { ...TEXT, fontSize: '10px', backgroundColor: '#141a24', padding: { x: 3, y: 0 } })
+        .text(SKILL_R - 2, -SKILL_R + 2, '', { ...TEXT, fontSize: '10px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 3, y: 0 } })
         .setOrigin(0.5);
-      const children: Phaser.GameObjects.GameObject[] = [face, label, cd, badge];
-      if (!this.isTouch()) children.push(this.add.text(0, SKILL_R - 6, SKILL_KEYS[i]!, { ...TEXT, fontSize: '8px', color: '#d6deea' }).setOrigin(0.5));
+      const children: Phaser.GameObjects.GameObject[] = [shadow, face, label, cd, badge];
+      if (!this.isTouch()) children.push(this.add.text(0, SKILL_R - 6, SKILL_KEYS[i]!, { ...WORLD_TEXT, fontSize: '8px', strokeThickness: 2 }).setOrigin(0.5));
       const root = this.add.container(0, 0, children);
       face.setInteractive({ useHandCursor: true });
       face.on('pointerdown', () => {
@@ -329,7 +346,7 @@ export class UIScene extends Phaser.Scene {
       b.badge.setText(`${cost}`);
       b.cd.setText(cdMs > 0 ? `${Math.ceil(cdMs / 1000)}s` : buff ? `${Math.ceil(buff.remainingMs / 1000)}s` : '');
       b.root.setAlpha(p.sp >= cost && cdMs === 0 && !p.dead ? 1 : 0.45);
-      b.face.setStrokeStyle(buff ? 3 : 2, buff ? 0xffe27a : 0xffffff, buff ? 1 : 0.5);
+      b.face.setStrokeStyle(buff ? 5 : 3, buff ? 0xffd84a : COLORS.ink);
     }
   }
 
@@ -358,9 +375,11 @@ export class UIScene extends Phaser.Scene {
     const y = narrow ? 152 : 14;
     if (boss) {
       const frac = Math.max(0, boss.hp / boss.def.hp);
-      g.fillStyle(0x141a24, 0.85).fillRoundedRect(x, y, w, 30, 6);
-      g.fillStyle(0x3a1e24).fillRoundedRect(x + 6, y + 18, w - 12, 7, 3);
-      if (frac > 0) g.fillStyle(0xe0533d).fillRoundedRect(x + 6, y + 18, (w - 12) * frac, 7, 3);
+      g.fillStyle(COLORS.ink).fillRect(x + 4, y + 4, w, 32);
+      g.fillStyle(COLORS.paper).fillRect(x, y, w, 32).lineStyle(3, COLORS.ink).strokeRect(x, y, w, 32);
+      g.fillStyle(0xe9e3d6).fillRect(x + 6, y + 19, w - 12, 8);
+      if (frac > 0) g.fillStyle(0xff4a3a).fillRect(x + 6, y + 19, (w - 12) * frac, 8);
+      g.lineStyle(2, COLORS.ink).strokeRect(x + 6, y + 19, w - 12, 8);
       this.bossText.setPosition(x + w / 2, y + 3).setText(`${boss.def.name}  ${Math.ceil(frac * 100)}%`).setVisible(true);
     } else if (respawn !== null) {
       const mins = Math.max(0, Math.ceil((respawn - this.world.now()) / 60_000));
@@ -404,14 +423,23 @@ export class UIScene extends Phaser.Scene {
   // ---- Stat window -------------------------------------------------------
 
   private buildStatWindow(): void {
-    const bg = this.add.graphics().fillStyle(COLORS.ui, 0.9).fillRoundedRect(0, 0, 236, 262, 8).lineStyle(1, COLORS.uiBorder, 0.6).strokeRoundedRect(0, 0, 236, 262, 8);
-    const title = this.add.text(10, 8, 'Stats', { ...TEXT, fontStyle: 'bold' });
+    const bg = this.add
+      .graphics()
+      .fillStyle(COLORS.ink)
+      .fillRect(5, 5, 236, 262)
+      .fillStyle(COLORS.paper)
+      .fillRect(0, 0, 236, 262)
+      .lineStyle(3, COLORS.ink)
+      .strokeRect(0, 0, 236, 262)
+      .fillStyle(COLORS.ink)
+      .fillRect(0, 0, 236, 30);
+    const title = this.add.text(10, 3, 'STATS', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '20px', color: '#ffffff' });
     const children: Phaser.GameObjects.GameObject[] = [this.swallowTaps(this.add.zone(0, 0, 236, 262).setOrigin(0)), bg, title];
     STAT_NAMES.forEach((stat, i) => {
       const y = 34 + i * 24;
       const line = this.add.text(10, y, '', { ...TEXT, fontSize: '12px' });
       const plus = this.add
-        .text(196, y - 3, '+', { ...TEXT, fontSize: '16px', fontStyle: 'bold', backgroundColor: '#3a4a63', padding: { x: 9, y: 1 } })
+        .text(196, y - 3, '+', { ...TEXT, fontSize: '16px', fontStyle: 'bold', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 9, y: 1 } })
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, e: Phaser.Types.Input.EventData) => {
           e.stopPropagation();
@@ -470,11 +498,11 @@ export class UIScene extends Phaser.Scene {
 
   private buildMenu(): void {
     this.menuButton = this.add
-      .text(0, 0, 'Menu', { ...TEXT, fontSize: '14px', fontStyle: 'bold', backgroundColor: '#1e2633dd', padding: { x: 12, y: 8 } })
+      .text(0, 0, 'MENU', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '20px', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 12, y: 6 } })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.toggleMenu());
-    this.savedText = this.add.text(0, 0, 'Saved', { ...TEXT, fontSize: '12px', color: '#9be38f' }).setOrigin(1, 0).setAlpha(0);
+    this.savedText = this.add.text(0, 0, 'Saved', { ...WORLD_TEXT, fontSize: '12px', color: '#9be38f' }).setOrigin(1, 0).setAlpha(0);
     const onSaved = () => {
       this.tweens.killTweensOf(this.savedText);
       this.savedText.setAlpha(1);
@@ -496,16 +524,21 @@ export class UIScene extends Phaser.Scene {
     ];
     const h = 44 + entries.length * 46;
     const panelChildren: Phaser.GameObjects.GameObject[] = [
-      this.add.rectangle(0, 0, w, h, COLORS.ui, 0.96).setStrokeStyle(1, COLORS.uiBorder, 0.7).setInteractive(),
-      this.add.text(0, -h / 2 + 14, 'Menu', { ...TEXT, fontSize: '15px', fontStyle: 'bold' }).setOrigin(0.5, 0),
+      this.add.rectangle(6, 6, w, h, COLORS.ink),
+      this.add.rectangle(0, 0, w, h, COLORS.paper).setStrokeStyle(3, COLORS.ink).setInteractive(),
+      this.add.rectangle(0, -h / 2 + 17, w, 34, COLORS.ink),
+      this.add.text(0, -h / 2 + 4, 'MENU', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5, 0),
     ];
     entries.forEach(([label, fn], i) => {
       const y = -h / 2 + 62 + i * 46;
       const bg = this.add
-        .rectangle(0, y, w - 28, 38, 0x3a4a63)
+        .rectangle(0, y, w - 28, 38, 0xffffff)
+        .setStrokeStyle(2.5, COLORS.ink)
         .setInteractive({ useHandCursor: true })
-        .on('pointerup', fn);
-      panelChildren.push(bg, this.add.text(0, y, label, { ...TEXT, fontSize: '13px' }).setOrigin(0.5));
+        .on('pointerdown', () => bg.setFillStyle(0xffe27a))
+        .on('pointerout', () => bg.setFillStyle(0xffffff))
+        .on('pointerup', () => (bg.setFillStyle(0xffffff), fn()));
+      panelChildren.push(this.add.rectangle(3, y + 3, w - 28, 38, COLORS.ink), bg, this.add.text(0, y, label, { ...TEXT, fontSize: '13px', fontStyle: 'bold' }).setOrigin(0.5));
     });
     this.menuPanel = this.add.container(0, 0, panelChildren);
     this.menu = this.add.container(0, 0, [this.menuDim, this.menuPanel]).setVisible(false).setDepth(100);

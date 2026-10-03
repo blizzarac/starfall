@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { jobOf } from '../core/jobs';
 import { learnBlocker, skillLevel, skillsFor, type SkillDef } from '../core/skills';
 import type { World } from '../core/world';
-import { TEXT } from '../render/palette';
+import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 const ROW_H = 70;
@@ -45,7 +45,7 @@ export class SkillWindow {
     panel.layout();
     panel.clear();
     panel.setTitle(`Skills · ${jobOf(p).name}`);
-    panel.add(this.scene.add.text(12, 40, `Skill points: ${p.skillPoints}`, { ...TEXT, fontSize: '13px', color: '#ffe27a' }));
+    panel.add(this.scene.add.text(12, 40, `Skill points: ${p.skillPoints}`, { ...TEXT, fontSize: '13px', color: TONE.gold }));
     const skills = skillsFor(p.jobId);
     this.page = pagedList(
       panel,
@@ -60,7 +60,7 @@ export class SkillWindow {
         this.refresh();
       },
     );
-    panel.add(this.scene.add.text(12, panel.h - 28, this.message, { ...TEXT, fontSize: '12px', color: '#ff9a7a', wordWrap: { width: panel.w - 24 } }));
+    panel.add(this.scene.add.text(12, panel.h - 28, this.message, { ...TEXT, fontSize: '12px', color: TONE.bad, wordWrap: { width: panel.w - 24 } }));
   }
 
   private row(s: SkillDef, y: number, w: number): void {
@@ -68,7 +68,7 @@ export class SkillWindow {
     const lv = skillLevel(p, s.id);
     const kind = s.kind === 'passive' ? 'passive' : `active · ${s.spCost(Math.max(1, lv))} SP`;
     this.panel.add(this.scene.add.text(12, y + 2, `${s.name}  ${lv}/${s.maxLevel}`, { ...TEXT, fontSize: '13px', fontStyle: 'bold' }));
-    this.panel.add(this.scene.add.text(12, y + 20, kind, { ...TEXT, fontSize: '11px', color: '#9fb4d6' }));
+    this.panel.add(this.scene.add.text(12, y + 20, kind, { ...TEXT, fontSize: '11px', color: TONE.accent }));
     const shown = lv === 0 ? 1 : lv;
     const blocker = learnBlocker(p, s.id);
     const req = blocker && /^Needs/.test(blocker) ? `  (${blocker})` : '';
@@ -76,7 +76,7 @@ export class SkillWindow {
       this.scene.add.text(12, y + 36, `${lv === 0 ? 'Lv 1: ' : ''}${s.describe(shown)}${req}`, {
         ...TEXT,
         fontSize: '11px',
-        color: '#c4cfdf',
+        color: TONE.muted,
         wordWrap: { width: w - 80 },
       }),
     );

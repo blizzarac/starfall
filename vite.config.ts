@@ -33,7 +33,7 @@ export default defineConfig({
       workbox: {
         // Phaser alone is ~1.3 MB, above Workbox's 2 MB default only once maps and audio land.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,png,svg,webp,json,ogg,opus}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,webp,json,ogg,opus,woff2}'],
       },
     }),
   ],
