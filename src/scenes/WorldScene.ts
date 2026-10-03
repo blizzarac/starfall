@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
 import { jobOf } from '../core/jobs';
+import { STATUS_INFO } from '../core/status';
 import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
@@ -55,6 +56,7 @@ export class WorldScene extends Phaser.Scene {
   private hover!: Phaser.GameObjects.Image;
   private debugGfx!: Phaser.GameObjects.Graphics;
   private castBar!: Phaser.GameObjects.Graphics;
+  private statusLabel!: Phaser.GameObjects.Text;
   private holdTimer = 0;
   /** True while a press that started on the map (not on a HUD button) is held. */
   private pressOnMap = false;
@@ -86,7 +88,8 @@ export class WorldScene extends Phaser.Scene {
 
     this.playerBody = this.add.image(0, 0, this.playerTexture()).setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H);
     this.castBar = this.add.graphics();
-    this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar]);
+    this.statusLabel = this.add.text(0, -66, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold' }).setOrigin(0.5, 1);
+    this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
 
     const cam = this.cameras.main;
     const { width, height } = this.world.map;
@@ -212,9 +215,14 @@ export class WorldScene extends Phaser.Scene {
 
   private placeNpcs(): void {
     for (const npc of this.world.npcs) {
-      const key = ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), hexColor(npc.look.hair));
       const p = tileToWorld(npc.x, npc.y);
-      const body = this.add.image(0, 0, key).setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H).setFlipX(hash(npc.x, npc.y) % 2 === 0);
+      const body =
+        npc.sprite === 'board'
+          ? this.add.image(0, 0, 'board').setOrigin(0.5, 54 / 58)
+          : this.add
+              .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), hexColor(npc.look.hair)))
+              .setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H)
+              .setFlipX(hash(npc.x, npc.y) % 2 === 0);
       const label = this.add
         .text(0, -62, npc.name, { ...TEXT, fontSize: '12px', color: '#ffe9a8' })
         .setOrigin(0.5, 1);
@@ -228,6 +236,12 @@ export class WorldScene extends Phaser.Scene {
 
   private syncPlayer(): void {
     const p = this.world.player;
+    const statuses = [...p.statuses.keys()];
+    this.statusLabel
+      .setText(statuses.map((s) => STATUS_INFO[s].name).join(' · '))
+      .setColor(statuses[0] ? STATUS_INFO[statuses[0]].color : '#ffffff');
+    if (p.statuses.has('poison') && !this.playerBody.isTinted) this.playerBody.setTint(0xb6f59a);
+    else if (!p.statuses.has('poison') && this.playerBody.tintTopLeft === 0xb6f59a) this.playerBody.clearTint();
     this.castBar.clear();
     if (p.casting) {
       const frac = 1 - Math.max(0, p.casting.remainingMs) / p.casting.totalMs;
@@ -254,7 +268,8 @@ export class WorldScene extends Phaser.Scene {
     this.playerBody.setY(-bob);
     this.playerBody.setScale(1, p.sitting ? 0.72 : 1);
     this.player.setAlpha(p.dead ? 0.35 : 1);
-    this.playerBody.setAngle(p.dead ? 90 : 0);
+    // Fainted players lie down; stunned ones wobble.
+    this.playerBody.setAngle(p.dead ? 90 : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
   }
 
   /** Trees just in front of the player turn see-through so the player never vanishes behind one. */

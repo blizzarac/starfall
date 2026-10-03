@@ -3,7 +3,7 @@ import { STAT_NAMES } from '../core/combat/formulas';
 import { EQUIP_SLOTS } from '../core/equipment';
 import { JOBS, type JobId } from '../core/jobs';
 
-export const SAVE_SCHEMA_VERSION = 5;
+export const SAVE_SCHEMA_VERSION = 6;
 
 const Place = z.object({ map: z.string(), x: z.number().int(), y: z.number().int() });
 const Counts = z.record(z.string(), z.number().int().positive());
@@ -47,7 +47,8 @@ export const SaveDocSchema = z.object({
   gold: z.number().int().nonnegative(),
   /** Kafra-style item storage; unused until towns exist. */
   storage: Counts,
-  quests: z.record(z.string(), z.unknown()),
+  /** Active hunts (kills so far) and how often each hunt was completed. */
+  quests: z.object({ active: z.record(z.string(), z.number().int().nonnegative()), done: z.record(z.string(), z.number().int().nonnegative()) }),
   flags: z.record(z.string(), z.union([z.boolean(), z.number(), z.string()])),
   position: Place,
   savePoint: Place,

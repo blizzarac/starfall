@@ -1,0 +1,173 @@
+[
+  {
+    "id": "jellop_cleanup",
+    "name": "Jellop Cleanup",
+    "description": "The meadow is wobbling with Jellops again.",
+    "minLevel": 1,
+    "target": {
+      "monster": "jellop",
+      "count": 15
+    },
+    "reward": {
+      "gold": 120,
+      "baseXp": 80,
+      "jobXp": 50
+    }
+  },
+  {
+    "id": "beetle_bother",
+    "name": "Beetle Bother",
+    "description": "Thornbeetles are biting travellers on the Thornfield road.",
+    "minLevel": 5,
+    "target": {
+      "monster": "thornbeetle",
+      "count": 12
+    },
+    "reward": {
+      "gold": 400,
+      "baseXp": 320,
+      "jobXp": 220,
+      "items": [
+        {
+          "id": "red_tonic",
+          "count": 2
+        }
+      ]
+    }
+  },
+  {
+    "id": "mossling_weeding",
+    "name": "Mossling Weeding",
+    "description": "Mosslings are smothering the Hollow's paths.",
+    "minLevel": 8,
+    "target": {
+      "monster": "mossling",
+      "count": 15
+    },
+    "reward": {
+      "gold": 650,
+      "baseXp": 620,
+      "jobXp": 430
+    }
+  },
+  {
+    "id": "boar_hunt",
+    "name": "Boar Hunt",
+    "description": "Bristleboars charged a caravan. Thin the herd.",
+    "minLevel": 11,
+    "target": {
+      "monster": "bristleboar",
+      "count": 10
+    },
+    "reward": {
+      "gold": 900,
+      "baseXp": 900,
+      "jobXp": 640,
+      "items": [
+        {
+          "id": "brightstone",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "puffcap_picking",
+    "name": "Puffcap Picking",
+    "description": "Whisperwood's Puffcaps are spreading poison spores. Mind your health.",
+    "minLevel": 13,
+    "target": {
+      "monster": "puffcap",
+      "count": 15
+    },
+    "reward": {
+      "gold": 1100,
+      "baseXp": 1400,
+      "jobXp": 1000,
+      "items": [
+        {
+          "id": "green_herb",
+          "count": 3
+        }
+      ]
+    }
+  },
+  {
+    "id": "wolf_pack",
+    "name": "Wolf Pack",
+    "description": "A Thicket Wolf pack is stalking the woodcutters.",
+    "minLevel": 15,
+    "target": {
+      "monster": "thicket_wolf",
+      "count": 12
+    },
+    "reward": {
+      "gold": 1400,
+      "baseXp": 1700,
+      "jobXp": 1200
+    }
+  },
+  {
+    "id": "bat_sweep",
+    "name": "Bat Sweep",
+    "description": "Cave Bats swarm the Glimmer Caves. Their bite can blind you.",
+    "minLevel": 18,
+    "target": {
+      "monster": "cave_bat",
+      "count": 15
+    },
+    "reward": {
+      "gold": 1800,
+      "baseXp": 2400,
+      "jobXp": 1700,
+      "items": [
+        {
+          "id": "brightstone",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "stoneling_breaking",
+    "name": "Stoneling Breaking",
+    "description": "Stonelings block the way to the Crystal Hall. Their blows can stun.",
+    "minLevel": 20,
+    "target": {
+      "monster": "stoneling",
+      "count": 10
+    },
+    "reward": {
+      "gold": 2200,
+      "baseXp": 2800,
+      "jobXp": 2000,
+      "items": [
+        {
+          "id": "brightstone",
+          "count": 2
+        }
+      ]
+    }
+  },
+  {
+    "id": "golem_slayer",
+    "name": "Golem Slayer",
+    "description": "The Crystal Golem rules the Crystal Hall. Bring it down.",
+    "minLevel": 25,
+    "target": {
+      "monster": "crystal_golem",
+      "count": 1
+    },
+    "reward": {
+      "gold": 5000,
+      "baseXp": 8000,
+      "jobXp": 6000,
+      "items": [
+        {
+          "id": "panacea",
+          "count": 3
+        }
+      ]
+    }
+  }
+]

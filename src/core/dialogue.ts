@@ -31,6 +31,8 @@ export class DialogueRunner {
   openShop: string | null = null;
   /** Set when the last choice asked to open the refine window. */
   openRefine = false;
+  /** Set when the last choice asked to open the hunting board. */
+  openQuests = false;
 
   constructor(
     private readonly world: World,
@@ -72,6 +74,7 @@ export class DialogueRunner {
       const result = this.world.applyAction(action);
       if (result.openShop) this.openShop = result.openShop;
       if (result.openRefine) this.openRefine = true;
+      if (result.openQuests) this.openQuests = true;
     }
     this.nodeId = choice.next ?? null;
     this.resolve();

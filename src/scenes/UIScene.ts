@@ -3,6 +3,7 @@ import * as F from '../core/combat/formulas';
 import { STAT_NAMES, type StatName } from '../core/combat/formulas';
 import { gearBonus } from '../core/equipment';
 import { isJobId, jobOf, JOBS } from '../core/jobs';
+import { STATUS_INFO } from '../core/status';
 import type { SimClock } from '../core/sim';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
@@ -12,6 +13,7 @@ import { COLORS, TEXT } from '../render/palette';
 import { DialogueBox } from '../ui/DialogueBox';
 import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
+import { QuestWindow } from '../ui/QuestWindow';
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
 import { SKILLS, skillLevel, type SkillDef } from '../core/skills';
@@ -58,6 +60,9 @@ export class UIScene extends Phaser.Scene {
   private frameMs = 16;
   private inventory!: InventoryWindow;
   private refineWindow!: RefineWindow;
+  private questWindow!: QuestWindow;
+  /** Active hunts under the status panel. */
+  private tracker!: Phaser.GameObjects.Text;
   private skillWindow!: SkillWindow;
   /** Learned active skills, one round button each, above the main row. */
   private skillButtons: Array<{ skill: SkillDef; root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Arc; cd: Phaser.GameObjects.Text; badge: Phaser.GameObjects.Text }> = [];
@@ -98,12 +103,15 @@ export class UIScene extends Phaser.Scene {
     this.skillWindow = new SkillWindow(this, this.world);
     this.shop = new ShopWindow(this, this.world);
     this.refineWindow = new RefineWindow(this, this.world);
+    this.questWindow = new QuestWindow(this, this.world);
     this.dialogue = new DialogueBox(
       this,
       this.world,
       (shopId) => this.shop.open(shopId),
       () => this.refineWindow.open(),
+      () => this.questWindow.open(true),
     );
+    this.tracker = this.add.text(12, 0, '', { ...TEXT, fontSize: '11px', lineSpacing: 2 });
     this.buildButtons();
     this.buildMenu();
     this.buildSkillButtons();
@@ -124,6 +132,7 @@ export class UIScene extends Phaser.Scene {
     this.drawButtons();
     this.drawSkillButtons();
     this.drawBossBar();
+    this.drawTracker();
     this.drawStatWindow();
     this.drawDebug();
     const p = this.world.player;
@@ -325,7 +334,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -333,6 +342,7 @@ export class UIScene extends Phaser.Scene {
     if (this.inventory.panel.visible) this.inventory.refresh();
     if (this.shop.panel.visible) this.shop.refresh();
     if (this.refineWindow.panel.visible) this.refineWindow.refresh();
+    if (this.questWindow.panel.visible) this.questWindow.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -358,6 +368,19 @@ export class UIScene extends Phaser.Scene {
     } else {
       this.bossText.setVisible(false);
     }
+  }
+
+  private drawTracker(): void {
+    const w = this.world;
+    const lines = [...w.player.quests.active].map(([id, n]) => {
+      const q = w.content.quests.get(id);
+      if (!q) return '';
+      const name = w.content.monsters.get(q.target.monster)?.name ?? q.target.monster;
+      return n >= q.target.count ? `✓ ${q.name}: return to the board` : `${name} ${n}/${q.target.count}`;
+    });
+    const narrow = this.scale.width < NARROW;
+    const bossShown = this.bossText.visible && narrow;
+    this.tracker.setText(lines.join('\n')).setPosition(12, bossShown ? 188 : 150).setVisible(!this.statWindow.visible);
   }
 
   private showBanner(text: string, color = '#f4f7fb'): void {
@@ -466,6 +489,7 @@ export class UIScene extends Phaser.Scene {
     const entries: Array<[string, () => void]> = [
       ['Save now', () => void this.saves().save().then(() => this.addLog('Game saved.'))],
       ['Export save file', () => this.exportSave()],
+      ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
       ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
       ['Save and quit to title', () => void endSession(this)],
       ['Close', () => this.toggleMenu()],
@@ -513,6 +537,10 @@ export class UIScene extends Phaser.Scene {
       ev.on('playerRespawned', () => this.addLog('You wake up at the save point.')),
       ev.on('notice', (e) => this.addLog(e.text)),
       ev.on('castInterrupted', () => this.addLog('Your cast was interrupted.')),
+      ev.on('statusApplied', (e) => this.addLog(`You are ${STATUS_INFO[e.status].name.toLowerCase()}! ${STATUS_INFO[e.status].describe}`)),
+      ev.on('statusEnded', (e) => this.addLog(`No longer ${STATUS_INFO[e.status].name.toLowerCase()}.`)),
+      ev.on('questReady', (e) => this.addLog(`Hunt done: ${e.name}. Turn it in at the Hunting Board.`)),
+      ev.on('questCompleted', (e) => this.showBanner(`Bounty collected: ${e.name}`, '#9be38f')),
       ev.on('boss', (e) => {
         if (e.kind === 'appeared') {
           this.addLog(`${e.name} has appeared!`);
@@ -535,6 +563,7 @@ export class UIScene extends Phaser.Scene {
         this.dialogue.open(e.npc);
       }),
       ev.on('mapChanged', () => {
+        this.questWindow.close();
         this.dialogue.close();
         this.shop.close();
         this.refineWindow.close();

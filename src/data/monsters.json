@@ -260,10 +260,19 @@
     },
     "baseXp": 95,
     "jobXp": 70,
+    "inflict": {
+      "status": "poison",
+      "chance": 0.15,
+      "durationMs": 10000
+    },
     "drops": [
       {
         "item": "puffcap_spore",
         "chance": 0.55
+      },
+      {
+        "item": "green_herb",
+        "chance": 0.12
       },
       {
         "item": "sweet_apple",
@@ -358,6 +367,11 @@
     },
     "baseXp": 150,
     "jobXp": 105,
+    "inflict": {
+      "status": "blind",
+      "chance": 0.12,
+      "durationMs": 8000
+    },
     "drops": [
       {
         "item": "bat_wing",
@@ -407,6 +421,11 @@
     },
     "baseXp": 240,
     "jobXp": 175,
+    "inflict": {
+      "status": "stun",
+      "chance": 0.08,
+      "durationMs": 2000
+    },
     "drops": [
       {
         "item": "glimmer_shard",
@@ -462,7 +481,12 @@
       "everyMs": 7000,
       "windupMs": 1200,
       "radius": 2,
-      "modifier": 1.6
+      "modifier": 1.6,
+      "inflict": {
+        "status": "stun",
+        "chance": 0.35,
+        "durationMs": 2500
+      }
     },
     "drops": [
       {

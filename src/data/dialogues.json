@@ -61,7 +61,7 @@
         ]
       },
       "wings": {
-        "text": "A Fly Wing whisks you to a random spot on the same map. A Butterfly Wing takes you straight home to your return point.",
+        "text": "A Fly Wing whisks you to a random spot on the same map. A Butterfly Wing takes you straight home to your return point. Green Herbs cure poison, and a Panacea cures anything.",
         "choices": [
           {
             "label": "Let's trade",
@@ -418,6 +418,27 @@
           },
           {
             "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "hunting_board",
+    "nodes": {
+      "start": {
+        "text": "BRIGHTMOOR HUNTING BOARD. Bounties posted by the town. Take up to three at a time and come back here to collect.",
+        "choices": [
+          {
+            "label": "Read the bounties",
+            "do": [
+              {
+                "type": "openQuests"
+              }
+            ]
+          },
+          {
+            "label": "Leave"
           }
         ]
       }

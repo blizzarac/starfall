@@ -11,6 +11,8 @@ import { isJobId } from './jobs';
 import { cardBlocker, cardEffects, EQUIP_SLOTS, MAX_REFINE, equipBlocker, isPlain, slotFor, STARTING_GEAR, weaponOf, type EquipSlot, type GearPiece } from './equipment';
 import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStats, gainXp, learnSkill, raiseStat } from './progression';
 import * as S from './skills';
+import * as St from './status';
+import { MAX_ACTIVE_QUESTS, questState } from './quests';
 import type { Element } from './combat/formulas';
 import { createRng, randInt, type Rng } from './rng';
 
@@ -38,6 +40,11 @@ export interface WorldEvents extends Record<string, unknown> {
   /** A monster is winding up an area attack: get out of the circle. */
   telegraph: { monsterId: number; tile: Tile; radius: number; ms: number };
   slam: { monsterId: number; tile: Tile; radius: number };
+  statusApplied: { status: St.StatusId };
+  statusEnded: { status: St.StatusId };
+  questProgress: { questId: string; progress: number; count: number };
+  questReady: { questId: string; name: string };
+  questCompleted: { questId: string; name: string };
   skillsChanged: Record<string, never>;
   equipmentChanged: Record<string, never>;
   jobChanged: { jobId: string };
@@ -122,7 +129,7 @@ export class World {
   /** Walk to a tile. Returns false when the tile can't be reached. */
   moveTo(target: Tile): boolean {
     const p = this.player;
-    if (p.dead) return false;
+    if (p.dead || this.stunned()) return false;
     if (!this.setPath(p, target)) return false;
     p.casting = null;
     p.intent = { kind: 'move' };
@@ -132,7 +139,7 @@ export class World {
 
   attack(monsterId: number): void {
     const p = this.player;
-    if (p.dead || !this.monsters.has(monsterId)) return;
+    if (p.dead || this.stunned() || !this.monsters.has(monsterId)) return;
     if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) {
       this.events.emit('notice', { text: "You're carrying too much to fight. Sell or drop some items." });
       return;
@@ -146,7 +153,7 @@ export class World {
   pickUp(dropId: number): void {
     const p = this.player;
     const drop = this.drops.get(dropId);
-    if (p.dead || !drop) return;
+    if (p.dead || this.stunned() || !drop) return;
     p.intent = { kind: 'pickup', dropId };
     p.sitting = false;
     p.casting = null;
@@ -156,7 +163,7 @@ export class World {
   talkTo(npcId: string): void {
     const p = this.player;
     const npc = this.npcs.find((n) => n.id === npcId);
-    if (p.dead || !npc) return;
+    if (p.dead || this.stunned() || !npc) return;
     p.sitting = false;
     p.casting = null;
     if (!p.next && tileDistance(p.tile, npc) <= F.TALK_RANGE) {
@@ -174,7 +181,7 @@ export class World {
 
   toggleSit(): void {
     const p = this.player;
-    if (p.dead) return;
+    if (p.dead || this.stunned()) return;
     if (!p.sitting && (p.next || p.path.length > 0 || p.casting)) return;
     p.sitting = !p.sitting;
     p.intent = { kind: 'none' };
@@ -194,6 +201,7 @@ export class World {
       p.sp += sp;
       this.events.emit('heal', { hp, sp });
     }
+    if (item.cure) this.cure(item.cure);
     if (item.effect === 'teleport') {
       const tile = this.randomWalkableIn({ x: 0, y: 0, w: this.grid.width, h: this.grid.height });
       if (tile) this.placePlayer(tile);
@@ -202,6 +210,111 @@ export class World {
     }
     this.removeItem(itemId, 1);
     this.events.emit('itemUsed', { item });
+  }
+
+  // ---- Status effects ----------------------------------------------------
+
+  stunned(): boolean {
+    return this.player.statuses.has('stun');
+  }
+
+  /** Tries to inflict a status; VIT or INT may resist it. */
+  inflict(status: St.StatusId, chance: number, durationMs: number): void {
+    const p = this.player;
+    if (p.dead) return;
+    const stats = effectiveStats(p);
+    if (this.rng() >= St.resistedChance(status, chance, stats)) return;
+    const ms = St.resistedDuration(status, durationMs, stats);
+    const had = p.statuses.get(status);
+    p.statuses.set(status, { remainingMs: Math.max(ms, had?.remainingMs ?? 0), tickMs: had?.tickMs ?? St.POISON_TICK_MS });
+    if (status === 'stun') {
+      p.path = [];
+      p.casting = null;
+      p.sitting = false;
+      if (p.intent.kind !== 'attack') p.intent = { kind: 'none' };
+    }
+    if (!had) this.events.emit('statusApplied', { status });
+  }
+
+  cure(statuses: readonly St.StatusId[]): void {
+    for (const s of statuses) {
+      if (this.player.statuses.delete(s)) this.events.emit('statusEnded', { status: s });
+    }
+  }
+
+  private tickStatuses(p: Player, dt: number): void {
+    for (const [id, st] of p.statuses) {
+      st.remainingMs -= dt;
+      if (id === 'poison') {
+        st.tickMs -= dt;
+        if (st.tickMs <= 0) {
+          st.tickMs += St.POISON_TICK_MS;
+          const dmg = Math.min(St.poisonDamage(derivedStats(p).maxHp), p.hp - 1);
+          if (dmg > 0) {
+            p.hp -= dmg;
+            this.events.emit('damage', { sourceId: 'player', targetId: 'player', amount: dmg, crit: false });
+          }
+        }
+      }
+      if (st.remainingMs <= 0) {
+        p.statuses.delete(id);
+        this.events.emit('statusEnded', { status: id });
+      }
+    }
+  }
+
+  // ---- Quests --------------------------------------------------------------
+
+  /** Takes a hunt from the board. Returns why not, or null. */
+  acceptQuest(id: string): string | null {
+    const q = this.content.quests.get(id);
+    const p = this.player;
+    if (!q) return 'Unknown quest.';
+    const state = questState(p, q);
+    if (state === 'locked') return `Requires base level ${q.minLevel}.`;
+    if (state !== 'available') return "You're already on that hunt.";
+    if (p.quests.active.size >= MAX_ACTIVE_QUESTS) return `You can only take ${MAX_ACTIVE_QUESTS} hunts at a time.`;
+    p.quests.active.set(id, 0);
+    this.events.emit('questProgress', { questId: id, progress: 0, count: q.target.count });
+    return null;
+  }
+
+  abandonQuest(id: string): void {
+    if (this.player.quests.active.delete(id)) this.events.emit('questProgress', { questId: id, progress: 0, count: 0 });
+  }
+
+  /** Hands in a finished hunt for its reward. Returns why not, or null. */
+  turnInQuest(id: string): string | null {
+    const q = this.content.quests.get(id);
+    const p = this.player;
+    if (!q || questState(p, q) !== 'ready') return "That hunt isn't finished yet.";
+    p.quests.active.delete(id);
+    p.quests.done.set(id, (p.quests.done.get(id) ?? 0) + 1);
+    p.gold += q.reward.gold;
+    for (const it of q.reward.items) this.addItem(it.id, it.count);
+    this.events.emit('questCompleted', { questId: id, name: q.name });
+    this.grantXp(q.reward.baseXp, q.reward.jobXp);
+    return null;
+  }
+
+  private trackKill(m: Monster): void {
+    const p = this.player;
+    for (const [id, progress] of p.quests.active) {
+      const q = this.content.quests.get(id);
+      if (!q || q.target.monster !== m.def.id || progress >= q.target.count) continue;
+      p.quests.active.set(id, progress + 1);
+      this.events.emit('questProgress', { questId: id, progress: progress + 1, count: q.target.count });
+      if (progress + 1 >= q.target.count) this.events.emit('questReady', { questId: id, name: q.name });
+    }
+  }
+
+  private grantXp(base: number, job: number): void {
+    const ups = gainXp(this.player, base, job);
+    this.session.baseXp += base;
+    this.session.jobXp += job;
+    this.events.emit('xpGained', { base, job });
+    for (const level of ups.base) this.events.emit('levelUp', { kind: 'base', level });
+    for (const level of ups.job) this.events.emit('levelUp', { kind: 'job', level });
   }
 
   raiseStat(stat: StatName): boolean {
@@ -219,6 +332,7 @@ export class World {
   useSkill(id: string): void {
     const p = this.player;
     if (p.dead || !S.isSkillId(id)) return;
+    if (this.stunned()) return void this.events.emit('notice', { text: "You're stunned!" });
     const skill = S.SKILLS[id];
     const lv = S.skillLevel(p, id);
     if (lv === 0 || skill.kind === 'passive') return;
@@ -514,7 +628,7 @@ export class World {
   // ---- NPC services ------------------------------------------------------
 
   /** Runs one dialogue action. Returns a shop id when the action opens a shop. */
-  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean } {
+  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean; openQuests?: boolean } {
     const p = this.player;
     switch (action.type) {
       case 'setSavePoint':
@@ -526,6 +640,7 @@ export class World {
         const sp = d.maxSp - p.sp;
         p.hp = d.maxHp;
         p.sp = d.maxSp;
+        this.cure([...St.STATUS_IDS]);
         this.events.emit('heal', { hp, sp });
         return {};
       }
@@ -533,6 +648,8 @@ export class World {
         return { openShop: action.shop };
       case 'openRefine':
         return { openRefine: true };
+      case 'openQuests':
+        return { openQuests: true };
       case 'takeItem':
         this.removeItem(action.id, action.count);
         return {};
@@ -638,6 +755,12 @@ export class World {
     }
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
     this.tickTimers(p, dt);
+    this.tickStatuses(p, dt);
+    if (this.stunned()) {
+      // Finish the current step so the player never freezes between tiles.
+      advance(p, dt, () => true);
+      return;
+    }
     const intent = p.intent;
 
     if (intent.kind === 'attack' || intent.kind === 'skill') {
@@ -754,8 +877,8 @@ export class World {
   }
 
   private regenerate(p: Player, dt: number): void {
-    // A heavy bag stops natural recovery, which is what sends players back to town.
-    if (this.weightRatio() >= F.WEIGHT_NO_REGEN) return;
+    // A heavy bag stops natural recovery, which is what sends players back to town. So does poison.
+    if (this.weightRatio() >= F.WEIGHT_NO_REGEN || p.statuses.has('poison')) return;
     const d = derivedStats(p);
     p.hpRegenTimer += dt;
     if (p.hpRegenTimer >= F.hpRegenIntervalMs(p.sitting)) {
@@ -827,12 +950,8 @@ export class World {
     this.events.emit('monsterDied', { monsterId: m.id, tile: { ...m.tile } });
     this.session.kills += 1;
 
-    const ups = gainXp(p, m.def.baseXp, m.def.jobXp);
-    this.session.baseXp += m.def.baseXp;
-    this.session.jobXp += m.def.jobXp;
-    this.events.emit('xpGained', { base: m.def.baseXp, job: m.def.jobXp });
-    for (const level of ups.base) this.events.emit('levelUp', { kind: 'base', level });
-    for (const level of ups.job) this.events.emit('levelUp', { kind: 'job', level });
+    this.grantXp(m.def.baseXp, m.def.jobXp);
+    this.trackKill(m);
 
     const spots = this.dropSpots(m.tile);
     let spot = 0;
@@ -943,6 +1062,7 @@ export class World {
       if (!p.dead && tileDistance(tile, p.tile) <= sp.radius) {
         const atk = ((m.def.atk[0] + m.def.atk[1]) / 2) * sp.modifier;
         this.hurtPlayer(m, F.damage({ atk, def: derivedStats(p).def }, this.rng));
+        if (sp.inflict) this.inflict(sp.inflict.status, sp.inflict.chance, sp.inflict.durationMs);
       }
       return true;
     }
@@ -965,6 +1085,8 @@ export class World {
       return;
     }
     this.hurtPlayer(m, F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng));
+    const inf = m.def.inflict;
+    if (inf) this.inflict(inf.status, inf.chance, inf.durationMs);
   }
 
   /** Applies a monster's hit to the player after resistances, and breaks any cast. */
@@ -996,6 +1118,7 @@ export class World {
     p.sitting = false;
     p.casting = null;
     p.buffs.clear();
+    p.statuses.clear();
     this.session.deaths += 1;
     const xpLost = applyDeathPenalty(p);
     for (const m of this.monsters.values()) m.hostile = false;

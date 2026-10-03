@@ -5,6 +5,7 @@ import type { Tile } from './grid';
 import { JOBS, jobOf, NOVICE_JOB_CHANGE, type JobId } from './jobs';
 import { learnBlocker, skillLevel, type SkillId } from './skills';
 import { gearBonus, weaponOf } from './equipment';
+import { BLIND_FACTOR } from './status';
 
 export interface DerivedStats {
   maxHp: number;
@@ -28,6 +29,7 @@ export function effectiveStats(p: Player): F.Stats {
 export function derivedStats(p: Player): DerivedStats {
   const s = effectiveStats(p);
   const gear = gearBonus(p);
+  const blind = p.statuses.has('blind') ? BLIND_FACTOR : 1;
   const job = jobOf(p);
   const weapon = weaponOf(p);
   const aspd = F.aspd(s.agi, s.dex, weapon.type);
@@ -37,8 +39,8 @@ export function derivedStats(p: Player): DerivedStats {
     maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
     atk: F.statusAtk(s) + weapon.atk + mastery + gear.atk,
     matk: F.statusMatk(s.int) + weapon.matk + gear.matk,
-    hit: F.hit(p.baseLevel, s.dex) + gear.hit,
-    flee: F.flee(p.baseLevel, s.agi) + gear.flee,
+    hit: Math.floor((F.hit(p.baseLevel, s.dex) + gear.hit) * blind),
+    flee: Math.floor((F.flee(p.baseLevel, s.agi) + gear.flee) * blind),
     def: F.softDef(s.vit) + gear.def,
     crit: F.critChance(s.luk),
     aspd,
@@ -58,6 +60,8 @@ export function createPlayer(name: string, start: Tile): Player {
     buffs: new Map(),
     cooldowns: new Map(),
     casting: null,
+    statuses: new Map(),
+    quests: { active: new Map(), done: new Map() },
     baseXp: 0,
     jobXp: 0,
     stats: { str: 5, agi: 5, vit: 5, int: 1, dex: 5, luk: 1 },

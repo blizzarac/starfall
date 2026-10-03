@@ -30,6 +30,8 @@ export const MIGRATIONS: Record<number, Migration> = {
     );
     return { ...d, gear: [], character: { ...c, equipment } };
   },
+  // v6: hunting quests.
+  6: (d) => ({ ...d, quests: { active: {}, done: {} } }),
 };
 
 /** Upgrades any older save to the current version, then validates it. Throws if it can't. */

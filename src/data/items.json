@@ -37,5 +37,7 @@
   {"id": "thicket_wolf_card", "name": "Thicket Wolf Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shoes", "bonus": {"agi": 2, "flee": 3}}, "description": "Shoes card: AGI +2, FLEE +3. Insert it from Items → Bag."},
   {"id": "cave_bat_card", "name": "Cave Bat Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "cloak", "bonus": {"flee": 6}}, "description": "Cloak card: FLEE +6. Insert it from Items → Bag."},
   {"id": "stoneling_card", "name": "Stoneling Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "shield", "resist": {"earth": 0.15}}, "description": "Shield card: 15% less damage from earth monsters. Insert it from Items → Bag."},
-  {"id": "crystal_golem_card", "name": "Crystal Golem Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "body", "bonus": {"def": 5, "hp": 300}}, "description": "Body card: DEF +5, Max HP +300. Only the Crystal Golem carries it. Insert it from Items → Bag."}
+  {"id": "crystal_golem_card", "name": "Crystal Golem Card", "type": "card", "price": 20, "weight": 1, "card": {"fits": "body", "bonus": {"def": 5, "hp": 300}}, "description": "Body card: DEF +5, Max HP +300. Only the Crystal Golem carries it. Insert it from Items → Bag."},
+  {"id": "green_herb", "name": "Green Herb", "type": "consumable", "price": 40, "weight": 3, "cure": ["poison"], "heal": {"hp": 5, "sp": 0}, "description": "Cures poison."},
+  {"id": "panacea", "name": "Panacea", "type": "consumable", "price": 250, "weight": 5, "cure": ["poison", "stun", "blind"], "description": "Cures poison, stun and blindness."}
 ]

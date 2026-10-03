@@ -109,6 +109,18 @@
         "body": "#6a4fa0",
         "hair": "#e8e0f0"
       }
+    },
+    {
+      "id": "hunting_board",
+      "name": "Hunting Board",
+      "x": 14,
+      "y": 17,
+      "dialogue": "hunting_board",
+      "look": {
+        "body": "#8a5a3b",
+        "hair": "#8a5a3b"
+      },
+      "sprite": "board"
     }
   ],
   "portals": [

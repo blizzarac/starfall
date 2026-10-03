@@ -3,6 +3,7 @@ import type { Stats } from './combat/formulas';
 import type { Equipment, GearPiece } from './equipment';
 import type { Tile } from './grid';
 import type { JobId } from './jobs';
+import type { StatusId } from './status';
 
 /** Tile-to-tile movement state shared by the player and monsters. */
 /** A tile on a specific map. */
@@ -37,6 +38,10 @@ export interface Player extends Mover {
   buffs: Map<string, { level: number; remainingMs: number }>;
   /** Milliseconds until each skill can be used again. */
   cooldowns: Map<string, number>;
+  /** Status effects and the time each has left. */
+  statuses: Map<StatusId, { remainingMs: number; tickMs: number }>;
+  /** Hunting quests: progress of active ones, and how often each was completed. */
+  quests: { active: Map<string, number>; done: Map<string, number> };
   /** A spell being cast; taking damage or moving cancels it. */
   casting: { skillId: string; targetId: number; remainingMs: number; totalMs: number } | null;
   baseXp: number;

@@ -146,6 +146,14 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x7fe3ff).fillCircle(23, 11, 2.2).fillCircle(33, 11, 2.2);
     g.generateTexture('golem', 56, 56).clear();
 
+    // Notice board on two posts, with pinned papers. Feet at (24, 54).
+    g.fillStyle(COLORS.shadow, 0.2).fillEllipse(24, 54, 40, 10);
+    g.fillStyle(0x6b4a2e).fillRect(8, 22, 4, 32).fillRect(36, 22, 4, 32);
+    g.fillStyle(0x9a6b42).fillRoundedRect(2, 6, 44, 28, 3);
+    g.fillStyle(0xf4ead2).fillRect(7, 10, 11, 13).fillRect(21, 12, 10, 12).fillRect(34, 9, 8, 10);
+    g.fillStyle(0xc9452f).fillCircle(12, 11, 1.5).fillCircle(26, 13, 1.5).fillCircle(38, 10, 1.5);
+    g.generateTexture('board', 48, 58).clear();
+
     // Portal swirl lying on the ground.
     g.fillStyle(0x6fd6ff, 0.35).fillEllipse(32, 16, 60, 28);
     g.lineStyle(3, 0xbff0ff, 0.9).strokeEllipse(32, 16, 46, 20);

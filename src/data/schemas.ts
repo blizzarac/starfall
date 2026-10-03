@@ -66,6 +66,8 @@ export const ItemSchema = z
     heal: z.object({ hp: z.number().int().nonnegative(), sp: z.number().int().nonnegative() }).optional(),
     /** Special use effect: random teleport on the current map, or return to the save point. */
     effect: z.enum(['teleport', 'return']).optional(),
+    /** Status effects this item cures. */
+    cure: z.array(z.enum(['poison', 'stun', 'blind'])).optional(),
     equip: EquipSchema.optional(),
     card: CardSchema.optional(),
     description: z.string().optional(),
@@ -78,6 +80,13 @@ export const DropSchema = z.object({
   item: z.string(),
   /** Independent chance per kill, 0–1. */
   chance: z.number().gt(0).max(1),
+});
+
+const InflictSchema = z.object({
+  status: z.enum(['poison', 'stun', 'blind']),
+  /** Chance per hit, before the player's resistance. */
+  chance: z.number().gt(0).max(1),
+  durationMs: z.number().int().positive(),
 });
 
 export const MonsterSchema = z.object({
@@ -110,6 +119,8 @@ export const MonsterSchema = z.object({
     scale: z.number().positive(),
     shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem']).default('blob'),
   }),
+  /** A status effect this monster's normal attacks may cause. */
+  inflict: InflictSchema.optional(),
   /** Area bosses (MVPs): one at a time, long real-time respawn, announced. */
   boss: z.boolean().default(false),
   /** A telegraphed area attack used while fighting. */
@@ -120,6 +131,7 @@ export const MonsterSchema = z.object({
       windupMs: z.number().int().nonnegative(),
       radius: z.number().int().positive(),
       modifier: z.number().positive(),
+      inflict: InflictSchema.optional(),
     })
     .optional(),
 });
@@ -149,6 +161,8 @@ export const NpcSchema = z.object({
   y: z.number().int().nonnegative(),
   dialogue: z.string(),
   look: z.object({ body: z.string().regex(/^#[0-9a-f]{6}$/i), hair: z.string().regex(/^#[0-9a-f]{6}$/i) }),
+  /** How it's drawn: a person, or a notice board. */
+  sprite: z.enum(['chibi', 'board']).default('chibi'),
 });
 export type NpcDef = z.infer<typeof NpcSchema>;
 
@@ -215,6 +229,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('heal') }),
   z.object({ type: z.literal('openShop'), shop: z.string() }),
   z.object({ type: z.literal('openRefine') }),
+  z.object({ type: z.literal('openQuests') }),
   z.object({ type: z.literal('takeItem'), id: z.string(), count: z.number().int().positive() }),
   z.object({ type: z.literal('giveItem'), id: z.string(), count: z.number().int().positive() }),
   z.object({ type: z.literal('changeJob'), job: z.string() }),
@@ -249,3 +264,21 @@ export const ShopSchema = z.object({
   items: z.array(z.string()).min(1),
 });
 export type ShopDef = z.infer<typeof ShopSchema>;
+
+// ---- Quests ---------------------------------------------------------------
+
+export const QuestSchema = z.object({
+  id: z.string().regex(/^[a-z0-9_]+$/),
+  name: z.string(),
+  description: z.string(),
+  minLevel: z.number().int().min(1).default(1),
+  repeatable: z.boolean().default(true),
+  target: z.object({ monster: z.string(), count: z.number().int().positive() }),
+  reward: z.object({
+    gold: z.number().int().nonnegative().default(0),
+    baseXp: z.number().int().nonnegative().default(0),
+    jobXp: z.number().int().nonnegative().default(0),
+    items: z.array(z.object({ id: z.string(), count: z.number().int().positive() })).default([]),
+  }),
+});
+export type QuestDef = z.infer<typeof QuestSchema>;

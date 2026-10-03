@@ -9,6 +9,7 @@ import {
   MapSchema,
   MonsterSchema,
   ShopSchema,
+  QuestSchema,
   TERRAIN_CHARS,
   type Condition,
   type DialogueDef,
@@ -16,11 +17,13 @@ import {
   type MapDef,
   type MonsterDef,
   type ShopDef,
+  type QuestDef,
 } from './schemas';
 import itemsJson from './items.json';
 import monstersJson from './monsters.json';
 import dialoguesJson from './dialogues.json';
 import shopsJson from './shops.json';
+import questsJson from './quests.json';
 
 const mapModules = import.meta.glob<{ default: unknown }>('./maps/*.json', { eager: true });
 
@@ -30,6 +33,7 @@ export interface Content {
   maps: Map<string, MapDef>;
   dialogues: Map<string, DialogueDef>;
   shops: Map<string, ShopDef>;
+  quests: Map<string, QuestDef>;
 }
 
 export interface RawContent {
@@ -38,6 +42,7 @@ export interface RawContent {
   maps: unknown[];
   dialogues: unknown;
   shops: unknown;
+  quests: unknown;
 }
 
 /** The map new characters start on and respawn to by default. */
@@ -66,6 +71,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     maps: byId(raw.maps.map((m) => MapSchema.parse(m)), 'map'),
     dialogues: byId(z.array(DialogueSchema).parse(raw.dialogues), 'dialogue'),
     shops: byId(z.array(ShopSchema).parse(raw.shops), 'shop'),
+    quests: byId(z.array(QuestSchema).parse(raw.quests), 'quest'),
   };
   const fail = (msg: string): never => {
     throw new Error(msg);
@@ -74,6 +80,10 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
 
   for (const m of content.monsters.values()) for (const d of m.drops) needItem(d.item, `Monster '${m.id}' drop`);
   for (const shop of content.shops.values()) for (const id of shop.items) needItem(id, `Shop '${shop.id}'`);
+  for (const q of content.quests.values()) {
+    if (!content.monsters.has(q.target.monster)) fail(`Quest '${q.id}' hunts unknown monster '${q.target.monster}'`);
+    for (const it of q.reward.items) needItem(it.id, `Quest '${q.id}' reward`);
+  }
   for (const id of STARTING_GEAR) {
     needItem(id, 'Starting gear');
     if (!content.items.get(id)!.equip) fail(`Starting gear '${id}' is not equipment`);
@@ -139,6 +149,7 @@ export const RAW_CONTENT: RawContent = {
   maps: Object.values(mapModules).map((m) => m.default),
   dialogues: dialoguesJson,
   shops: shopsJson,
+  quests: questsJson,
 };
 
 export function loadContent(): Content {
