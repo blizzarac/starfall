@@ -75,6 +75,20 @@ describe('crafting', () => {
     expect(w.shopItems('materials')).toContain('gear_cog');
   });
 
+  it('the traders stock every regular monster material, from every area you have visited', () => {
+    const shop = content.shops.get('materials')!;
+    for (const m of content.monsters.values()) {
+      if (m.boss) continue;
+      for (const d of m.drops) if (content.items.get(d.item)!.type === 'etc') expect(shop.items, `${m.id} drops ${d.item}`).toContain(d.item);
+    }
+    // Having been to the Iron Wastes is enough: its loot is in stock even if you sold it all.
+    const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });
+    expect(w.shopItems('materials')).not.toContain('gear_cog');
+    w.changeMap('iron-wastes', content.maps.get('iron-wastes')!.playerStart);
+    expect(w.shopItems('materials')).toEqual(expect.arrayContaining(['scrap_metal', 'gear_cog', 'power_cell']));
+    expect(w.shopItems('materials')).not.toContain('sand_ruby');
+  });
+
   it('every town has a materials trader', () => {
     for (const town of [...content.maps.values()].filter((m) => m.kind === 'town')) {
       const npc = town.npcs.find((n) => n.dialogue === 'materials_trader');

@@ -998,9 +998,29 @@ export class World {
   }
 
   /** Buys `count` of an item from a shop. Returns an error message, or null on success. */
-  /** Whether the player has come across this item: picked it up once, or has it in the bag or storage. */
+  /**
+   * Whether the player has come across this item: picked it up once, has it
+   * in the bag or storage, or has been to an area where a regular monster drops it.
+   */
   hasFound(itemId: string): boolean {
-    return this.flags.has(foundFlag(itemId)) || this.itemCount(itemId) > 0 || this.storage.items.has(itemId);
+    if (this.flags.has(foundFlag(itemId)) || this.itemCount(itemId) > 0 || this.storage.items.has(itemId)) return true;
+    return (this.dropAreas().get(itemId) ?? []).some((map) => this.flags.has(visitedFlag(map)));
+  }
+
+  private dropAreasCache: Map<string, string[]> | null = null;
+
+  /** For each item, the maps where a regular (non-boss) monster drops it. */
+  private dropAreas(): Map<string, string[]> {
+    if (this.dropAreasCache) return this.dropAreasCache;
+    const areas = new Map<string, string[]>();
+    for (const map of this.content.maps.values()) {
+      for (const spawn of map.spawns) {
+        const def = this.content.monsters.get(spawn.monster)!;
+        if (def.boss) continue;
+        for (const d of def.drops) areas.set(d.item, [...new Set([...(areas.get(d.item) ?? []), map.id])]);
+      }
+    }
+    return (this.dropAreasCache = areas);
   }
 
   /** What a shop sells right now (a materials trader only stocks what you've found). */

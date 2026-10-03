@@ -122,7 +122,9 @@
       "scorpion_tail",
       "gear_cog",
       "power_cell",
-      "scrap_metal"
+      "scrap_metal",
+      "sand_pelt",
+      "old_bone"
     ]
   }
 ]
