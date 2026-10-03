@@ -3,7 +3,7 @@ import { SLOT_IDS, type SaveDb } from '../save/db';
 import { downloadSave, getLastSlot, parseSaveFile, pickFile } from '../save/manager';
 import type { SlotMeta } from '../save/schema';
 import { JOBS } from '../core/jobs';
-import { CHAR_SCALE, chibiOrigin, playerChibi } from '../render/chibi';
+import { chibiOrigin, playerChibi, PORTRAIT_FRAME } from '../render/chibi';
 import { DEFAULT_APPEARANCE } from '../core/appearance';
 import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton } from '../ui/widgets';
@@ -119,7 +119,7 @@ export class TitleScene extends Phaser.Scene {
       }
       if (job) {
         const key = playerChibi(this, job, meta?.appearance ?? DEFAULT_APPEARANCE);
-        children.push(this.add.image(-w / 2 + 34, 108, key).setOrigin(0.5, chibiOrigin(this, key)).setScale(CHAR_SCALE * 0.95));
+        children.push(this.add.image(-w / 2 + 32, 104, key, PORTRAIT_FRAME).setOrigin(0.5, chibiOrigin()).setScale(1.6));
       }
       if (meta) {
         children.push(

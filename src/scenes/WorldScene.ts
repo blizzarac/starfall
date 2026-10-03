@@ -4,11 +4,12 @@ import type { Tile } from '../core/grid';
 import { weaponOf } from '../core/equipment';
 import { jobOf } from '../core/jobs';
 import { STATUS_INFO } from '../core/status';
-import type { MonsterDef } from '../data/schemas';
+import type { MonsterDef, NpcDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
-import { WORLD_CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
+import { WORLD_CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi, PORTRAIT_FRAME } from '../render/chibi';
+import { animKey, type Anim, type Facing } from '../render/knight';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
@@ -80,6 +81,8 @@ const SAND_GROUND = '#f7e3a8';
 const PICK_RADIUS = 24;
 /** While the button is held, re-issue the move this often so the player follows the pointer. */
 const HOLD_REPATH_MS = 120;
+/** How long one attack animation plays (5 frames at 18 fps). */
+const ATTACK_ANIM_MS = 280;
 
 /** Draws the world from core state each frame and turns pointer input into intents. */
 export class WorldScene extends Phaser.Scene {
@@ -87,7 +90,7 @@ export class WorldScene extends Phaser.Scene {
   private clock!: SimClock;
   private alpha = 0;
   private player!: Phaser.GameObjects.Container;
-  private playerBody!: Phaser.GameObjects.Image;
+  private playerBody!: Phaser.GameObjects.Sprite;
   private monsterViews = new Map<number, MonsterView>();
   private dropViews = new Map<number, Phaser.GameObjects.Image>();
   /** Trees and buildings that fade when the player walks behind them. */
@@ -109,6 +112,13 @@ export class WorldScene extends Phaser.Scene {
   /** True while a press that started on the map (not on a HUD button) is held. */
   private pressOnMap = false;
   private lastPlayerX = 0;
+  private lastPlayerY = 0;
+  /** Which way the player faces: front (down the screen) or back, and mirrored for left. */
+  private facing: Facing = 'F';
+  private facingLeft = false;
+  /** The animation playing on the player, so it's only restarted when it changes. */
+  private playerAnim = '';
+  private hurtUntil = 0;
   private attackAnimUntil = 0;
   private attackDir = { x: 0, y: 0 };
 
@@ -141,7 +151,7 @@ export class WorldScene extends Phaser.Scene {
     this.debugGfx = this.add.graphics().setDepth(5000);
 
     const playerKey = this.playerTexture();
-    this.playerBody = this.add.image(0, 0, playerKey).setOrigin(0.5, chibiOrigin(this, playerKey)).setScale(WORLD_CHAR_SCALE);
+    this.playerBody = this.add.sprite(0, 0, playerKey, PORTRAIT_FRAME).setOrigin(0.5, chibiOrigin()).setScale(WORLD_CHAR_SCALE);
     this.castBar = this.add.graphics();
     this.statusLabel = this.add.text(0, -86, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
@@ -338,17 +348,11 @@ export class WorldScene extends Phaser.Scene {
       const body =
         npc.sprite === 'board'
           ? this.add.image(0, 0, 'board').setOrigin(0.5, feetOrigin(this, 'board', 54))
-          : this.add
-              .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), npcAppearance(npc.id, hexColor(npc.look.hair))))
-              .setOrigin(0.5, chibiOrigin(this, `npc-${npc.id}`))
-              .setScale(WORLD_CHAR_SCALE)
-              .setFlipX(hash(npc.x, npc.y) % 2 === 0);
+          : this.npcSprite(npc);
       const label = this.add
         .text(0, npc.sprite === 'board' ? -66 : -84, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
         .setOrigin(0.5, 1);
       const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
-      const s = body.scaleY;
-      this.tweens.add({ targets: body, scaleY: { from: s, to: s * 0.985 }, yoyo: true, repeat: -1, duration: 1200 + (hash(npc.x, npc.y) % 400) });
       this.npcViews.set(npc.id, view);
     }
   }
@@ -374,23 +378,65 @@ export class WorldScene extends Phaser.Scene {
     let ox = 0;
     let oy = 0;
     const now = this.time.now;
-    if (now < this.attackAnimUntil) {
-      const k = Math.sin(((this.attackAnimUntil - now) / 180) * Math.PI) * 6;
+    const attacking = now < this.attackAnimUntil;
+    if (attacking && this.attackDir.x !== 0) {
+      // A small step into the swing.
+      const k = Math.sin(((this.attackAnimUntil - now) / ATTACK_ANIM_MS) * Math.PI) * 3;
       ox = this.attackDir.x * k;
       oy = this.attackDir.y * k;
     }
     this.player.setPosition(w.x + ox, w.y + oy).setDepth(depthFor(w.y) + 0.5);
 
-    if (Math.abs(w.x - this.lastPlayerX) > 0.5) this.playerBody.setFlipX(w.x < this.lastPlayerX);
-    this.lastPlayerX = w.x;
-
     const moving = p.next !== null;
-    const bob = moving ? Math.abs(Math.sin(now / 70)) * 2 : 0;
-    this.playerBody.setY(-bob);
-    this.playerBody.setScale(WORLD_CHAR_SCALE, WORLD_CHAR_SCALE * (p.sitting ? 0.72 : 1));
+    const dx = w.x - this.lastPlayerX;
+    const dy = w.y - this.lastPlayerY;
+    if (!attacking && Math.hypot(dx, dy) > 0.3) this.face(dx, dy);
+    this.lastPlayerX = w.x;
+    this.lastPlayerY = w.y;
+
+    let anim: Anim = 'idle';
+    if (p.dead) anim = 'hurt';
+    else if (p.sitting) anim = 'sit';
+    else if (attacking) anim = 'attack';
+    else if (now < this.hurtUntil) anim = 'hurt';
+    else if (p.casting) anim = 'cast';
+    else if (moving) anim = 'walk';
+    const key = animKey(this.playerBody.texture.key, this.facing, anim);
+    if (key !== this.playerAnim) {
+      this.playerAnim = key;
+      this.playerBody.play(key);
+    }
+    this.playerBody.setFlipX(this.facingLeft);
     this.player.setAlpha(p.dead ? 0.35 : 1);
     // Fainted players lie down; stunned ones wobble.
-    this.playerBody.setAngle(p.dead ? 90 : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
+    this.playerBody.setAngle(p.dead ? (this.facingLeft ? -90 : 90) : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
+  }
+
+  /** Turns the player toward a screen direction. */
+  private face(dx: number, dy: number): void {
+    this.facing = dy < -0.2 * Math.abs(dx) ? 'B' : 'F';
+    if (Math.abs(dx) > 0.1) this.facingLeft = dx < 0;
+  }
+
+  /** Restarts the attack animation toward a screen direction. */
+  private startAttackAnim(dx: number, dy: number, lunge: boolean): void {
+    const len = Math.hypot(dx, dy) || 1;
+    this.attackDir = lunge ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
+    this.attackAnimUntil = this.time.now + ATTACK_ANIM_MS;
+    this.face(dx, dy);
+    this.playerAnim = '';
+  }
+
+  private npcSprite(npc: NpcDef): Phaser.GameObjects.Sprite {
+    const key = ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), npcAppearance(npc.id, hexColor(npc.look.hair)));
+    const h = hash(npc.x, npc.y);
+    // Everyone breathes on their own rhythm.
+    return this.add
+      .sprite(0, 0, key, PORTRAIT_FRAME)
+      .setOrigin(0.5, chibiOrigin())
+      .setScale(WORLD_CHAR_SCALE)
+      .setFlipX(h % 2 === 0)
+      .play({ key: animKey(key, 'F', 'idle'), startFrame: h % 4, frameRate: 4 + (h % 3) });
   }
 
   /** Hides scenery that's off screen, so the renderer skips it. Checked a few times a second. */
@@ -666,6 +712,7 @@ export class WorldScene extends Phaser.Scene {
         if (crit) this.soundEffect(e.targetId, pick(SFX.hit), '#ffd84a', true);
         else if (toPlayer && e.sourceId !== 'player' && e.amount >= this.world.player.hp * 0.5) this.soundEffect('player', pick(SFX.hurt), '#ff5a4a');
         if (e.sourceId === 'player') this.playAttack(e.targetId);
+        if (toPlayer && e.amount > 0) this.hurtUntil = this.time.now + 200;
         this.flashHit(e.targetId);
       }),
       ev.on('miss', (e) => {
@@ -676,11 +723,12 @@ export class WorldScene extends Phaser.Scene {
         if (e.hp > 0) this.floatText('player', `+${e.hp}`, '#7dff9a', 15);
       }),
       ev.on('appearanceChanged', () => {
-        const key = this.playerTexture();
-        this.playerBody.setTexture(key).setOrigin(0.5, chibiOrigin(this, key));
+        this.playerBody.setTexture(this.playerTexture(), PORTRAIT_FRAME);
+        this.playerAnim = '';
       }),
       ev.on('jobChanged', () => {
-        this.playerBody.setTexture(this.playerTexture());
+        this.playerBody.setTexture(this.playerTexture(), PORTRAIT_FRAME);
+        this.playerAnim = '';
         this.soundEffect('player', 'JOB CHANGE!!', '#ffe27a', true);
         this.lines(this.player.x, this.player.y - 30, { inner: 50, outer: 220, count: 40 });
         this.camFx('flash', 300, 255, 240, 180);
@@ -1023,16 +1071,10 @@ export class WorldScene extends Phaser.Scene {
     if (!view) return;
     const dx = view.root.x - this.player.x;
     const dy = view.root.y - this.player.y;
-    if (weaponOf(this.world.player).type === 'bow') {
-      // Archers don't lunge; the arrow does the travelling.
-      this.playerBody.setFlipX(dx < 0);
-      this.arrowEffect(targetId);
-      return;
-    }
-    const len = Math.hypot(dx, dy) || 1;
-    this.attackDir = { x: dx / len, y: dy / len };
-    this.attackAnimUntil = this.time.now + 180;
-    this.playerBody.setFlipX(dx < 0);
+    // Archers don't step in; the arrow does the travelling.
+    const bow = weaponOf(this.world.player).type === 'bow';
+    this.startAttackAnim(dx, dy, !bow);
+    if (bow) this.time.delayedCall(ATTACK_ANIM_MS * 0.45, () => this.arrowEffect(targetId));
   }
 
   private flashHit(id: EntityId): void {

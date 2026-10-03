@@ -2,7 +2,8 @@ import type Phaser from 'phaser';
 import { EYE_COLORS, HAIR_COLORS, HAIR_STYLE_NAMES, HAIR_STYLES, SKIN_TONES, type Appearance } from '../core/appearance';
 import { jobOf } from '../core/jobs';
 import type { World } from '../core/world';
-import { CHAR_SCALE, chibiOrigin, playerChibi } from '../render/chibi';
+import { chibiOrigin, playerChibi } from '../render/chibi';
+import { animKey } from '../render/knight';
 import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton, Panel } from './widgets';
 
@@ -53,9 +54,9 @@ export class AppearanceWindow {
     const cx = p.w / 2;
     p.add(this.scene.add.rectangle(cx, 120, 150, 182, 0xffe9a8).setStrokeStyle(3, COLORS.ink));
     p.add(this.scene.add.ellipse(cx, 202, 90, 16, COLORS.ink, 0.15));
-    // The sprite is drawn at 3x, so it stays sharp at this size.
+    // Pixel art scaled up with nearest-neighbor filtering, playing its idle animation.
     const key = playerChibi(this.scene, jobOf(w.player), a);
-    p.add(this.scene.add.image(cx, 204, key).setOrigin(0.5, chibiOrigin(this.scene, key)).setScale(CHAR_SCALE * 1.6));
+    p.add(this.scene.add.sprite(cx, 204, key).setOrigin(0.5, chibiOrigin()).setScale(3.5).play(animKey(key, 'F', 'idle')));
 
     let y = 222;
     const heading = (label: string) => {
