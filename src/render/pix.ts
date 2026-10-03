@@ -93,8 +93,8 @@ export class Pix {
     for (const [x, y, c] of add) this.set(x, y, c);
   }
 
-  /** Copies the pixels into a 2D canvas at (ox, oy). */
-  blit(ctx: CanvasRenderingContext2D, ox: number, oy: number): void {
+  /** Copies the pixels into a 2D canvas at (ox, oy), optionally see-through. */
+  blit(ctx: CanvasRenderingContext2D, ox: number, oy: number, alpha = 255): void {
     const img = ctx.createImageData(this.w, this.h);
     for (let i = 0; i < this.px.length; i++) {
       const v = this.px[i]!;
@@ -103,7 +103,7 @@ export class Pix {
       img.data[i * 4] = (c >> 16) & 255;
       img.data[i * 4 + 1] = (c >> 8) & 255;
       img.data[i * 4 + 2] = c & 255;
-      img.data[i * 4 + 3] = 255;
+      img.data[i * 4 + 3] = alpha;
     }
     ctx.putImageData(img, ox, oy);
   }

@@ -10,6 +10,9 @@ import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
 import { WORLD_CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi, PORTRAIT_FRAME } from '../render/chibi';
 import { animKey, type Anim, type Facing } from '../render/knight';
+import { ensureMonster, MON_ORIGIN_Y, monsterAnimKey, WORLD_PX, type MonsterAnim } from '../render/monsters';
+import { paintGround } from '../render/ground';
+import { setArtRes } from '../render/art';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
@@ -19,9 +22,13 @@ import { depthFor, TILE_H, TILE_W, tileToWorld, worldToTile } from '../render/is
 
 interface MonsterView {
   root: Phaser.GameObjects.Container;
-  body: Phaser.GameObjects.Image;
+  body: Phaser.GameObjects.Sprite;
   hpBar: Phaser.GameObjects.Graphics;
   lastX: number;
+  /** Sheet key and the animation playing, so it only restarts on change. */
+  key: string;
+  anim: string;
+  attackUntil: number;
   /** HP the bar was last drawn for; it's only redrawn when this changes. */
   lastHp: number;
 }
@@ -32,24 +39,6 @@ const BOLT_COLORS: Record<string, number> = {
   cold_bolt: 0x7fd3ff,
   lightning_bolt: 0xfff27a,
   soul_strike: 0xd9b8ff,
-};
-/** Pixel row each monster drawing stands on (before inking). */
-const MONSTER_FEET: Record<MonsterDef['look']['shape'], number> = {
-  blob: 38,
-  beetle: 36,
-  sprout: 40,
-  boar: 40,
-  wolf: 40,
-  mushroom: 42,
-  bat: 40,
-  golem: 52,
-  crab: 36,
-  bird: 42,
-  scorpion: 36,
-  worm: 54,
-  skeleton: 54,
-  mummy: 54,
-  pharaoh: 62,
 };
 /** Comic sound effects for big hits, by what landed. */
 const SFX = {
@@ -97,7 +86,15 @@ export class WorldScene extends Phaser.Scene {
   private trees: Array<{ img: Phaser.GameObjects.Image; tile: Tile }> = [];
   private npcViews = new Map<string, Phaser.GameObjects.Container>();
   /** The pet following the player, and which species/name it was drawn for. */
-  private petView: { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; key: string; lastX: number } | null = null;
+  private petView: {
+    root: Phaser.GameObjects.Container;
+    body: Phaser.GameObjects.Sprite;
+    label: Phaser.GameObjects.Text;
+    key: string;
+    sheet: string;
+    anim: string;
+    lastX: number;
+  } | null = null;
   private hover!: Phaser.GameObjects.Image;
   /** Pulsing ring under whatever the player is fighting. */
   private targetRing!: Phaser.GameObjects.Ellipse;
@@ -192,102 +189,31 @@ export class WorldScene extends Phaser.Scene {
     const ox = height * (TILE_W / 2);
     const oy = TILE_H / 2;
     const key = `ground-${this.world.map.id}`;
-    // Each ground image is several megabytes; keep only the current map's. It
-    // stays at 1x: a supersampled ground costs too much memory on phones.
+    // Keep only the current map's ground texture.
     for (const k of this.textures.getTextureKeys()) if (k.startsWith('ground-') && k !== key) this.textures.remove(k);
-    if (this.textures.exists(key)) {
-      this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
-      return;
+    if (!this.textures.exists(key)) {
+      const grid = this.world.grid;
+      const grass = this.world.map.grass;
+      const desert = grass?.[0] === SAND_GROUND;
+      // Terrain classes: a seam is drawn wherever two different classes meet.
+      const classOf = (x: number, y: number): string => {
+        const t = grid.terrainAt(x, y);
+        if (t === undefined) return 'void';
+        if (t === 'tree' || t === 'rock' || t === 'flower') return desert ? 'sand' : 'grass';
+        if (t === 'palm') return 'sand';
+        return t === 'wall' || t === 'ruin' ? 'cobble' : t;
+      };
+      const canvas = paintGround({
+        width,
+        height,
+        classOf,
+        isFlower: (x, y) => grid.terrainAt(x, y) === 'flower',
+        colorOf: (kind) => (grass && kind === 'grass' ? hexColor(grass[0]!) : ((COLORS[kind as keyof typeof COLORS] as readonly number[] | undefined)?.[0] ?? 0x444444)),
+        dungeon: this.world.map.kind === 'dungeon',
+      });
+      this.textures.addCanvas(key, canvas)!.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      setArtRes(key, 0.5);
     }
-    const g = this.make.graphics({}, false);
-    const grid = this.world.grid;
-    const dungeon = this.world.map.kind === 'dungeon';
-    const grass = this.world.map.grass;
-    // Terrain classes: an ink line is drawn wherever two different classes meet.
-    const classOf = (x: number, y: number): string => {
-      const t = grid.terrainAt(x, y);
-      if (t === undefined) return 'void';
-      if (t === 'tree' || t === 'rock' || t === 'flower') return grass?.[0] === SAND_GROUND ? 'sand' : 'grass';
-      if (t === 'palm') return 'sand';
-      return t === 'wall' || t === 'ruin' ? 'cobble' : t;
-    };
-    const V = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const terrain = grid.terrainAt(x, y)!;
-        const kind = classOf(x, y) as keyof typeof COLORS;
-        const base = grass && kind === 'grass' ? hexColor(grass[0]!) : (COLORS[kind] as readonly number[])[0]!;
-        const c = tileToWorld(x, y);
-        const cx = c.x + ox;
-        const cy = c.y + oy;
-        const h = hash(x, y);
-        g.fillStyle(base).fillPoints([V(cx, cy - TILE_H / 2), V(cx + TILE_W / 2, cy), V(cx, cy + TILE_H / 2), V(cx - TILE_W / 2, cy)], true);
-
-        // Hand-drawn texture marks, sparse so the ground stays calm.
-        if (kind === 'grass' && !dungeon && h % 3 === 0) {
-          g.lineStyle(1.3, COLORS.ink, 0.45);
-          const tx = cx + ((h >>> 4) % 30) - 15;
-          const ty = cy + ((h >>> 9) % 12) - 6;
-          g.lineBetween(tx - 3, ty - 4, tx, ty).lineBetween(tx, ty, tx + 3, ty - 5);
-        }
-        if (kind === 'grass' && dungeon && h % 4 === 0) {
-          g.lineStyle(1.2, COLORS.ink, 0.5);
-          const tx = cx + ((h >>> 4) % 26) - 13;
-          const ty = cy + ((h >>> 9) % 10) - 5;
-          g.lineBetween(tx - 6, ty, tx, ty + 2).lineBetween(tx, ty + 2, tx + 5, ty - 1);
-        }
-        if (kind === 'path' && h % 2 === 0) {
-          g.fillStyle(COLORS.ink, 0.28).fillCircle(cx + ((h >>> 3) % 24) - 12, cy + ((h >>> 8) % 10) - 5, 1.4);
-        }
-        if (kind === 'sand' && h % 3 === 0) {
-          g.fillStyle(0xc9a35a, 0.8).fillCircle(cx + ((h >>> 3) % 24) - 12, cy + ((h >>> 8) % 10) - 5, 1.2);
-          g.fillStyle(0xc9a35a, 0.8).fillCircle(cx + ((h >>> 6) % 20) - 10, cy + ((h >>> 11) % 8) - 4, 1);
-        }
-        if (kind === 'plank') {
-          // Boards run along one iso axis, with a dark gap between them.
-          g.lineStyle(1.2, COLORS.ink, 0.45);
-          // From the left→bottom edge to the top→right edge, parallel to the left→top edge.
-          for (const t of [1 / 3, 2 / 3]) g.lineBetween(cx - TILE_W / 2 + (t * TILE_W) / 2, cy + (t * TILE_H) / 2, cx + (t * TILE_W) / 2, cy - TILE_H / 2 + (t * TILE_H) / 2);
-          if (h % 4 === 0) g.fillStyle(COLORS.ink, 0.5).fillCircle(cx, cy, 1.2);
-        }
-        if (kind === 'cobble') {
-          g.lineStyle(1, COLORS.ink, 0.22).lineBetween(cx - 16, cy - 8, cx + 16, cy + 8).lineBetween(cx + 16, cy - 8, cx - 16, cy + 8);
-        }
-        if (kind === 'water' && h % 2 === 0) {
-          g.lineStyle(2, 0xffffff, 0.9);
-          const wx = cx + ((h >>> 5) % 16) - 8;
-          g.beginPath().arc(wx, cy + 4, 6, Math.PI * 1.15, Math.PI * 1.85).strokePath();
-        }
-        if (terrain === 'flower') {
-          const petals = [0xffffff, 0xffd84a, 0xff8fb8, 0xb9a4ff];
-          for (let i = 0; i < 2; i++) {
-            const px = cx + (((h >>> (i * 4)) & 15) - 7.5) * 2.4;
-            const py = cy + (((h >>> (i * 4 + 2)) & 7) - 3.5) * 1.6;
-            g.fillStyle(petals[(h >>> (i * 3)) % petals.length]!).fillCircle(px, py, 3);
-            g.lineStyle(1.2, COLORS.ink).strokeCircle(px, py, 3);
-            g.fillStyle(0xffd84a).fillCircle(px, py, 1);
-          }
-        }
-      }
-    }
-    // Ink borders between different kinds of ground.
-    g.lineStyle(2, COLORS.ink, 0.85);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const c = tileToWorld(x, y);
-        const cx = c.x + ox;
-        const cy = c.y + oy;
-        const here = classOf(x, y);
-        if (classOf(x + 1, y) !== here) g.lineBetween(cx + TILE_W / 2, cy, cx, cy + TILE_H / 2);
-        if (classOf(x, y + 1) !== here) g.lineBetween(cx - TILE_W / 2, cy, cx, cy + TILE_H / 2);
-        if (x === 0 || classOf(x - 1, y) !== here) g.lineBetween(cx - TILE_W / 2, cy, cx, cy - TILE_H / 2);
-        if (y === 0 || classOf(x, y - 1) !== here) g.lineBetween(cx + TILE_W / 2, cy, cx, cy - TILE_H / 2);
-      }
-    }
-    const texW = (width + height) * (TILE_W / 2);
-    const texH = (width + height) * (TILE_H / 2);
-    g.generateTexture(key, texW, texH);
-    g.destroy();
     this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
   }
 
@@ -479,10 +405,11 @@ export class WorldScene extends Phaser.Scene {
       if (Math.abs(w.x - view.lastX) > 0.5) view.body.setFlipX(w.x < view.lastX);
       view.lastX = w.x;
 
-      const t = this.time.now / 1000 + m.id;
-      const squash = m.next ? Math.sin(t * 14) * 0.12 : Math.sin(t * 3) * 0.04;
-      const s = m.def.look.scale;
-      view.body.setScale(s * (1 + squash), s * (1 - squash));
+      const anim: MonsterAnim = this.time.now < view.attackUntil ? 'attack' : m.next ? 'move' : 'idle';
+      if (anim !== view.anim) {
+        view.anim = anim;
+        view.body.play(monsterAnimKey(view.key, anim));
+      }
 
       if (m.hp === view.lastHp) continue;
       view.lastHp = m.hp;
@@ -508,14 +435,17 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private createMonsterView(m: Monster): MonsterView {
-    const color = Phaser.Display.Color.HexStringToColor(m.def.look.color).color;
-    const shape = m.def.look.shape;
-    const body = this.add.image(0, 0, shape).setOrigin(0.5, feetOrigin(this, shape, MONSTER_FEET[shape])).setTint(color);
+    const key = ensureMonster(this, m.def.look.shape, hexColor(m.def.look.color));
+    const body = this.add
+      .sprite(0, 0, key)
+      .setOrigin(0.5, MON_ORIGIN_Y)
+      .setScale(WORLD_PX * m.def.look.scale)
+      .play({ key: monsterAnimKey(key, 'idle'), startFrame: m.id % 4 });
     const hpBar = this.add.graphics();
-    const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.9), body, hpBar]);
+    const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.9 * Math.max(1, m.def.look.scale * 0.8)), body, hpBar]);
     root.setAlpha(0);
     this.tweens.add({ targets: root, alpha: 1, duration: 400 });
-    const view = { root, body, hpBar, lastX: 0, lastHp: m.def.hp };
+    const view: MonsterView = { root, body, hpBar, lastX: 0, lastHp: m.def.hp, key, anim: 'idle', attackUntil: 0 };
     this.monsterViews.set(m.id, view);
     return view;
   }
@@ -531,14 +461,12 @@ export class WorldScene extends Phaser.Scene {
     if (!pet || !mover) return;
     if (!this.petView) {
       const def = this.world.content.monsters.get(pet.species)!;
-      const shape = def.look.shape;
-      const body = this.add
-        .image(0, 0, shape)
-        .setOrigin(0.5, feetOrigin(this, shape, MONSTER_FEET[shape]))
-        .setTint(Phaser.Display.Color.HexStringToColor(def.look.color).color);
+      const sheet = ensureMonster(this, def.look.shape, hexColor(def.look.color));
+      // Pets are drawn smaller than their wild cousins.
+      const body = this.add.sprite(0, 0, sheet).setOrigin(0.5, MON_ORIGIN_Y).setScale(WORLD_PX * 0.62);
       const label = this.add.text(0, -34, pet.name, { ...WORLD_TEXT, fontSize: '10px', color: '#ffb8d8' }).setOrigin(0.5, 1);
       const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.6), body, label]);
-      this.petView = { root, body, label, key, lastX: 0 };
+      this.petView = { root, body, label, key, sheet, anim: '', lastX: 0 };
     }
     const view = this.petView;
     const pos = renderPosition(mover, this.alpha);
@@ -546,11 +474,11 @@ export class WorldScene extends Phaser.Scene {
     view.root.setPosition(w.x, w.y).setDepth(depthFor(w.y) + 0.2);
     if (Math.abs(w.x - view.lastX) > 0.5) view.body.setFlipX(w.x < view.lastX);
     view.lastX = w.x;
-    const t = this.time.now / 1000;
-    const hop = mover.next ? Math.abs(Math.sin(t * 12)) * 4 : 0;
-    const squash = mover.next ? Math.sin(t * 14) * 0.08 : Math.sin(t * 3) * 0.03;
-    // Pets are drawn smaller than their wild cousins.
-    view.body.setScale(0.62 * (1 + squash), 0.62 * (1 - squash)).setY(-hop);
+    const anim = monsterAnimKey(view.sheet, mover.next ? 'move' : 'idle');
+    if (anim !== view.anim) {
+      view.anim = anim;
+      view.body.play(anim);
+    }
   }
 
   /** Little hearts rising from the pet (or the player if there is none on screen). */
@@ -712,12 +640,14 @@ export class WorldScene extends Phaser.Scene {
         if (crit) this.soundEffect(e.targetId, pick(SFX.hit), '#ffd84a', true);
         else if (toPlayer && e.sourceId !== 'player' && e.amount >= this.world.player.hp * 0.5) this.soundEffect('player', pick(SFX.hurt), '#ff5a4a');
         if (e.sourceId === 'player') this.playAttack(e.targetId);
+        else this.monsterAttack(e.sourceId);
         if (toPlayer && e.amount > 0) this.hurtUntil = this.time.now + 200;
         this.flashHit(e.targetId);
       }),
       ev.on('miss', (e) => {
         this.damageNumber(e.targetId, 'MISS', '#8fd0ff', 18);
         if (e.sourceId === 'player') this.playAttack(e.targetId);
+        else this.monsterAttack(e.sourceId);
       }),
       ev.on('heal', (e) => {
         if (e.hp > 0) this.floatText('player', `+${e.hp}`, '#7dff9a', 15);
@@ -1063,6 +993,15 @@ export class WorldScene extends Phaser.Scene {
         fx.destroy();
       },
     });
+  }
+
+  /** Plays a monster's attack animation, facing the player. */
+  private monsterAttack(id: EntityId): void {
+    const view = typeof id === 'number' ? this.monsterViews.get(id) : undefined;
+    if (!view) return;
+    view.attackUntil = this.time.now + 260;
+    view.anim = '';
+    view.body.setFlipX(this.player.x < view.root.x);
   }
 
   private playAttack(targetId: EntityId): void {
