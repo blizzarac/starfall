@@ -27,6 +27,8 @@ On touch screens, tap where you'd click; the round buttons in the bottom-right c
 | Left click NPC | Walk over and talk (shops, save point, tips) |
 | F1 / F2 | Use Red Tonic / Sweet Apple |
 | I | Items: inventory, weight and gold |
+| S | Skills: spend skill points |
+| F3–F6 | Use learned active skills (the purple buttons) |
 | Z or Insert | Sit (doubles HP and SP regeneration) |
 | A | Stat window (spend points with +) |
 | ` | Debug overlay (also in the menu): paths, AI state, kills/min, XP/h, loot gold/h |
@@ -51,6 +53,8 @@ tests/         Vitest suites
 ```
 
 Scenes send intents to `World` (`moveTo`, `attack`, `pickUp`, `useItem`, ...) and draw from its state and events. Content is validated against the zod schemas on load, and `tests/content.test.ts` runs the same check in CI.
+
+**Jobs.** Everyone starts as a Novice. At job level 10, with Basic Training at level 9, Captain Harlan in Brightmoor runs the Swordsman trial (bring 10 Jelly Drops). Swordsmen learn Sword Mastery, Increase HP Recovery, Bash, Magnum Break and Endure. Jobs and skill rules live in `src/core/jobs.ts` and `src/core/skills.ts`.
 
 The world so far: **Brightmoor** (town) → **Southern Meadow** (Jellops, passive) → **Thornfield** (Thornbeetles attack on sight) → **Mossy Hollow** (Mosslings, and aggressive Bristleboars).
 

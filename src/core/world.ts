@@ -7,7 +7,10 @@ import { createMover } from './entities';
 import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
-import { applyDeathPenalty, createPlayer, derivedStats, gainXp, raiseStat } from './progression';
+import { isJobId } from './jobs';
+import { applyDeathPenalty, changeJob, createPlayer, derivedStats, gainXp, learnSkill, raiseStat } from './progression';
+import * as S from './skills';
+import type { Element } from './combat/formulas';
 import { createRng, randInt, type Rng } from './rng';
 
 export type EntityId = 'player' | number;
@@ -26,6 +29,9 @@ export interface WorldEvents extends Record<string, unknown> {
   playerRespawned: Record<string, never>;
   /** The player reached an NPC; the UI opens its dialogue. */
   talk: { npc: NpcDef };
+  skillUsed: { skillId: S.SkillId; targets: number[] };
+  skillsChanged: Record<string, never>;
+  jobChanged: { jobId: string };
   /** The current map was swapped for another; scenes rebuild. */
   mapChanged: { mapId: string };
   notice: { text: string };
@@ -42,6 +48,8 @@ export interface SessionStats {
 }
 
 const PLAYER_ATTACK_RANGE = 1;
+/** How far (tiles) a skill looks for a target when none is selected. */
+const SKILL_AUTO_TARGET_RANGE = 8;
 const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
 
@@ -154,7 +162,8 @@ export class World {
     if (p.dead || !item || item.type !== 'consumable' || count <= 0) return;
     if (item.heal) {
       const d = derivedStats(p);
-      const hp = Math.min(item.heal.hp, d.maxHp - p.hp);
+      const boost = 1 + 0.1 * S.skillLevel(p, 'hp_recovery');
+      const hp = Math.min(Math.floor(item.heal.hp * boost), d.maxHp - p.hp);
       const sp = Math.min(item.heal.sp, d.maxSp - p.sp);
       p.hp += hp;
       p.sp += sp;
@@ -172,6 +181,78 @@ export class World {
 
   raiseStat(stat: StatName): boolean {
     return raiseStat(this.player, stat);
+  }
+
+  /** Spends a skill point. Returns why not, or null on success. */
+  learnSkill(id: S.SkillId): string | null {
+    const err = learnSkill(this.player, id);
+    if (!err) this.events.emit('skillsChanged', {});
+    return err;
+  }
+
+  /** Uses an active skill. Targeted skills walk into range first, picking the nearest monster if needed. */
+  useSkill(id: string): void {
+    const p = this.player;
+    if (p.dead || !S.isSkillId(id)) return;
+    const skill = S.SKILLS[id];
+    const lv = S.skillLevel(p, id);
+    if (lv === 0 || skill.kind === 'passive') return;
+    const notice = (text: string) => this.events.emit('notice', { text });
+    if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) return notice("You're carrying too much to fight.");
+    if ((p.cooldowns.get(id) ?? 0) > 0) return notice(`${skill.name} isn't ready yet.`);
+    if (p.sp < skill.spCost(lv)) return notice('Not enough SP.');
+    p.sitting = false;
+    if (skill.kind === 'enemy') {
+      const target = this.skillTarget();
+      if (!target) return notice('No monster nearby.');
+      p.intent = { kind: 'skill', skillId: id, targetId: target.id };
+      p.goal = null;
+      return;
+    }
+    this.castSkill(id);
+  }
+
+  /** The monster being fought, or the closest one (hostile ones first). */
+  private skillTarget(): Monster | null {
+    const p = this.player;
+    const current = p.intent.kind === 'attack' || p.intent.kind === 'skill' ? this.monsters.get(p.intent.targetId) : undefined;
+    if (current) return current;
+    let best: Monster | null = null;
+    let bestScore = Infinity;
+    for (const m of this.monsters.values()) {
+      const d = tileDistance(p.tile, m.tile);
+      if (d > SKILL_AUTO_TARGET_RANGE) continue;
+      const score = d - (m.hostile ? 100 : 0);
+      if (score < bestScore) {
+        best = m;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  private castSkill(id: S.SkillId, target?: Monster): void {
+    const p = this.player;
+    const skill = S.SKILLS[id];
+    const lv = S.skillLevel(p, id);
+    p.sp -= skill.spCost(lv);
+    if (skill.cooldownMs > 0) p.cooldowns.set(id, skill.cooldownMs);
+    const hit: number[] = [];
+    if (id === 'bash' && target) {
+      hit.push(target.id);
+      this.events.emit('skillUsed', { skillId: id, targets: hit });
+      this.playerHit(target, { modifier: S.bashModifier(lv), hitBonus: S.bashHitBonus(lv), element: 'neutral' });
+    } else if (id === 'magnum_break') {
+      for (const m of this.monsters.values()) if (tileDistance(p.tile, m.tile) <= S.MAGNUM_RADIUS) hit.push(m.id);
+      this.events.emit('skillUsed', { skillId: id, targets: hit });
+      for (const mid of hit) {
+        const m = this.monsters.get(mid);
+        if (m) this.playerHit(m, { modifier: S.magnumModifier(lv), hitBonus: S.MAGNUM_HIT_BONUS, element: 'fire' });
+      }
+    } else if (id === 'endure') {
+      p.buffs.set('endure', { level: lv, remainingMs: S.endureDurationMs(lv) });
+      this.events.emit('skillUsed', { skillId: id, targets: [] });
+    }
   }
 
   // ---- Inventory and trade -----------------------------------------------
@@ -215,8 +296,8 @@ export class World {
   }
 
   /** Learned level of a skill; 0 if unknown. */
-  skillLevel(_skillId: string): number {
-    return 0;
+  skillLevel(skillId: string): number {
+    return S.skillLevel(this.player, skillId);
   }
 
   hasItem(itemId: string, count: number): boolean {
@@ -263,8 +344,12 @@ export class World {
       case 'giveItem':
         this.addItem(action.id, action.count);
         return {};
-      case 'changeJob':
+      case 'changeJob': {
+        const err = isJobId(action.job) ? changeJob(p, action.job) : 'Unknown job.';
+        if (err) this.events.emit('notice', { text: err });
+        else this.events.emit('jobChanged', { jobId: action.job });
         return {};
+      }
     }
   }
 
@@ -337,26 +422,24 @@ export class World {
       return;
     }
     p.attackCooldown = Math.max(0, p.attackCooldown - dt);
+    this.tickTimers(p, dt);
     const intent = p.intent;
 
-    if (intent.kind === 'attack') {
+    if (intent.kind === 'attack' || intent.kind === 'skill') {
       const target = this.monsters.get(intent.targetId);
       if (!target) {
         p.intent = { kind: 'none' };
         p.path = [];
-      } else {
-        const inRange = () => tileDistance(p.tile, target.tile) <= PLAYER_ATTACK_RANGE;
-        if (!p.next && inRange()) {
-          p.path = [];
-        } else {
-          const stale = !p.goal || !sameTile(p.goal, target.tile);
-          if (stale && !this.setPath(p, target.tile)) {
-            p.intent = { kind: 'none' };
-            this.events.emit('notice', { text: 'Target is out of reach.' });
-          }
-          advance(p, dt, inRange);
-        }
-        if (p.intent.kind === 'attack' && !p.next && inRange() && p.attackCooldown === 0) {
+      } else if (this.approach(p, target, dt)) {
+        if (intent.kind === 'skill' && S.isSkillId(intent.skillId)) {
+          // Re-check SP: it may have dropped while walking over.
+          const skill = S.SKILLS[intent.skillId];
+          if (p.sp >= skill.spCost(S.skillLevel(p, intent.skillId))) this.castSkill(intent.skillId, target);
+          else this.events.emit('notice', { text: 'Not enough SP.' });
+          // Keep fighting the same monster with normal attacks afterwards.
+          if (this.monsters.has(target.id)) p.intent = { kind: 'attack', targetId: target.id };
+          else p.intent = { kind: 'none' };
+        } else if (p.attackCooldown === 0) {
           this.playerAttack(target);
         }
       }
@@ -397,6 +480,37 @@ export class World {
     this.regenerate(p, dt);
   }
 
+  /** Walks toward a monster until in melee range. True once standing in range. */
+  private approach(p: Player, target: Monster, dt: number): boolean {
+    const inRange = () => tileDistance(p.tile, target.tile) <= PLAYER_ATTACK_RANGE;
+    if (!p.next && inRange()) {
+      p.path = [];
+      return true;
+    }
+    const stale = !p.goal || !sameTile(p.goal, target.tile);
+    if (stale && !this.setPath(p, target.tile)) {
+      p.intent = { kind: 'none' };
+      this.events.emit('notice', { text: 'Target is out of reach.' });
+      return false;
+    }
+    advance(p, dt, inRange);
+    return !p.next && inRange();
+  }
+
+  private tickTimers(p: Player, dt: number): void {
+    for (const [id, ms] of p.cooldowns) {
+      if (ms - dt <= 0) p.cooldowns.delete(id);
+      else p.cooldowns.set(id, ms - dt);
+    }
+    for (const [id, buff] of p.buffs) {
+      buff.remainingMs -= dt;
+      if (buff.remainingMs <= 0) {
+        p.buffs.delete(id);
+        if (id === 'endure') this.events.emit('notice', { text: 'Endure wore off.' });
+      }
+    }
+  }
+
   private regenerate(p: Player, dt: number): void {
     // A heavy bag stops natural recovery, which is what sends players back to town.
     if (this.weightRatio() >= F.WEIGHT_NO_REGEN) return;
@@ -404,7 +518,8 @@ export class World {
     p.hpRegenTimer += dt;
     if (p.hpRegenTimer >= F.hpRegenIntervalMs(p.sitting)) {
       p.hpRegenTimer = 0;
-      p.hp = Math.min(d.maxHp, p.hp + F.hpRegenAmount(d.maxHp, p.stats.vit));
+      const bonus = 2 * S.skillLevel(p, 'hp_recovery');
+      p.hp = Math.min(d.maxHp, p.hp + F.hpRegenAmount(d.maxHp, p.stats.vit) + bonus);
     }
     p.spRegenTimer += dt;
     if (p.spRegenTimer >= F.spRegenIntervalMs(p.sitting)) {
@@ -414,20 +529,25 @@ export class World {
   }
 
   private playerAttack(target: Monster): void {
+    this.player.attackCooldown = derivedStats(this.player).attackDelayMs;
+    this.playerHit(target, { modifier: 1, hitBonus: 0, element: 'neutral', canCrit: true });
+  }
+
+  /** One hit from the player: normal attacks can crit, skills add damage and accuracy. */
+  private playerHit(target: Monster, o: { modifier: number; hitBonus: number; element: Element; canCrit?: boolean }): void {
     const p = this.player;
     const d = derivedStats(p);
-    p.attackCooldown = d.attackDelayMs;
     target.hostile = true;
-
-    const crit = this.rng() < d.crit;
-    if (!crit && this.rng() >= F.hitChance(d.hit, target.def.flee)) {
+    const crit = !!o.canCrit && this.rng() < d.crit;
+    if (!crit && this.rng() >= Math.min(0.95, F.hitChance(d.hit, target.def.flee) + o.hitBonus)) {
       this.events.emit('miss', { sourceId: 'player', targetId: target.id });
       return;
     }
     const amount = F.damage(
       {
         atk: d.atk,
-        elementModifier: F.elementModifier('neutral', target.def.element),
+        skillModifier: o.modifier,
+        elementModifier: F.elementModifier(o.element, target.def.element),
         sizeModifier: F.sizeModifier(p.weapon.type, target.def.size),
         def: target.def.def,
         crit,
@@ -556,7 +676,9 @@ export class World {
       this.events.emit('miss', { sourceId: m.id, targetId: 'player' });
       return;
     }
-    const amount = F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng);
+    const raw = F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng);
+    const endure = p.buffs.get('endure');
+    const amount = endure ? Math.max(1, Math.floor(raw * (1 - S.endureReduction(endure.level)))) : raw;
     p.hp -= amount;
     p.sitting = false;
     this.events.emit('damage', { sourceId: m.id, targetId: 'player', amount, crit: false });
@@ -572,6 +694,7 @@ export class World {
     p.path = [];
     p.next = null;
     p.sitting = false;
+    p.buffs.clear();
     this.session.deaths += 1;
     const xpLost = applyDeathPenalty(p);
     for (const m of this.monsters.values()) m.hostile = false;

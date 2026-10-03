@@ -4,7 +4,9 @@ import { DialogueRunner } from '../src/core/dialogue';
 import { World } from '../src/core/world';
 import { loadContent, START_MAP } from '../src/data/content';
 import { migrate } from '../src/save/migrations';
-import { toSaveDoc } from '../src/save/serialize';
+import { applySaveDoc } from '../src/save/serialize';
+import { SAVE_SCHEMA_VERSION } from '../src/save/schema';
+import saveV1 from './fixtures/save-v1.json';
 
 const content = loadContent();
 const town = content.maps.get(START_MAP)!;
@@ -155,10 +157,16 @@ describe('wings', () => {
   });
 });
 
-describe('save v1 → v2', () => {
-  it('adds gold to old saves', () => {
-    const v2 = toSaveDoc(new World(content, town, { seed: 1 }), 0);
-    const { gold: _gold, ...v1 } = { ...v2, schemaVersion: 1 };
-    expect(migrate(v1).gold).toBe(0);
+describe('old saves', () => {
+  it('upgrades a real v1 save exported before shops and jobs existed', () => {
+    const doc = migrate(saveV1);
+    expect(doc.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+    expect(doc.gold).toBe(0);
+    expect(doc.character.jobId).toBe('novice');
+    expect(doc.character.skills).toEqual({});
+    expect(doc.character.name).toBe(saveV1.character.name);
+    const w = new World(content, content.maps.get(doc.position.map)!, { seed: 1 });
+    applySaveDoc(w, doc);
+    expect(w.player.inventory.get('red_tonic')).toBe(2);
   });
 });

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "savedAt": 1791024917434,
+  "playtimeMs": 4050,
+  "character": {
+    "name": "Mira",
+    "jobName": "Novice",
+    "baseLevel": 1,
+    "jobLevel": 1,
+    "maxJobLevel": 10,
+    "baseXp": 15,
+    "jobXp": 0,
+    "stats": {
+      "str": 5,
+      "agi": 5,
+      "vit": 5,
+      "int": 1,
+      "dex": 5,
+      "luk": 1
+    },
+    "statPoints": 20,
+    "skillPoints": 0,
+    "weapon": {
+      "type": "dagger",
+      "atk": 17
+    },
+    "hp": 50,
+    "sp": 12
+  },
+  "inventory": {
+    "red_tonic": 2
+  },
+  "storage": {},
+  "quests": {},
+  "flags": {},
+  "position": {
+    "map": "meadow-1",
+    "x": 22,
+    "y": 21
+  },
+  "savePoint": {
+    "map": "meadow-1",
+    "x": 19,
+    "y": 21
+  }
+}

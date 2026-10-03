@@ -1,4 +1,6 @@
 import { createMover } from '../core/entities';
+import { JOBS } from '../core/jobs';
+import { isSkillId } from '../core/skills';
 import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
@@ -16,10 +18,10 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     playtimeMs: Math.floor(playtimeMs),
     character: {
       name: p.name,
-      jobName: p.jobName,
+      jobId: p.jobId,
       baseLevel: p.baseLevel,
       jobLevel: p.jobLevel,
-      maxJobLevel: p.maxJobLevel,
+      skills: Object.fromEntries(p.skills),
       baseXp: p.baseXp,
       jobXp: p.jobXp,
       stats: { ...p.stats },
@@ -46,10 +48,9 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   const c = doc.character;
   Object.assign(p, {
     name: c.name,
-    jobName: c.jobName,
+    jobId: c.jobId,
     baseLevel: c.baseLevel,
-    jobLevel: c.jobLevel,
-    maxJobLevel: c.maxJobLevel,
+    jobLevel: Math.min(c.jobLevel, JOBS[c.jobId].maxJobLevel),
     baseXp: c.baseXp,
     jobXp: c.jobXp,
     stats: { ...c.stats },
@@ -59,6 +60,7 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   });
   p.inventory = new Map(Object.entries(doc.inventory).filter(([id]) => world.content.items.has(id)));
   p.gold = doc.gold;
+  p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
 
   // Places on maps that no longer exist, or tiles that are now blocked, fall back to safe spots.
   const valid = (place: SaveDoc['position']) => {

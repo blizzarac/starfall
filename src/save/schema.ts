@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { STAT_NAMES } from '../core/combat/formulas';
+import { JOBS, type JobId } from '../core/jobs';
 
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 const Place = z.object({ map: z.string(), x: z.number().int(), y: z.number().int() });
 const Counts = z.record(z.string(), z.number().int().positive());
@@ -13,10 +14,10 @@ export const SaveDocSchema = z.object({
   playtimeMs: z.number().nonnegative(),
   character: z.object({
     name: z.string().min(1).max(24),
-    jobName: z.string(),
+    jobId: z.enum(Object.keys(JOBS) as [JobId, ...JobId[]]),
     baseLevel: z.number().int().min(1),
     jobLevel: z.number().int().min(1),
-    maxJobLevel: z.number().int().min(1),
+    skills: z.record(z.string(), z.number().int().positive()),
     baseXp: z.number().int().nonnegative(),
     jobXp: z.number().int().nonnegative(),
     stats: z.object(Object.fromEntries(STAT_NAMES.map((s) => [s, z.number().int().min(1)])) as Record<
@@ -56,7 +57,7 @@ export function slotMetaFrom(id: number, doc: SaveDoc): SlotMeta {
   return {
     id,
     name: c.name,
-    jobName: c.jobName,
+    jobName: JOBS[c.jobId].name,
     baseLevel: c.baseLevel,
     jobLevel: c.jobLevel,
     playtimeMs: doc.playtimeMs,

@@ -13,7 +13,7 @@ const MAX_BRANCH_HOPS = 20;
 export function checkCondition(world: World, c: Condition | undefined): boolean {
   if (!c) return true;
   const p = world.player;
-  if (c.job !== undefined && p.jobName.toLowerCase() !== c.job) return false;
+  if (c.job !== undefined && p.jobId !== c.job) return false;
   if (c.jobLevelMin !== undefined && p.jobLevel < c.jobLevelMin) return false;
   if (c.skillMin !== undefined && world.skillLevel(c.skillMin.id) < c.skillMin.level) return false;
   if (c.hasItem !== undefined && !world.hasItem(c.hasItem.id, c.hasItem.count)) return false;

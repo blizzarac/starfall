@@ -5,13 +5,35 @@
       "start": {
         "text": "Welcome, {name}. The waystone remembers travellers who rest beside it.",
         "choices": [
-          { "label": "Make this my return point", "do": [{ "type": "setSavePoint" }], "next": "saved" },
-          { "label": "Rest a while (free)", "do": [{ "type": "heal" }], "next": "rested" },
-          { "label": "Goodbye" }
+          {
+            "label": "Make this my return point",
+            "do": [
+              {
+                "type": "setSavePoint"
+              }
+            ],
+            "next": "saved"
+          },
+          {
+            "label": "Rest a while (free)",
+            "do": [
+              {
+                "type": "heal"
+              }
+            ],
+            "next": "rested"
+          },
+          {
+            "label": "Goodbye"
+          }
         ]
       },
-      "saved": { "text": "Done. If you faint or use a Butterfly Wing, you'll wake up right here." },
-      "rested": { "text": "You feel refreshed. HP and SP fully restored." }
+      "saved": {
+        "text": "Done. If you faint or use a Butterfly Wing, you'll wake up right here."
+      },
+      "rested": {
+        "text": "You feel refreshed. HP and SP fully restored."
+      }
     }
   },
   {
@@ -20,14 +42,40 @@
       "start": {
         "text": "Tonics, wings and fresh apples! Got loot to sell? I'll pay half what it's worth, which is more than the monsters will.",
         "choices": [
-          { "label": "Let's trade", "do": [{ "type": "openShop", "shop": "tool_dealer" }] },
-          { "label": "What do wings do?", "next": "wings" },
-          { "label": "Goodbye" }
+          {
+            "label": "Let's trade",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "tool_dealer"
+              }
+            ]
+          },
+          {
+            "label": "What do wings do?",
+            "next": "wings"
+          },
+          {
+            "label": "Goodbye"
+          }
         ]
       },
       "wings": {
         "text": "A Fly Wing whisks you to a random spot on the same map. A Butterfly Wing takes you straight home to your return point.",
-        "choices": [{ "label": "Let's trade", "do": [{ "type": "openShop", "shop": "tool_dealer" }] }, { "label": "Thanks" }]
+        "choices": [
+          {
+            "label": "Let's trade",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "tool_dealer"
+              }
+            ]
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
       }
     }
   },
@@ -37,23 +85,168 @@
       "start": {
         "text": "New in Brightmoor? I'm Pell. Ask me anything.",
         "choices": [
-          { "label": "How do I fight?", "next": "fight" },
-          { "label": "Where should I go?", "next": "where" },
-          { "label": "How do I get stronger?", "next": "stronger" },
-          { "label": "Goodbye" }
+          {
+            "label": "How do I fight?",
+            "next": "fight"
+          },
+          {
+            "label": "Where should I go?",
+            "next": "where"
+          },
+          {
+            "label": "How do I get stronger?",
+            "next": "stronger"
+          },
+          {
+            "label": "Goodbye"
+          }
         ]
       },
       "fight": {
         "text": "Tap a monster and you'll walk up and keep attacking. Sit to recover faster, and keep a few Red Tonics on hand.",
-        "choices": [{ "label": "Anything else?", "next": "start" }, { "label": "Thanks" }]
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "start"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
       },
       "where": {
         "text": "Take the road south to the Southern Meadow. The Jellops there are harmless unless you poke them.",
-        "choices": [{ "label": "Anything else?", "next": "start" }, { "label": "Thanks" }]
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "start"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
       },
       "stronger": {
         "text": "Every level gives stat points: open Stats to spend them. Sell your loot to the Tool Dealer and carry less, or you'll stop healing when your bag gets heavy.",
-        "choices": [{ "label": "Anything else?", "next": "start" }, { "label": "Thanks" }]
+        "choices": [
+          {
+            "label": "Anything else?",
+            "next": "start"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "swordsman_guild",
+    "nodes": {
+      "start": {
+        "text": "Swordsman Guild. You look like you could swing a blade, {name}.",
+        "choices": [
+          {
+            "label": "I want to become a Swordsman",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "What does a Swordsman do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              },
+              "hasItem": {
+                "id": "jelly_drop",
+                "count": 10
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              }
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training. Open Skills to spend them.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "You've trained well. Your trial: bring me 10 Jelly Drops from the Southern Meadow. A Swordsman finishes what they start.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "10 Jelly Drops, and the scars to prove it. Hand them over and swear the Swordsman's oath?",
+        "choices": [
+          {
+            "label": "I swear it",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "jelly_drop",
+                "count": 10
+              },
+              {
+                "type": "changeJob",
+                "job": "swordsman"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome to the Guild, Swordsman {name}! You keep your unspent skill points. Open Skills and learn Bash first."
+      },
+      "about": {
+        "text": "Swordsmen take hits and hit back harder. You'll learn Bash for heavy single blows, Magnum Break to blast a crowd, and Endure to shrug off damage.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
       }
     }
   }

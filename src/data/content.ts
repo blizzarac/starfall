@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { Grid, type Terrain } from '../core/grid';
+import { JOB_IDS } from '../core/jobs';
+import { SKILL_IDS } from '../core/skills';
 import {
   DialogueSchema,
   ItemSchema,
@@ -96,6 +98,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     if (!c) return;
     if (c.hasItem) needItem(c.hasItem.id, where);
     if (c.job && knownJobs.size > 0 && !knownJobs.has(c.job)) fail(`${where} checks unknown job '${c.job}'`);
+    if (c.skillMin && !SKILL_IDS.has(c.skillMin.id)) fail(`${where} checks unknown skill '${c.skillMin.id}'`);
   };
   for (const dlg of content.dialogues.values()) {
     for (const [nodeId, node] of Object.entries(dlg.nodes)) {
@@ -129,5 +132,5 @@ export const RAW_CONTENT: RawContent = {
 };
 
 export function loadContent(): Content {
-  return buildContent(RAW_CONTENT);
+  return buildContent(RAW_CONTENT, JOB_IDS);
 }

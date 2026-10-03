@@ -1,6 +1,7 @@
 import type { MonsterDef } from '../data/schemas';
 import type { Stats, WeaponType } from './combat/formulas';
 import type { Tile } from './grid';
+import type { JobId } from './jobs';
 
 /** Tile-to-tile movement state shared by the player and monsters. */
 /** A tile on a specific map. */
@@ -28,8 +29,13 @@ export interface Player extends Mover {
   name: string;
   baseLevel: number;
   jobLevel: number;
-  jobName: string;
-  maxJobLevel: number;
+  jobId: JobId;
+  /** Learned skill levels by skill id. */
+  skills: Map<string, number>;
+  /** Active timed buffs by skill id. */
+  buffs: Map<string, { level: number; remainingMs: number }>;
+  /** Milliseconds until each skill can be used again. */
+  cooldowns: Map<string, number>;
   baseXp: number;
   jobXp: number;
   stats: Stats;
@@ -56,7 +62,8 @@ export type PlayerIntent =
   | { kind: 'move' }
   | { kind: 'attack'; targetId: number }
   | { kind: 'pickup'; dropId: number }
-  | { kind: 'talk'; npcId: string };
+  | { kind: 'talk'; npcId: string }
+  | { kind: 'skill'; skillId: string; targetId: number };
 
 export type MonsterState = 'idle' | 'wander' | 'chase' | 'attack';
 

@@ -48,9 +48,9 @@ export function baseXpToNext(level: number): number {
   return Math.round(10 * level * level + 10 * level);
 }
 
-/** Job XP needed to go from `jobLevel` to `jobLevel + 1`. */
-export function jobXpToNext(jobLevel: number): number {
-  return Math.round(8 * Math.pow(jobLevel, 1.8) + 6);
+/** Job XP needed to go from `jobLevel` to `jobLevel + 1`; later jobs scale it up by `factor`. */
+export function jobXpToNext(jobLevel: number, factor = 1): number {
+  return Math.round((8 * Math.pow(jobLevel, 1.8) + 6) * factor);
 }
 
 /** XP lost on death: 1% of the current level's requirement. */

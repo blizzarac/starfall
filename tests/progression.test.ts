@@ -23,8 +23,8 @@ describe('progression', () => {
   it('stops job levels at the job cap', () => {
     const p = createPlayer('t', { x: 0, y: 0 });
     gainXp(p, 0, 1_000_000);
-    expect(p.jobLevel).toBe(p.maxJobLevel);
-    expect(p.skillPoints).toBe(p.maxJobLevel - 1);
+    expect(p.jobLevel).toBe(10);
+    expect(p.skillPoints).toBe(9);
   });
 
   it('spends stat points by the raise cost', () => {

@@ -2,6 +2,8 @@ import * as F from './combat/formulas';
 import type { StatName } from './combat/formulas';
 import { createMover, type Player } from './entities';
 import type { Tile } from './grid';
+import { JOBS, jobOf, NOVICE_JOB_CHANGE, type JobId } from './jobs';
+import { learnBlocker, skillLevel, type SkillId } from './skills';
 
 export interface DerivedStats {
   maxHp: number;
@@ -17,11 +19,13 @@ export interface DerivedStats {
 
 export function derivedStats(p: Player): DerivedStats {
   const s = p.stats;
+  const job = jobOf(p);
   const aspd = F.aspd(s.agi, s.dex, p.weapon.type);
+  const mastery = p.weapon.type === 'dagger' || p.weapon.type === 'sword' ? 4 * skillLevel(p, 'sword_mastery') : 0;
   return {
-    maxHp: F.maxHp(p.baseLevel, s.vit),
-    maxSp: F.maxSp(p.baseLevel, s.int),
-    atk: F.statusAtk(s) + p.weapon.atk,
+    maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))),
+    maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor),
+    atk: F.statusAtk(s) + p.weapon.atk + mastery,
     hit: F.hit(p.baseLevel, s.dex),
     flee: F.flee(p.baseLevel, s.agi),
     def: F.softDef(s.vit),
@@ -38,8 +42,10 @@ export function createPlayer(name: string, start: Tile): Player {
     name,
     baseLevel: 1,
     jobLevel: 1,
-    jobName: 'Novice',
-    maxJobLevel: 10,
+    jobId: 'novice',
+    skills: new Map(),
+    buffs: new Map(),
+    cooldowns: new Map(),
     baseXp: 0,
     jobXp: 0,
     stats: { str: 5, agi: 5, vit: 5, int: 1, dex: 5, luk: 1 },
@@ -83,14 +89,16 @@ export function gainXp(p: Player, baseXp: number, jobXp: number): LevelUps {
   }
   if (p.baseLevel >= F.MAX_BASE_LEVEL) p.baseXp = 0;
 
+  const job = jobOf(p);
+  const jobNeed = () => F.jobXpToNext(p.jobLevel, job.jobXpFactor);
   p.jobXp += jobXp;
-  while (p.jobLevel < p.maxJobLevel && p.jobXp >= F.jobXpToNext(p.jobLevel)) {
-    p.jobXp -= F.jobXpToNext(p.jobLevel);
+  while (p.jobLevel < job.maxJobLevel && p.jobXp >= jobNeed()) {
+    p.jobXp -= jobNeed();
     p.jobLevel += 1;
     p.skillPoints += 1;
     ups.job.push(p.jobLevel);
   }
-  if (p.jobLevel >= p.maxJobLevel) p.jobXp = Math.min(p.jobXp, F.jobXpToNext(p.jobLevel) - 1);
+  if (p.jobLevel >= job.maxJobLevel) p.jobXp = Math.min(p.jobXp, jobNeed() - 1);
 
   if (ups.base.length > 0) {
     const d = derivedStats(p);
@@ -117,4 +125,41 @@ export function applyDeathPenalty(p: Player): number {
   const loss = Math.min(p.baseXp, F.deathXpPenalty(p.baseLevel));
   p.baseXp -= loss;
   return loss;
+}
+
+/** Spends one skill point. Returns why not, or null on success. */
+export function learnSkill(p: Player, id: SkillId): string | null {
+  const blocker = learnBlocker(p, id);
+  if (blocker) return blocker;
+  p.skills.set(id, skillLevel(p, id) + 1);
+  p.skillPoints -= 1;
+  const d = derivedStats(p);
+  p.hp = Math.min(p.hp, d.maxHp);
+  return null;
+}
+
+/** Why the player can't become `to` right now, or null if they can. */
+export function jobChangeBlocker(p: Player, to: JobId): string | null {
+  const from = jobOf(p);
+  if (!from.next.includes(to)) return `A ${from.name} can't become a ${JOBS[to].name}.`;
+  if (from.id === 'novice') {
+    if (p.jobLevel < NOVICE_JOB_CHANGE.jobLevel) return `Reach job level ${NOVICE_JOB_CHANGE.jobLevel} first.`;
+    if (skillLevel(p, 'basic_training') < NOVICE_JOB_CHANGE.basicTraining) {
+      return `Learn Basic Training to level ${NOVICE_JOB_CHANGE.basicTraining} first.`;
+    }
+  }
+  return null;
+}
+
+/** Changes job: job level resets to 1, skills and unspent points carry over, HP and SP refill. */
+export function changeJob(p: Player, to: JobId): string | null {
+  const blocker = jobChangeBlocker(p, to);
+  if (blocker) return blocker;
+  p.jobId = to;
+  p.jobLevel = 1;
+  p.jobXp = 0;
+  const d = derivedStats(p);
+  p.hp = d.maxHp;
+  p.sp = d.maxSp;
+  return null;
 }

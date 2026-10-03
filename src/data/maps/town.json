@@ -76,6 +76,17 @@
         "body": "#3aa37a",
         "hair": "#c9452f"
       }
+    },
+    {
+      "id": "swordsman_captain",
+      "name": "Captain Harlan",
+      "x": 21,
+      "y": 16,
+      "dialogue": "swordsman_guild",
+      "look": {
+        "body": "#8a96ad",
+        "hair": "#2e2a33"
+      }
     }
   ],
   "portals": [

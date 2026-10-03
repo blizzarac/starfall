@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
+import { jobOf } from '../core/jobs';
 import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
@@ -72,7 +73,7 @@ export class WorldScene extends Phaser.Scene {
     this.hover = this.add.image(0, 0, 'tile-outline').setDepth(2).setAlpha(0.6);
     this.debugGfx = this.add.graphics().setDepth(5000);
 
-    this.playerBody = this.add.image(0, 0, 'job-novice').setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H);
+    this.playerBody = this.add.image(0, 0, this.playerTexture()).setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody]);
 
     const cam = this.cameras.main;
@@ -174,6 +175,12 @@ export class WorldScene extends Phaser.Scene {
         img.setDepth(depthFor(p.y));
       }
     }
+  }
+
+  /** The player's look follows their job. */
+  private playerTexture(): string {
+    const job = jobOf(this.world.player);
+    return ensureChibi(this, `job-${job.id}`, job.look.body, COLORS.playerHair, job.look.extra);
   }
 
   private placePortals(): void {
@@ -436,12 +443,36 @@ export class WorldScene extends Phaser.Scene {
       ev.on('heal', (e) => {
         if (e.hp > 0) this.floatText('player', `+${e.hp}`, '#7dff9a', 15);
       }),
+      ev.on('jobChanged', () => {
+        this.playerBody.setTexture(this.playerTexture());
+        this.floatText('player', 'JOB CHANGE!', '#ffe27a', 20, 1600);
+        this.cameras.main.flash(300, 255, 240, 180);
+      }),
+      ev.on('skillUsed', (e) => this.skillEffect(e.skillId)),
       ev.on('levelUp', (e) => {
         this.floatText('player', e.kind === 'base' ? 'LEVEL UP!' : 'JOB LEVEL UP!', '#ffe27a', 20, 1400);
         this.cameras.main.flash(200, 255, 240, 180);
       }),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
+  }
+
+  private skillEffect(skillId: string): void {
+    const at = { x: this.player.x, y: this.player.y };
+    if (skillId === 'bash') {
+      this.floatText('player', 'Bash!', '#ffb15a', 15, 600);
+      this.cameras.main.shake(90, 0.004);
+    } else if (skillId === 'magnum_break') {
+      const ring = this.add.ellipse(at.x, at.y, 40, 20).setStrokeStyle(6, 0xff7a3a, 0.9).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
+      const glow = this.add.ellipse(at.x, at.y, 40, 20, 0xffb15a, 0.35).setDepth(3999).setBlendMode(Phaser.BlendModes.ADD);
+      // Radius 2 tiles: 5 tiles across in iso space.
+      this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * 5) / 40, scaleY: (TILE_H * 5) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
+      this.cameras.main.shake(150, 0.006);
+    } else if (skillId === 'endure') {
+      this.floatText('player', 'Endure', '#ffe27a', 15, 900);
+      this.playerBody.setTint(0xffe9a8);
+      this.time.delayedCall(400, () => this.playerBody.clearTint());
+    }
   }
 
   private anchorOf(id: EntityId): { x: number; y: number } | null {
