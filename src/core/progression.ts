@@ -4,6 +4,7 @@ import { createMover, type Player } from './entities';
 import type { Tile } from './grid';
 import { JOBS, jobOf, NOVICE_JOB_CHANGE, type JobId } from './jobs';
 import { learnBlocker, skillLevel, type SkillId } from './skills';
+import { gearBonus, weaponOf } from './equipment';
 
 export interface DerivedStats {
   maxHp: number;
@@ -17,18 +18,26 @@ export interface DerivedStats {
   attackDelayMs: number;
 }
 
+/** Base stats plus gear bonuses: what every formula should use. */
+export function effectiveStats(p: Player): F.Stats {
+  const b = gearBonus(p);
+  return { str: p.stats.str + b.str, agi: p.stats.agi + b.agi, vit: p.stats.vit + b.vit, int: p.stats.int + b.int, dex: p.stats.dex + b.dex, luk: p.stats.luk + b.luk };
+}
+
 export function derivedStats(p: Player): DerivedStats {
-  const s = p.stats;
+  const s = effectiveStats(p);
+  const gear = gearBonus(p);
   const job = jobOf(p);
-  const aspd = F.aspd(s.agi, s.dex, p.weapon.type);
-  const mastery = p.weapon.type === 'dagger' || p.weapon.type === 'sword' ? 4 * skillLevel(p, 'sword_mastery') : 0;
+  const weapon = weaponOf(p);
+  const aspd = F.aspd(s.agi, s.dex, weapon.type);
+  const mastery = weapon.type === 'dagger' || weapon.type === 'sword' ? 4 * skillLevel(p, 'sword_mastery') : 0;
   return {
-    maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))),
-    maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor),
-    atk: F.statusAtk(s) + p.weapon.atk + mastery,
-    hit: F.hit(p.baseLevel, s.dex),
-    flee: F.flee(p.baseLevel, s.agi),
-    def: F.softDef(s.vit),
+    maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))) + gear.hp,
+    maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
+    atk: F.statusAtk(s) + weapon.atk + mastery,
+    hit: F.hit(p.baseLevel, s.dex) + gear.hit,
+    flee: F.flee(p.baseLevel, s.agi) + gear.flee,
+    def: F.softDef(s.vit) + gear.def,
     crit: F.critChance(s.luk),
     aspd,
     attackDelayMs: F.attackDelayMs(aspd),
@@ -51,7 +60,7 @@ export function createPlayer(name: string, start: Tile): Player {
     stats: { str: 5, agi: 5, vit: 5, int: 1, dex: 5, luk: 1 },
     statPoints: 20,
     skillPoints: 0,
-    weapon: { type: 'dagger', atk: 17 },
+    equipment: {},
     hp: 0,
     sp: 0,
     sitting: false,

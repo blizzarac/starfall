@@ -8,7 +8,8 @@ import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
 import { isJobId } from './jobs';
-import { applyDeathPenalty, changeJob, createPlayer, derivedStats, gainXp, learnSkill, raiseStat } from './progression';
+import { EQUIP_SLOTS, equipBlocker, slotFor, STARTING_GEAR, weaponOf, type EquipSlot } from './equipment';
+import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStats, gainXp, learnSkill, raiseStat } from './progression';
 import * as S from './skills';
 import type { Element } from './combat/formulas';
 import { createRng, randInt, type Rng } from './rng';
@@ -31,6 +32,7 @@ export interface WorldEvents extends Record<string, unknown> {
   talk: { npc: NpcDef };
   skillUsed: { skillId: S.SkillId; targets: number[] };
   skillsChanged: Record<string, never>;
+  equipmentChanged: Record<string, never>;
   jobChanged: { jobId: string };
   /** The current map was swapped for another; scenes rebuild. */
   mapChanged: { mapId: string };
@@ -81,6 +83,10 @@ export class World {
     this.rng = createRng(opts.seed ?? Date.now());
     this.player = createPlayer(opts.playerName ?? 'Adventurer', map.playerStart);
     this.player.savePoint = { map: map.id, ...map.savePoint };
+    for (const id of STARTING_GEAR) {
+      const item = content.items.get(id);
+      if (item?.equip) this.player.equipment[slotFor(this.player, item.equip)] = item;
+    }
     this.loadMap(map);
   }
 
@@ -257,15 +263,65 @@ export class World {
 
   // ---- Inventory and trade -----------------------------------------------
 
-  /** Total weight carried. */
+  /** Total weight carried, worn gear included. */
   weight(): number {
     let total = 0;
     for (const [id, n] of this.player.inventory) total += (this.content.items.get(id)?.weight ?? 0) * n;
+    for (const item of Object.values(this.player.equipment)) total += item?.weight ?? 0;
     return total;
   }
 
+  /** Wears an item from the inventory, putting back whatever it replaces. Returns why not, or null. */
+  equip(itemId: string): string | null {
+    const p = this.player;
+    const item = this.content.items.get(itemId);
+    if (!item?.equip || !this.hasItem(itemId, 1)) return "You don't have that.";
+    const blocker = equipBlocker(p, item);
+    if (blocker) return blocker;
+    const slot = slotFor(p, item.equip);
+    this.removeItem(itemId, 1);
+    this.unequipQuiet(slot);
+    // A two-handed weapon and a shield can't be held together.
+    if (slot === 'weapon' && item.equip.twoHanded) this.unequipQuiet('shield');
+    if (slot === 'shield' && p.equipment.weapon?.equip?.twoHanded) this.unequipQuiet('weapon');
+    p.equipment[slot] = item;
+    this.afterGearChange();
+    return null;
+  }
+
+  unequip(slot: EquipSlot): void {
+    if (!this.player.equipment[slot]) return;
+    this.unequipQuiet(slot);
+    this.afterGearChange();
+  }
+
+  private unequipQuiet(slot: EquipSlot): void {
+    const old = this.player.equipment[slot];
+    if (!old) return;
+    delete this.player.equipment[slot];
+    this.addItem(old.id, 1);
+  }
+
+  private afterGearChange(): void {
+    const p = this.player;
+    const d = derivedStats(p);
+    p.hp = Math.min(p.hp, d.maxHp);
+    p.sp = Math.min(p.sp, d.maxSp);
+    this.events.emit('equipmentChanged', {});
+  }
+
+  /** Equipped item ids by slot, for saving. */
+  equipmentIds(): Partial<Record<EquipSlot, string>> {
+    const out: Partial<Record<EquipSlot, string>> = {};
+    for (const slot of EQUIP_SLOTS) {
+      const item = this.player.equipment[slot];
+      if (item) out[slot] = item.id;
+    }
+    return out;
+  }
+
   maxWeight(): number {
-    return F.maxWeight(this.player.stats.str);
+    return F.maxWeight(effectiveStats(this.player).str);
   }
 
   weightRatio(): number {
@@ -519,12 +575,12 @@ export class World {
     if (p.hpRegenTimer >= F.hpRegenIntervalMs(p.sitting)) {
       p.hpRegenTimer = 0;
       const bonus = 2 * S.skillLevel(p, 'hp_recovery');
-      p.hp = Math.min(d.maxHp, p.hp + F.hpRegenAmount(d.maxHp, p.stats.vit) + bonus);
+      p.hp = Math.min(d.maxHp, p.hp + F.hpRegenAmount(d.maxHp, effectiveStats(p).vit) + bonus);
     }
     p.spRegenTimer += dt;
     if (p.spRegenTimer >= F.spRegenIntervalMs(p.sitting)) {
       p.spRegenTimer = 0;
-      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, p.stats.int));
+      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int));
     }
   }
 
@@ -548,7 +604,7 @@ export class World {
         atk: d.atk,
         skillModifier: o.modifier,
         elementModifier: F.elementModifier(o.element, target.def.element),
-        sizeModifier: F.sizeModifier(p.weapon.type, target.def.size),
+        sizeModifier: F.sizeModifier(weaponOf(p).type, target.def.size),
         def: target.def.def,
         crit,
       },

@@ -87,6 +87,17 @@
         "body": "#8a96ad",
         "hair": "#2e2a33"
       }
+    },
+    {
+      "id": "blacksmith",
+      "name": "Greta",
+      "x": 10,
+      "y": 16,
+      "dialogue": "blacksmith",
+      "look": {
+        "body": "#5a4a3a",
+        "hair": "#b8b0a8"
+      }
     }
   ],
   "portals": [

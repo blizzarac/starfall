@@ -249,5 +249,48 @@
         ]
       }
     }
+  },
+  {
+    "id": "blacksmith",
+    "nodes": {
+      "start": {
+        "text": "Greta's forge. Blades, shields, boots: if it keeps you alive out there, I make it.",
+        "choices": [
+          {
+            "label": "Show me your gear",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "blacksmith"
+              }
+            ]
+          },
+          {
+            "label": "How do I wear gear?",
+            "next": "howto"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "howto": {
+        "text": "Open Items and tap Equip next to a piece of gear. The Gear tab shows what you're wearing. Some pieces are for Swordsmen only, and some need a higher level.",
+        "choices": [
+          {
+            "label": "Show me your gear",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "blacksmith"
+              }
+            ]
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
   }
 ]

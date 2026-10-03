@@ -56,6 +56,8 @@ Scenes send intents to `World` (`moveTo`, `attack`, `pickUp`, `useItem`, ...) an
 
 **Jobs.** Everyone starts as a Novice. At job level 10, with Basic Training at level 9, Captain Harlan in Brightmoor runs the Swordsman trial (bring 10 Jelly Drops). Swordsmen learn Sword Mastery, Increase HP Recovery, Bash, Magnum Break and Endure. Jobs and skill rules live in `src/core/jobs.ts` and `src/core/skills.ts`.
 
+**Gear.** Eight slots (weapon, shield, head, body, cloak, shoes, two accessories). Greta the blacksmith in Brightmoor sells the basics; rarer pieces drop from monsters (Beetle Buckler, Moss Cap, Clover Charm, Tusk Blade). Equip from *Items → Bag*, see what you wear in *Items → Gear*. Gear is plain item data (`equip` block in `src/data/items.json`): ATK, DEF, stat bonuses, job and level limits.
+
 The world so far: **Brightmoor** (town) → **Southern Meadow** (Jellops, passive) → **Thornfield** (Thornbeetles attack on sight) → **Mossy Hollow** (Mosslings, and aggressive Bristleboars).
 
 Maps are a row-per-line terrain grid (`.` grass, `,` flowers, `=` path, `:` cobblestone, `T` tree, `R` rock, `~` water, `#` building) plus spawns, NPCs and edge portals. Every map file in `src/data/maps/` is loaded automatically, and the content check fails the build if a portal, NPC dialogue, shop or drop points at something that doesn't exist.

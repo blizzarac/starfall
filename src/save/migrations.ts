@@ -16,6 +16,11 @@ export const MIGRATIONS: Record<number, Migration> = {
     const { jobName, maxJobLevel: _cap, ...character } = d.character as Record<string, unknown>;
     return { ...d, character: { ...character, jobId: String(jobName).toLowerCase(), skills: {} } };
   },
+  // v4: equipment. The old built-in dagger becomes a real Novice Knife, plus the starting shirt.
+  4: (d) => {
+    const { weapon: _weapon, ...character } = d.character as Record<string, unknown>;
+    return { ...d, character: { ...character, equipment: { weapon: 'novice_knife', body: 'cotton_shirt' } } };
+  },
 };
 
 /** Upgrades any older save to the current version, then validates it. Throws if it can't. */

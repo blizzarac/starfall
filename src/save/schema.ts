@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { STAT_NAMES } from '../core/combat/formulas';
+import { EQUIP_SLOTS } from '../core/equipment';
 import { JOBS, type JobId } from '../core/jobs';
 
-export const SAVE_SCHEMA_VERSION = 3;
+export const SAVE_SCHEMA_VERSION = 4;
 
 const Place = z.object({ map: z.string(), x: z.number().int(), y: z.number().int() });
 const Counts = z.record(z.string(), z.number().int().positive());
@@ -26,7 +27,8 @@ export const SaveDocSchema = z.object({
     >),
     statPoints: z.number().int().nonnegative(),
     skillPoints: z.number().int().nonnegative(),
-    weapon: z.object({ type: z.enum(['fist', 'dagger', 'sword', 'bow', 'staff']), atk: z.number().int().nonnegative() }),
+    /** Equipped item ids by slot. */
+    equipment: z.partialRecord(z.enum(EQUIP_SLOTS), z.string()),
     hp: z.number().int().nonnegative(),
     sp: z.number().int().nonnegative(),
   }),

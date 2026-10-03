@@ -1,12 +1,13 @@
 import type Phaser from 'phaser';
 import { sellPrice } from '../core/combat/formulas';
+import { describeGear } from '../core/equipment';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 type Tab = 'buy' | 'sell';
-const ROW_H = 44;
+const ROW_H = 54;
 
 /** Buy from an NPC's stock, or sell anything you carry at half price. */
 export class ShopWindow {
@@ -93,8 +94,13 @@ export class ShopWindow {
     const price = this.tab === 'buy' ? item.price : sellPrice(item.price);
     this.panel.add(this.scene.add.text(12, y + 4, item.name, { ...TEXT, fontSize: '13px' }));
     this.panel.add(
-      this.scene.add.text(12, y + 22, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: '#c4cfdf' }),
+      this.scene.add.text(12, y + 20, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: '#c4cfdf' }),
     );
+    if (item.equip) {
+      this.panel.add(
+        this.scene.add.text(12, y + 35, describeGear(item.equip), { ...TEXT, fontSize: '10px', color: '#9fb4d6', wordWrap: { width: pw - 150 } }),
+      );
+    }
     const act = (count: number) => () => {
       const err = this.tab === 'buy' ? w.buy(this.shopId!, item.id, count) : w.sell(item.id, count);
       this.message = err ?? `${this.tab === 'buy' ? 'Bought' : 'Sold'} ${count} × ${item.name}.`;

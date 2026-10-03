@@ -1,18 +1,52 @@
 import { z } from 'zod';
 import { ELEMENTS, SIZES } from '../core/combat/formulas';
 
-export const ItemSchema = z.object({
-  id: z.string().regex(/^[a-z0-9_]+$/),
-  name: z.string().min(1),
-  type: z.enum(['consumable', 'etc', 'card', 'equipment']),
-  /** Base price in gold; NPCs buy at 50%. */
-  price: z.number().int().nonnegative(),
-  weight: z.number().int().nonnegative(),
-  heal: z.object({ hp: z.number().int().nonnegative(), sp: z.number().int().nonnegative() }).optional(),
-  /** Special use effect: random teleport on the current map, or return to the save point. */
-  effect: z.enum(['teleport', 'return']).optional(),
-  description: z.string().optional(),
-});
+const BonusSchema = z
+  .object({
+    str: z.number().int(),
+    agi: z.number().int(),
+    vit: z.number().int(),
+    int: z.number().int(),
+    dex: z.number().int(),
+    luk: z.number().int(),
+    hp: z.number().int(),
+    sp: z.number().int(),
+    hit: z.number().int(),
+    flee: z.number().int(),
+  })
+  .partial();
+export type GearBonus = z.infer<typeof BonusSchema>;
+
+export const EquipSchema = z
+  .object({
+    slot: z.enum(['weapon', 'shield', 'head', 'body', 'cloak', 'shoes', 'accessory']),
+    atk: z.number().int().nonnegative().default(0),
+    def: z.number().int().nonnegative().default(0),
+    weaponType: z.enum(['dagger', 'sword', 'bow', 'staff']).optional(),
+    twoHanded: z.boolean().default(false),
+    /** Jobs that can wear it; omit for everyone. */
+    jobs: z.array(z.string()).optional(),
+    minLevel: z.number().int().min(1).default(1),
+    bonus: BonusSchema.default({}),
+  })
+  .refine((e) => (e.slot === 'weapon') === (e.weaponType !== undefined), 'weapons need a weaponType, and only weapons have one');
+export type EquipDef = z.infer<typeof EquipSchema>;
+
+export const ItemSchema = z
+  .object({
+    id: z.string().regex(/^[a-z0-9_]+$/),
+    name: z.string().min(1),
+    type: z.enum(['consumable', 'etc', 'card', 'equipment']),
+    /** Base price in gold; NPCs buy at 50%. */
+    price: z.number().int().nonnegative(),
+    weight: z.number().int().nonnegative(),
+    heal: z.object({ hp: z.number().int().nonnegative(), sp: z.number().int().nonnegative() }).optional(),
+    /** Special use effect: random teleport on the current map, or return to the save point. */
+    effect: z.enum(['teleport', 'return']).optional(),
+    equip: EquipSchema.optional(),
+    description: z.string().optional(),
+  })
+  .refine((i) => (i.type === 'equipment') === (i.equip !== undefined), 'equipment items (and only those) need an equip block');
 export type ItemDef = z.infer<typeof ItemSchema>;
 
 export const DropSchema = z.object({

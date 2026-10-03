@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Grid, type Terrain } from '../core/grid';
+import { STARTING_GEAR } from '../core/equipment';
 import { JOB_IDS } from '../core/jobs';
 import { SKILL_IDS } from '../core/skills';
 import {
@@ -73,6 +74,15 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
 
   for (const m of content.monsters.values()) for (const d of m.drops) needItem(d.item, `Monster '${m.id}' drop`);
   for (const shop of content.shops.values()) for (const id of shop.items) needItem(id, `Shop '${shop.id}'`);
+  for (const id of STARTING_GEAR) {
+    needItem(id, 'Starting gear');
+    if (!content.items.get(id)!.equip) fail(`Starting gear '${id}' is not equipment`);
+  }
+  for (const item of content.items.values()) {
+    for (const job of item.equip?.jobs ?? []) {
+      if (knownJobs.size > 0 && !knownJobs.has(job)) fail(`Item '${item.id}' is limited to unknown job '${job}'`);
+    }
+  }
 
   if (!content.maps.has(START_MAP)) fail(`Start map '${START_MAP}' is missing`);
   const grids = new Map([...content.maps.values()].map((m) => [m.id, buildGrid(m)]));

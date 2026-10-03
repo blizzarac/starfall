@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import * as F from '../core/combat/formulas';
 import { STAT_NAMES, type StatName } from '../core/combat/formulas';
+import { gearBonus } from '../core/equipment';
 import { jobOf } from '../core/jobs';
 import type { SimClock } from '../core/sim';
 import { derivedStats } from '../core/progression';
@@ -361,9 +362,11 @@ export class UIScene extends Phaser.Scene {
     if (!this.statWindow.visible) return;
     const p = this.world.player;
     const d = derivedStats(p);
+    const bonus = gearBonus(p);
     for (const stat of STAT_NAMES) {
       const v = p.stats[stat];
-      this.statLines.get(stat)!.setText(`${stat.toUpperCase().padEnd(4)} ${String(v).padStart(3)}     cost ${F.statRaiseCost(v)}`);
+      const plus = bonus[stat] ? ` +${bonus[stat]}` : '';
+      this.statLines.get(stat)!.setText(`${stat.toUpperCase().padEnd(4)} ${String(v).padStart(3)}${plus.padEnd(4)}  cost ${F.statRaiseCost(v)}`);
     }
     this.statSummary.setText(
       [

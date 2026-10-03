@@ -1,5 +1,6 @@
 import type { MonsterDef } from '../data/schemas';
-import type { Stats, WeaponType } from './combat/formulas';
+import type { Stats } from './combat/formulas';
+import type { Equipment } from './equipment';
 import type { Tile } from './grid';
 import type { JobId } from './jobs';
 
@@ -41,7 +42,8 @@ export interface Player extends Mover {
   stats: Stats;
   statPoints: number;
   skillPoints: number;
-  weapon: { type: WeaponType; atk: number };
+  /** Equipped items by slot. Worn items are not in the inventory. */
+  equipment: Equipment;
   hp: number;
   sp: number;
   sitting: boolean;

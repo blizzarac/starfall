@@ -1,3 +1,27 @@
 [
-  { "id": "tool_dealer", "name": "Tool Dealer", "items": ["red_tonic", "sweet_apple", "fly_wing", "butterfly_wing"] }
+  {
+    "id": "tool_dealer",
+    "name": "Tool Dealer",
+    "items": [
+      "red_tonic",
+      "sweet_apple",
+      "fly_wing",
+      "butterfly_wing"
+    ]
+  },
+  {
+    "id": "blacksmith",
+    "name": "Blacksmith",
+    "items": [
+      "novice_knife",
+      "stiletto",
+      "short_sword",
+      "cotton_shirt",
+      "leather_vest",
+      "buckler",
+      "leather_cap",
+      "sandals",
+      "traveler_cloak"
+    ]
+  }
 ]

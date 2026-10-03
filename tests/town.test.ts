@@ -113,7 +113,7 @@ describe('shops, gold and weight', () => {
     w.player.gold = 1_000_000;
     const max = w.maxWeight();
     const tonic = content.items.get('red_tonic')!;
-    const fits = Math.floor(max / tonic.weight);
+    const fits = Math.floor((max - w.weight()) / tonic.weight); // worn gear counts too
     expect(w.buy('tool_dealer', 'red_tonic', fits + 1)).toMatch(/carry/);
     expect(w.buy('tool_dealer', 'red_tonic', fits)).toBeNull();
     expect(w.weight()).toBeLessThanOrEqual(max);

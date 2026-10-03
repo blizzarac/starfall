@@ -1,4 +1,5 @@
 import { createMover } from '../core/entities';
+import type { EquipSlot } from '../core/equipment';
 import { JOBS } from '../core/jobs';
 import { isSkillId } from '../core/skills';
 import { buildGrid, START_MAP } from '../data/content';
@@ -27,7 +28,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
       stats: { ...p.stats },
       statPoints: p.statPoints,
       skillPoints: p.skillPoints,
-      weapon: { ...p.weapon },
+      equipment: world.equipmentIds(),
       // A save taken while fainted restores to full at the save point, matching respawn.
       hp: p.dead ? d.maxHp : p.hp,
       sp: p.dead ? d.maxSp : p.sp,
@@ -56,8 +57,13 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     stats: { ...c.stats },
     statPoints: c.statPoints,
     skillPoints: c.skillPoints,
-    weapon: { ...c.weapon },
   });
+  // Gear that no longer exists in the game is dropped rather than failing the load.
+  p.equipment = {};
+  for (const [slot, id] of Object.entries(c.equipment)) {
+    const item = world.content.items.get(id);
+    if (item?.equip) p.equipment[slot as EquipSlot] = item;
+  }
   p.inventory = new Map(Object.entries(doc.inventory).filter(([id]) => world.content.items.has(id)));
   p.gold = doc.gold;
   p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
