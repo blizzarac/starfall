@@ -263,7 +263,8 @@ export class World {
       const d = derivedStats(p);
       const boost = 1 + 0.1 * S.skillLevel(p, 'hp_recovery');
       const hp = Math.min(Math.floor(item.heal.hp * boost), d.maxHp - p.hp);
-      const sp = Math.min(item.heal.sp, d.maxSp - p.sp);
+      const spBoost = 1 + 0.1 * S.skillLevel(p, 'sp_recovery');
+      const sp = Math.min(Math.floor(item.heal.sp * spBoost), d.maxSp - p.sp);
       p.hp += hp;
       p.sp += sp;
       this.events.emit('heal', { hp, sp });
@@ -1706,7 +1707,7 @@ export class World {
     p.spRegenTimer += dt;
     if (p.spRegenTimer >= F.spRegenIntervalMs(p.sitting)) {
       p.spRegenTimer = 0;
-      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int) + 2 * S.skillLevel(p, 'sp_recovery'));
+      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int) + S.spRecoveryBonus(S.skillLevel(p, 'sp_recovery'), d.maxSp));
     }
   }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as F from '../src/core/combat/formulas';
 import { DialogueRunner } from '../src/core/dialogue';
 import { gainXp, derivedStats, jobChangeBlocker } from '../src/core/progression';
-import { learnBlocker, SKILLS } from '../src/core/skills';
+import { learnBlocker, SKILLS, spRecoveryBonus } from '../src/core/skills';
 import { World } from '../src/core/world';
 import { loadContent, START_MAP } from '../src/data/content';
 import { migrate } from '../src/save/migrations';
@@ -321,5 +321,22 @@ describe('staff basic attack', () => {
     const matk = derivedStats(w.player).matk;
     expect(Math.max(...hits)).toBeLessThan(matk * 1.1);
     expect(Math.min(...hits)).toBeGreaterThan(0);
+  });
+});
+
+describe('Increase SP Recovery', () => {
+  it('adds more SP per tick with level and with max SP, and boosts SP potions', () => {
+    expect(spRecoveryBonus(0, 500)).toBe(0);
+    expect(spRecoveryBonus(5, 176)).toBe(24);
+    // Grows with max SP: the same level gives more to a bigger pool.
+    expect(spRecoveryBonus(10, 1800)).toBeGreaterThan(spRecoveryBonus(10, 500) + 50);
+    const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });
+    w.player.jobId = 'mage';
+    w.player.skills.set('sp_recovery', 10);
+    w.player.sp = 0;
+    w.addItem('blue_tonic', 1);
+    const sp = content.items.get('blue_tonic')!.heal!.sp;
+    w.useItem('blue_tonic');
+    expect(w.player.sp).toBe(Math.min(Math.floor(sp * 2), derivedStats(w.player).maxSp));
   });
 });
