@@ -30,6 +30,59 @@ describe('Auto mode', () => {
     expect(w.session.lootValue).toBeGreaterThan(0);
   });
 
+  it('a mage opens with bolts from range before swinging the staff', () => {
+    const w = new World(content, content.maps.get('meadow-2')!, { seed: 4 });
+    gainXp(w.player, 0, 100_000);
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    w.applyAction({ type: 'changeJob', job: 'mage' });
+    w.player.skillPoints = 5;
+    for (let i = 0; i < 5; i++) expect(w.learnSkill('fire_bolt')).toBeNull();
+    w.player.hp = 1e6;
+    // Only earth monsters around, which fire hurts most.
+    for (const m of [...w.monsters.values()]) if (m.def.element !== 'earth') w.monsters.delete(m.id);
+    const beetle = [...w.monsters.values()][0]!;
+    const spot = [{ x: beetle.tile.x - 4, y: beetle.tile.y }, { x: beetle.tile.x + 4, y: beetle.tile.y }, { x: beetle.tile.x, y: beetle.tile.y - 4 }, { x: beetle.tile.x, y: beetle.tile.y + 4 }].find((t) => w.grid.isWalkable(t.x, t.y))!;
+    w.changeMap('meadow-2', spot);
+    for (const m of [...w.monsters.values()]) if (m.def.element !== 'earth') w.monsters.delete(m.id);
+    const order: string[] = [];
+    w.events.on('skillUsed', (e) => order.push(`skill:${e.skillId}`));
+    w.events.on('damage', (e) => e.sourceId === 'player' && order.push('hit'));
+    w.setAuto(true);
+    run(w, 20_000, () => order.length >= 3);
+    expect(order[0]).toBe('skill:fire_bolt');
+  });
+
+  it('skips spells the target shrugs off', () => {
+    const w = new World(content, meadow, { seed: 4 });
+    gainXp(w.player, 0, 100_000);
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    w.applyAction({ type: 'changeJob', job: 'mage' });
+    w.player.skillPoints = 5;
+    for (let i = 0; i < 5; i++) w.learnSkill('fire_bolt');
+    const used: string[] = [];
+    w.events.on('skillUsed', (e) => used.push(e.skillId));
+    w.player.hp = 1e6;
+    w.setAuto(true);
+    // Jellops are water: fire bolts would barely scratch them, so Auto swings instead.
+    run(w, 15_000);
+    expect(used).toEqual([]);
+  });
+
+  it('an acolyte heals itself when hurt', () => {
+    const w = new World(content, meadow, { seed: 4 });
+    gainXp(w.player, 0, 100_000);
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    w.applyAction({ type: 'changeJob', job: 'acolyte' });
+    w.player.skillPoints = 3;
+    for (let i = 0; i < 3; i++) expect(w.learnSkill('heal')).toBeNull();
+    const used: string[] = [];
+    w.events.on('skillUsed', (e) => used.push(e.skillId));
+    w.player.hp = Math.round(w.player.hp * 0.5);
+    w.setAuto(true);
+    run(w, 5000, () => used.length > 0);
+    expect(used[0]).toBe('heal');
+  });
+
   it('a manual move takes over, and Auto resumes after arriving', () => {
     const w = new World(content, meadow, { seed: 4 });
     w.setAuto(true);

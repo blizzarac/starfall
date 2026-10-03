@@ -369,6 +369,12 @@ export class World {
       this.events.emit('notice', { text: 'Auto stopped: your bag is too heavy.' });
       return;
     }
+    // Mid-fight: work in skills between basic attacks.
+    if (p.intent.kind === 'attack') {
+      const target = this.monsters.get(p.intent.targetId);
+      if (target) this.autoSkill(target);
+      return;
+    }
     if (p.intent.kind !== 'none') return;
     const fighting = [...this.monsters.values()].some((m) => m.hostile && tileDistance(m.tile, p.tile) <= 2);
     if (!fighting) {
@@ -391,7 +397,55 @@ export class World {
         score = s;
       }
     }
-    if (best) this.attack(best.id);
+    if (!best) return;
+    this.attack(best.id);
+    // Open with a skill if one fits (a mage starts with a bolt from range).
+    this.autoSkill(best);
+  }
+
+  /** Skills Auto may use: what's on your quick bar, in its order; everything you know if the bar has none. */
+  private autoSkills(): S.SkillId[] {
+    const p = this.player;
+    const usable = (id: string): id is S.SkillId => S.isSkillId(id) && S.SKILLS[id].kind !== 'passive' && S.skillLevel(p, id) > 0;
+    const bar = p.hotbar.filter(usable);
+    return bar.length > 0 ? bar : [...p.skills.keys()].filter(usable);
+  }
+
+  /**
+   * Uses the first skill that makes sense right now: a heal when hurt, a buff
+   * that has run out, then attack skills the target doesn't shrug off. Keeps a
+   * little SP back for healing. Returns true when it used one.
+   */
+  private autoSkill(target: Monster): boolean {
+    const p = this.player;
+    const d = derivedStats(p);
+    const weapon = weaponOf(p);
+    const twoHanded = !!p.equipment.weapon?.item.equip?.twoHanded;
+    const healLv = S.skillLevel(p, 'heal');
+    // SP kept back so a healer can always heal.
+    const reserve = healLv > 0 ? S.SKILLS.heal.spCost(healLv) : Math.round(d.maxSp * 0.1);
+    for (const id of this.autoSkills()) {
+      const skill = S.SKILLS[id];
+      const lv = S.skillLevel(p, id);
+      const cost = skill.spCost(lv);
+      if ((p.cooldowns.get(id) ?? 0) > 0 || p.sp < cost) continue;
+      if (skill.needsWeapon && weapon.type !== skill.needsWeapon) continue;
+      if (skill.needsTwoHanded && !twoHanded) continue;
+      if (skill.kind === 'self') {
+        if (id === 'heal') {
+          if (p.hp >= d.maxHp * 0.6) continue;
+        } else if (!skill.buffMs || p.buffs.has(id)) continue;
+      } else {
+        if (p.sp - cost < reserve) continue;
+        if (skill.magic?.only && !skill.magic.only.includes(target.def.element)) continue;
+        if (skill.magic && F.elementModifier(skill.magic.element, target.def.element) < 1) continue;
+        // Area skills around you need something in reach.
+        if (skill.kind === 'area' && skill.area?.around === 'self' && ![...this.monsters.values()].some((m) => tileDistance(m.tile, p.tile) <= skill.area!.radius)) continue;
+      }
+      this.useSkill(id);
+      return true;
+    }
+    return false;
   }
 
   // ---- Pets ------------------------------------------------------------------
