@@ -39,7 +39,11 @@ export function installErrorGuard(): void {
   };
 
   window.addEventListener('error', (e) => reportError(e.error ?? e.message, 'page'));
-  window.addEventListener('unhandledrejection', (e) => reportError(e.reason, 'async'));
+  window.addEventListener('unhandledrejection', (e) => {
+    // iOS refuses to start sound while another app holds the audio. Harmless: the game stays quiet.
+    if (/audio device/i.test(String((e.reason as Error | undefined)?.message ?? e.reason))) return;
+    reportError(e.reason, 'async');
+  });
 }
 
 const seen = new Map<string, number>();

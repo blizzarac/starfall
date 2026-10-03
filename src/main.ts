@@ -43,6 +43,9 @@ const game = new Phaser.Game({
   // The canvas is sized in physical pixels and shown at CSS size (zoom 1/DPR); cameras zoom by DPR.
   scale: { mode: Phaser.Scale.NONE, ...physicalSize(), zoom: 1 / DPR },
   scene: [BootScene, TitleScene, WorldScene, UIScene],
+  // All sound goes through our own engine (src/audio). Phaser's would open a second
+  // audio context and resume it on every tap, unguarded, which iOS sometimes refuses.
+  audio: { noAudio: true },
 });
 new ResizeObserver(() => {
   const { width, height } = physicalSize();
