@@ -13,6 +13,9 @@ const BonusSchema = z
     sp: z.number().int(),
     hit: z.number().int(),
     flee: z.number().int(),
+    atk: z.number().int(),
+    matk: z.number().int(),
+    def: z.number().int(),
   })
   .partial();
 export type GearBonus = z.infer<typeof BonusSchema>;
@@ -30,9 +33,27 @@ export const EquipSchema = z
     jobs: z.array(z.string()).optional(),
     minLevel: z.number().int().min(1).default(1),
     bonus: BonusSchema.default({}),
+    /** Card slots, 0–4. */
+    slots: z.number().int().min(0).max(4).default(0),
   })
   .refine((e) => (e.slot === 'weapon') === (e.weaponType !== undefined), 'weapons need a weaponType, and only weapons have one');
 export type EquipDef = z.infer<typeof EquipSchema>;
+
+const ElementMap = z.partialRecord(z.enum(ELEMENTS), z.number());
+const SizeMap = z.partialRecord(z.enum(SIZES), z.number());
+
+/** What a card does once slotted into gear. Percent values are fractions (0.15 = +15%). */
+export const CardSchema = z.object({
+  fits: z.enum(['weapon', 'shield', 'head', 'body', 'cloak', 'shoes', 'accessory']),
+  bonus: BonusSchema.default({}),
+  /** Extra damage dealt to monsters of these elements. */
+  vsElement: ElementMap.default({}),
+  /** Extra damage dealt to monsters of these sizes. */
+  vsSize: SizeMap.default({}),
+  /** Less damage taken from monsters of these elements. */
+  resist: ElementMap.default({}),
+});
+export type CardDef = z.infer<typeof CardSchema>;
 
 export const ItemSchema = z
   .object({
@@ -46,9 +67,11 @@ export const ItemSchema = z
     /** Special use effect: random teleport on the current map, or return to the save point. */
     effect: z.enum(['teleport', 'return']).optional(),
     equip: EquipSchema.optional(),
+    card: CardSchema.optional(),
     description: z.string().optional(),
   })
-  .refine((i) => (i.type === 'equipment') === (i.equip !== undefined), 'equipment items (and only those) need an equip block');
+  .refine((i) => (i.type === 'equipment') === (i.equip !== undefined), 'equipment items (and only those) need an equip block')
+  .refine((i) => (i.type === 'card') === (i.card !== undefined), 'cards (and only cards) need a card block');
 export type ItemDef = z.infer<typeof ItemSchema>;
 
 export const DropSchema = z.object({

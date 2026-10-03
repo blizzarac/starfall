@@ -1,6 +1,6 @@
 import type { MonsterDef } from '../data/schemas';
 import type { Stats } from './combat/formulas';
-import type { Equipment } from './equipment';
+import type { Equipment, GearPiece } from './equipment';
 import type { Tile } from './grid';
 import type { JobId } from './jobs';
 
@@ -56,7 +56,10 @@ export interface Player extends Mover {
   attackCooldown: number;
   hpRegenTimer: number;
   spRegenTimer: number;
+  /** Stackable items (potions, loot, cards) by item id. */
   inventory: Map<string, number>;
+  /** Unequipped gear, one entry per piece. */
+  gear: GearPiece[];
   gold: number;
   savePoint: Place;
 }

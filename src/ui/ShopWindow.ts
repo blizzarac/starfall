@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { sellPrice } from '../core/combat/formulas';
-import { describeGear } from '../core/equipment';
+import { describeGear, isPlain, pieceName, type GearPiece } from '../core/equipment';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT } from '../render/palette';
@@ -8,6 +8,7 @@ import { centered, makeButton, pagedList, Panel } from './widgets';
 
 type Tab = 'buy' | 'sell';
 const ROW_H = 54;
+type SellRow = { kind: 'stack'; item: ItemDef } | { kind: 'piece'; piece: GearPiece };
 
 /** Buy from an NPC's stock, or sell anything you carry at half price. */
 export class ShopWindow {
@@ -54,9 +55,10 @@ export class ShopWindow {
       this.scene.add.text(12, 80, `Gold ${w.player.gold}    Weight ${w.weight()} / ${w.maxWeight()}`, { ...TEXT, fontSize: '12px', color: '#ffe27a' }),
     );
 
-    const items = this.tab === 'buy' ? shop.items.map((id) => w.content.items.get(id)!) : this.sellable();
+    const items: SellRow[] =
+      this.tab === 'buy' ? shop.items.map((id) => ({ kind: 'stack', item: w.content.items.get(id)! })) : this.sellable();
     if (this.tab === 'sell' && items.length > 0) {
-      const etc = items.filter((i) => i.type === 'etc');
+      const etc = items.flatMap((r) => (r.kind === 'stack' && r.item.type === 'etc' ? [r.item] : []));
       const total = etc.reduce((sum, i) => sum + sellPrice(i.price) * (w.player.inventory.get(i.id) ?? 0), 0);
       p.add(
         makeButton(this.scene, 12, p.h - 84, p.w - 24, 34, `Sell all loot (+${total} gold)`, () => {
@@ -75,7 +77,7 @@ export class ShopWindow {
       104,
       this.tab === 'sell' ? 84 : 40,
       ROW_H,
-      (item, y, pw) => this.row(item, y, pw),
+      (row, y, pw) => (row.kind === 'stack' ? this.row(row.item, y, pw) : this.pieceRow(row.piece, y, pw)),
       (pg) => {
         this.page = pg;
         this.refresh();
@@ -84,13 +86,38 @@ export class ShopWindow {
     p.add(this.scene.add.text(12, p.h - 30, this.message, { ...TEXT, fontSize: '12px', color: '#9be38f', wordWrap: { width: p.w - 24 } }));
   }
 
-  private sellable(): ItemDef[] {
-    return [...this.world.player.inventory.keys()].map((id) => this.world.content.items.get(id)!).filter(Boolean);
+  /** Stackables, then each unequipped piece of gear on its own row. */
+  private sellable(): SellRow[] {
+    const w = this.world;
+    const stacks: SellRow[] = [...w.player.inventory.keys()]
+      .map((id) => w.content.items.get(id))
+      .filter((i): i is ItemDef => !!i)
+      .map((item) => ({ kind: 'stack', item }));
+    return [...stacks, ...w.player.gear.map((piece): SellRow => ({ kind: 'piece', piece }))];
+  }
+
+  private pieceRow(piece: GearPiece, y: number, pw: number): void {
+    this.panel.add(this.scene.add.text(12, y + 4, pieceName(piece), { ...TEXT, fontSize: '13px' }));
+    const warn = isPlain(piece) ? '' : ' · refined/carded!';
+    this.panel.add(
+      this.scene.add.text(12, y + 20, `${sellPrice(piece.item.price)} gold · wt ${piece.item.weight}${warn}`, {
+        ...TEXT,
+        fontSize: '11px',
+        color: isPlain(piece) ? '#c4cfdf' : '#ffb15a',
+      }),
+    );
+    this.panel.add(
+      makeButton(this.scene, pw - 68, y + 4, 56, 34, 'Sell', () => {
+        const err = this.world.sellPiece(piece.uid);
+        this.message = err ?? `Sold ${pieceName(piece)}.`;
+        this.refresh();
+      }).root,
+    );
   }
 
   private row(item: ItemDef, y: number, pw: number): void {
     const w = this.world;
-    const have = w.player.inventory.get(item.id) ?? 0;
+    const have = w.itemCount(item.id);
     const price = this.tab === 'buy' ? item.price : sellPrice(item.price);
     this.panel.add(this.scene.add.text(12, y + 4, item.name, { ...TEXT, fontSize: '13px' }));
     this.panel.add(

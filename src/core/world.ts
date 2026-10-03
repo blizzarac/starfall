@@ -8,7 +8,7 @@ import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
 import { isJobId } from './jobs';
-import { EQUIP_SLOTS, equipBlocker, slotFor, STARTING_GEAR, weaponOf, type EquipSlot } from './equipment';
+import { cardBlocker, cardEffects, EQUIP_SLOTS, equipBlocker, isPlain, slotFor, STARTING_GEAR, weaponOf, type EquipSlot, type GearPiece } from './equipment';
 import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStats, gainXp, learnSkill, raiseStat } from './progression';
 import * as S from './skills';
 import type { Element } from './combat/formulas';
@@ -73,6 +73,7 @@ export class World {
   private currentMap!: MapDef;
   private currentGrid!: Grid;
   private nextId = 1;
+  private nextGearUid = 1;
   private respawns: Array<{ spawnIndex: number; at: number }> = [];
   private readonly rng: Rng;
 
@@ -86,7 +87,7 @@ export class World {
     this.player.savePoint = { map: map.id, ...map.savePoint };
     for (const id of STARTING_GEAR) {
       const item = content.items.get(id);
-      if (item?.equip) this.player.equipment[slotFor(this.player, item.equip)] = item;
+      if (item?.equip) this.player.equipment[slotFor(this.player, item.equip)] = this.newPiece(item);
     }
     this.loadMap(map);
   }
@@ -257,7 +258,7 @@ export class World {
       const elem = F.elementModifier(skill.magic.element, target.def.element);
       for (let i = 0; i < skill.magic.hits(lv) && this.monsters.has(target.id); i++) {
         target.hostile = true;
-        this.hurtMonster(target, F.magicDamage(d.matk, skill.magic.perHit, elem, target.def.def, this.rng), false);
+        this.hurtMonster(target, F.magicDamage(d.matk, skill.magic.perHit * this.cardDamageFactor(target), elem, target.def.def, this.rng), false);
       }
     } else if (id === 'bash' && target) {
       hit.push(target.id);
@@ -280,26 +281,65 @@ export class World {
 
   /** Total weight carried, worn gear included. */
   weight(): number {
+    const p = this.player;
     let total = 0;
-    for (const [id, n] of this.player.inventory) total += (this.content.items.get(id)?.weight ?? 0) * n;
-    for (const item of Object.values(this.player.equipment)) total += item?.weight ?? 0;
+    for (const [id, n] of p.inventory) total += (this.content.items.get(id)?.weight ?? 0) * n;
+    for (const piece of p.gear) total += piece.item.weight;
+    for (const piece of Object.values(p.equipment)) total += piece?.item.weight ?? 0;
     return total;
   }
 
-  /** Wears an item from the inventory, putting back whatever it replaces. Returns why not, or null. */
-  equip(itemId: string): string | null {
+  /** A fresh piece of gear; unrefined with empty slots unless given. */
+  newPiece(item: ItemDef, refine = 0, cards: ItemDef[] = []): GearPiece {
+    return { uid: this.nextGearUid++, item, refine, cards };
+  }
+
+  /** A gear piece by uid, whether in the bag or worn. */
+  findPiece(uid: number): { piece: GearPiece; slot: EquipSlot | null } | null {
     const p = this.player;
-    const item = this.content.items.get(itemId);
-    if (!item?.equip || !this.hasItem(itemId, 1)) return "You don't have that.";
+    const bag = p.gear.find((g) => g.uid === uid);
+    if (bag) return { piece: bag, slot: null };
+    for (const slot of EQUIP_SLOTS) if (p.equipment[slot]?.uid === uid) return { piece: p.equipment[slot]!, slot };
+    return null;
+  }
+
+  /**
+   * Wears a piece from the bag, putting back whatever it replaces. Accepts a
+   * piece uid, or an item id (then the first plain piece of that item).
+   * Returns why not, or null.
+   */
+  equip(pieceOrItem: number | string): string | null {
+    const p = this.player;
+    const piece =
+      typeof pieceOrItem === 'number'
+        ? p.gear.find((g) => g.uid === pieceOrItem)
+        : (p.gear.find((g) => g.item.id === pieceOrItem && isPlain(g)) ?? p.gear.find((g) => g.item.id === pieceOrItem));
+    const item = piece?.item;
+    if (!piece || !item?.equip) return "You don't have that.";
     const blocker = equipBlocker(p, item);
     if (blocker) return blocker;
     const slot = slotFor(p, item.equip);
-    this.removeItem(itemId, 1);
+    p.gear = p.gear.filter((g) => g !== piece);
     this.unequipQuiet(slot);
     // A two-handed weapon and a shield can't be held together.
     if (slot === 'weapon' && item.equip.twoHanded) this.unequipQuiet('shield');
-    if (slot === 'shield' && p.equipment.weapon?.equip?.twoHanded) this.unequipQuiet('weapon');
-    p.equipment[slot] = item;
+    if (slot === 'shield' && p.equipment.weapon?.item.equip?.twoHanded) this.unequipQuiet('weapon');
+    p.equipment[slot] = piece;
+    this.events.emit('inventoryChanged', {});
+    this.afterGearChange();
+    return null;
+  }
+
+  /** Slots a card from the bag into a piece of gear, for good. Returns why not, or null. */
+  insertCard(cardId: string, uid: number): string | null {
+    const card = this.content.items.get(cardId);
+    const found = this.findPiece(uid);
+    if (!card || !this.hasItem(cardId, 1)) return "You don't have that card.";
+    if (!found) return "You don't have that gear.";
+    const blocker = cardBlocker(found.piece, card);
+    if (blocker) return blocker;
+    this.removeItem(cardId, 1);
+    found.piece.cards.push(card);
     this.afterGearChange();
     return null;
   }
@@ -314,7 +354,8 @@ export class World {
     const old = this.player.equipment[slot];
     if (!old) return;
     delete this.player.equipment[slot];
-    this.addItem(old.id, 1);
+    this.player.gear.push(old);
+    this.events.emit('inventoryChanged', {});
   }
 
   private afterGearChange(): void {
@@ -325,14 +366,12 @@ export class World {
     this.events.emit('equipmentChanged', {});
   }
 
-  /** Equipped item ids by slot, for saving. */
-  equipmentIds(): Partial<Record<EquipSlot, string>> {
-    const out: Partial<Record<EquipSlot, string>> = {};
-    for (const slot of EQUIP_SLOTS) {
-      const item = this.player.equipment[slot];
-      if (item) out[slot] = item.id;
-    }
-    return out;
+  /** Worn pieces by slot. */
+  wornPieces(): Array<[EquipSlot, GearPiece]> {
+    return EQUIP_SLOTS.flatMap((slot) => {
+      const piece = this.player.equipment[slot];
+      return piece ? [[slot, piece] as [EquipSlot, GearPiece]] : [];
+    });
   }
 
   maxWeight(): number {
@@ -356,14 +395,30 @@ export class World {
     return null;
   }
 
-  /** Sells `count` of an item to any NPC. Returns an error message, or null on success. */
+  /** Sells `count` of an item to any NPC (plain gear pieces first). Returns an error message, or null on success. */
   sell(itemId: string, count = 1): string | null {
     const item = this.content.items.get(itemId);
-    const have = this.player.inventory.get(itemId) ?? 0;
-    if (!item || count < 1 || have < count) return "You don't have that many.";
+    if (!item || count < 1 || this.itemCount(itemId) < count) return "You don't have that many.";
     this.removeItem(itemId, count);
     this.player.gold += F.sellPrice(item.price) * count;
     return null;
+  }
+
+  /** Sells one specific piece of gear from the bag. */
+  sellPiece(uid: number): string | null {
+    const piece = this.player.gear.find((g) => g.uid === uid);
+    if (!piece) return "You don't have that.";
+    this.player.gear = this.player.gear.filter((g) => g !== piece);
+    this.player.gold += F.sellPrice(piece.item.price);
+    this.events.emit('inventoryChanged', {});
+    return null;
+  }
+
+  /** How many of an item are in the bag (worn gear not counted). */
+  itemCount(itemId: string): number {
+    const item = this.content.items.get(itemId);
+    if (item?.equip) return this.player.gear.filter((g) => g.item.id === itemId).length;
+    return this.player.inventory.get(itemId) ?? 0;
   }
 
   /** Learned level of a skill; 0 if unknown. */
@@ -372,20 +427,37 @@ export class World {
   }
 
   hasItem(itemId: string, count: number): boolean {
-    return (this.player.inventory.get(itemId) ?? 0) >= count;
+    return this.itemCount(itemId) >= count;
   }
 
+  /** Adds items to the bag; gear arrives as new, plain pieces. */
   addItem(itemId: string, count: number): void {
-    const inv = this.player.inventory;
-    inv.set(itemId, (inv.get(itemId) ?? 0) + count);
+    const item = this.content.items.get(itemId);
+    if (item?.equip) {
+      for (let i = 0; i < count; i++) this.player.gear.push(this.newPiece(item));
+    } else {
+      const inv = this.player.inventory;
+      inv.set(itemId, (inv.get(itemId) ?? 0) + count);
+    }
     this.events.emit('inventoryChanged', {});
   }
 
+  /** Removes items from the bag; for gear, plain pieces go before refined or carded ones. */
   removeItem(itemId: string, count: number): void {
-    const inv = this.player.inventory;
-    const left = (inv.get(itemId) ?? 0) - count;
-    if (left > 0) inv.set(itemId, left);
-    else inv.delete(itemId);
+    const item = this.content.items.get(itemId);
+    if (item?.equip) {
+      const p = this.player;
+      const ordered = p.gear
+        .filter((g) => g.item.id === itemId)
+        .sort((a, b) => Number(isPlain(b)) - Number(isPlain(a)) || a.refine - b.refine);
+      const gone = new Set(ordered.slice(0, count));
+      p.gear = p.gear.filter((g) => !gone.has(g));
+    } else {
+      const inv = this.player.inventory;
+      const left = (inv.get(itemId) ?? 0) - count;
+      if (left > 0) inv.set(itemId, left);
+      else inv.delete(itemId);
+    }
     this.events.emit('inventoryChanged', {});
   }
 
@@ -645,7 +717,7 @@ export class World {
     const amount = F.damage(
       {
         atk: d.atk,
-        skillModifier: o.modifier,
+        skillModifier: o.modifier * this.cardDamageFactor(target),
         elementModifier: F.elementModifier(o.element, target.def.element),
         sizeModifier: F.sizeModifier(weaponOf(p).type, target.def.size),
         def: target.def.def,
@@ -654,6 +726,12 @@ export class World {
       this.rng,
     );
     this.hurtMonster(target, amount, crit);
+  }
+
+  /** Card bonuses against this monster's element and size, e.g. 1.15 for +15%. */
+  private cardDamageFactor(target: Monster): number {
+    const fx = cardEffects(this.player);
+    return 1 + (fx.vsElement[target.def.element] ?? 0) + (fx.vsSize[target.def.size] ?? 0);
   }
 
   private hurtMonster(target: Monster, amount: number, crit: boolean): void {
@@ -777,7 +855,9 @@ export class World {
     }
     const raw = F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng);
     const endure = p.buffs.get('endure');
-    const amount = endure ? Math.max(1, Math.floor(raw * (1 - S.endureReduction(endure.level)))) : raw;
+    // Monsters hit with their own element, so cards with matching resistance help.
+    const resist = Math.min(0.8, cardEffects(p).resist[m.def.element] ?? 0) + (endure ? S.endureReduction(endure.level) : 0);
+    const amount = resist > 0 ? Math.max(1, Math.floor(raw * (1 - Math.min(0.9, resist)))) : raw;
     p.hp -= amount;
     p.sitting = false;
     this.events.emit('damage', { sourceId: m.id, targetId: 'player', amount, crit: false });

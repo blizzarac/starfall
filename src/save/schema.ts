@@ -3,10 +3,18 @@ import { STAT_NAMES } from '../core/combat/formulas';
 import { EQUIP_SLOTS } from '../core/equipment';
 import { JOBS, type JobId } from '../core/jobs';
 
-export const SAVE_SCHEMA_VERSION = 4;
+export const SAVE_SCHEMA_VERSION = 5;
 
 const Place = z.object({ map: z.string(), x: z.number().int(), y: z.number().int() });
 const Counts = z.record(z.string(), z.number().int().positive());
+
+/** One piece of gear: which item, how far it's refined, which cards are slotted. */
+const PieceSchema = z.object({
+  item: z.string(),
+  refine: z.number().int().min(0).max(10).default(0),
+  cards: z.array(z.string()).default([]),
+});
+export type SavedPiece = z.infer<typeof PieceSchema>;
 
 /** One slot's full player state. Monsters and ground loot are not saved; they respawn on load. */
 export const SaveDocSchema = z.object({
@@ -28,11 +36,14 @@ export const SaveDocSchema = z.object({
     statPoints: z.number().int().nonnegative(),
     skillPoints: z.number().int().nonnegative(),
     /** Equipped item ids by slot. */
-    equipment: z.partialRecord(z.enum(EQUIP_SLOTS), z.string()),
+    equipment: z.partialRecord(z.enum(EQUIP_SLOTS), PieceSchema),
     hp: z.number().int().nonnegative(),
     sp: z.number().int().nonnegative(),
   }),
+  /** Stackable items. */
   inventory: Counts,
+  /** Unequipped gear pieces. */
+  gear: z.array(PieceSchema),
   gold: z.number().int().nonnegative(),
   /** Kafra-style item storage; unused until towns exist. */
   storage: Counts,

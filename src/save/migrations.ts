@@ -21,6 +21,15 @@ export const MIGRATIONS: Record<number, Migration> = {
     const { weapon: _weapon, ...character } = d.character as Record<string, unknown>;
     return { ...d, character: { ...character, equipment: { weapon: 'novice_knife', body: 'cotton_shirt' } } };
   },
+  // v5: gear pieces carry refine levels and cards. Gear left in the stackable inventory
+  // is turned into pieces when the save is applied, since that needs the item data.
+  5: (d) => {
+    const c = d.character as Record<string, unknown>;
+    const equipment = Object.fromEntries(
+      Object.entries((c.equipment ?? {}) as Record<string, string>).map(([slot, id]) => [slot, { item: id, refine: 0, cards: [] }]),
+    );
+    return { ...d, gear: [], character: { ...c, equipment } };
+  },
 };
 
 /** Upgrades any older save to the current version, then validates it. Throws if it can't. */

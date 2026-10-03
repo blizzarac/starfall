@@ -1,11 +1,12 @@
 import { createMover } from '../core/entities';
-import type { EquipSlot } from '../core/equipment';
+import { MAX_REFINE, type EquipSlot, type GearPiece } from '../core/equipment';
+import type { ItemDef } from '../data/schemas';
 import { JOBS } from '../core/jobs';
 import { isSkillId } from '../core/skills';
 import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
-import { SAVE_SCHEMA_VERSION, type SaveDoc } from './schema';
+import { SAVE_SCHEMA_VERSION, type SaveDoc, type SavedPiece } from './schema';
 
 /** Snapshot of the player's state. Pure: reads the world, touches nothing. */
 export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): SaveDoc {
@@ -28,12 +29,13 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
       stats: { ...p.stats },
       statPoints: p.statPoints,
       skillPoints: p.skillPoints,
-      equipment: world.equipmentIds(),
+      equipment: Object.fromEntries(world.wornPieces().map(([slot, piece]) => [slot, savePiece(piece)])),
       // A save taken while fainted restores to full at the save point, matching respawn.
       hp: p.dead ? d.maxHp : p.hp,
       sp: p.dead ? d.maxSp : p.sp,
     },
     inventory: Object.fromEntries(p.inventory),
+    gear: p.gear.map(savePiece),
     gold: p.gold,
     storage: {},
     quests: {},
@@ -58,13 +60,28 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     statPoints: c.statPoints,
     skillPoints: c.skillPoints,
   });
-  // Gear that no longer exists in the game is dropped rather than failing the load.
+  // Gear and cards that no longer exist in the game are dropped rather than failing the load.
+  const items = world.content.items;
+  const loadPiece = (s: SavedPiece): GearPiece | null => {
+    const item = items.get(s.item);
+    if (!item?.equip) return null;
+    const cards = s.cards.map((id) => items.get(id)).filter((c): c is ItemDef => !!c?.card);
+    return world.newPiece(item, Math.min(s.refine, MAX_REFINE), cards.slice(0, item.equip.slots));
+  };
   p.equipment = {};
-  for (const [slot, id] of Object.entries(c.equipment)) {
-    const item = world.content.items.get(id);
-    if (item?.equip) p.equipment[slot as EquipSlot] = item;
+  for (const [slot, saved] of Object.entries(c.equipment)) {
+    const piece = saved && loadPiece(saved);
+    if (piece) p.equipment[slot as EquipSlot] = piece;
   }
-  p.inventory = new Map(Object.entries(doc.inventory).filter(([id]) => world.content.items.has(id)));
+  p.gear = doc.gear.map(loadPiece).filter((g): g is GearPiece => !!g);
+  p.inventory = new Map();
+  for (const [id, n] of Object.entries(doc.inventory)) {
+    const item = items.get(id);
+    if (!item) continue;
+    // Older saves kept gear in the stackable inventory.
+    if (item.equip) for (let i = 0; i < n; i++) p.gear.push(world.newPiece(item));
+    else p.inventory.set(id, n);
+  }
   p.gold = doc.gold;
   p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
 
@@ -83,4 +100,8 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   const d = derivedStats(p);
   p.hp = Math.min(Math.max(1, c.hp), d.maxHp);
   p.sp = Math.min(c.sp, d.maxSp);
+}
+
+function savePiece(piece: GearPiece): SavedPiece {
+  return { item: piece.item.id, refine: piece.refine, cards: piece.cards.map((c) => c.id) };
 }
