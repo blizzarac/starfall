@@ -56,7 +56,8 @@ export function createPlayer(name: string, start: Tile): Player {
     hpRegenTimer: 0,
     spRegenTimer: 0,
     inventory: new Map(),
-    savePoint: { ...start },
+    gold: 0,
+    savePoint: { map: '', ...start },
   };
   const d = derivedStats(p);
   p.hp = d.maxHp;

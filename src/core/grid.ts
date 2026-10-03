@@ -3,13 +3,15 @@ export interface Tile {
   y: number;
 }
 
-export type Terrain = 'grass' | 'path' | 'flower' | 'tree' | 'rock' | 'water';
+export type Terrain = 'grass' | 'path' | 'flower' | 'cobble' | 'tree' | 'rock' | 'water' | 'wall';
 
-const BLOCKING: ReadonlySet<Terrain> = new Set(['tree', 'rock', 'water']);
+const BLOCKING: ReadonlySet<Terrain> = new Set(['tree', 'rock', 'water', 'wall']);
 
 /** Walkability grid for one map; the core's only view of the map. */
 export class Grid {
   readonly terrain: Terrain[];
+  /** Tiles blocked by something standing on them (NPCs), on top of terrain. */
+  readonly occupied = new Set<number>();
 
   constructor(
     readonly width: number,
@@ -32,7 +34,11 @@ export class Grid {
 
   isWalkable(x: number, y: number): boolean {
     const t = this.terrainAt(x, y);
-    return t !== undefined && !BLOCKING.has(t);
+    return t !== undefined && !BLOCKING.has(t) && !this.occupied.has(y * this.width + x);
+  }
+
+  occupy(x: number, y: number): void {
+    this.occupied.add(y * this.width + x);
   }
 }
 

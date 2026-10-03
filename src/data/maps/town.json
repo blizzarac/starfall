@@ -1,0 +1,96 @@
+{
+  "id": "town",
+  "name": "Brightmoor",
+  "kind": "town",
+  "width": 32,
+  "height": 28,
+  "rows": [
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TT......T...TTT..T....TT.TTTT.TT",
+    "TT..,....,.####...###.......,.TT",
+    "TT..####..,####...###,..####..TT",
+    "TT..####,..####...###.,.####..TT",
+    "TT..####................####.TTT",
+    "TT...........,,..,...,.,..,...TT",
+    "TT..,....::::::::::::::.......TT",
+    "TTT......::::::::::::::...,..TTT",
+    "TTT....,.::::::::::::::......TTT",
+    "TT...,...::::::::::::::.......TT",
+    "TT...,...::::::::::::::......TTT",
+    "TT.======::::::~~::::::======.TT",
+    "TTT......::::::~~::::::......TTT",
+    "TT.......::::::::::::::.,.....TT",
+    "TT...,...::::::::::::::......TTT",
+    "TTT.###..::::::::::::::..###..TT",
+    "TT.,###..::::::::::::::.,###.TTT",
+    "TTT.###..::::::::::::::.,###.TTT",
+    "TT..###........::,,......###..TT",
+    "TTT............::.,,.........TTT",
+    "TTT,......###.,::.,###.,.....TTT",
+    "TT......,.###..::..###,......TTT",
+    "TT........###..::..###........TT",
+    "TTT.T.T.TT..T.T::.T.TT.TTTT.T.TT",
+    "TTTTTTTTTTTTTTT::TTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTT::TTTTTTTTTTTTTTT"
+  ],
+  "playerStart": {
+    "x": 15,
+    "y": 21
+  },
+  "savePoint": {
+    "x": 13,
+    "y": 11
+  },
+  "spawns": [],
+  "npcs": [
+    {
+      "id": "waystone_keeper",
+      "name": "Tess",
+      "x": 12,
+      "y": 10,
+      "dialogue": "waystone",
+      "look": {
+        "body": "#7a5cc7",
+        "hair": "#e8c46a"
+      }
+    },
+    {
+      "id": "tool_dealer",
+      "name": "Bram",
+      "x": 19,
+      "y": 10,
+      "dialogue": "tool_dealer",
+      "look": {
+        "body": "#c7743a",
+        "hair": "#4a3326"
+      }
+    },
+    {
+      "id": "guide",
+      "name": "Pell",
+      "x": 17,
+      "y": 19,
+      "dialogue": "guide",
+      "look": {
+        "body": "#3aa37a",
+        "hair": "#c9452f"
+      }
+    }
+  ],
+  "portals": [
+    {
+      "area": {
+        "x": 15,
+        "y": 27,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "meadow-1",
+        "x": 19,
+        "y": 3
+      }
+    }
+  ]
+}

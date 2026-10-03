@@ -24,10 +24,12 @@ On touch screens, tap where you'd click; the round buttons in the bottom-right c
 | Left click ground | Walk there (hold to keep walking toward the pointer) |
 | Left click monster | Walk into range and auto-attack |
 | Left click loot | Walk over and pick it up |
+| Left click NPC | Walk over and talk (shops, save point, tips) |
 | F1 / F2 | Use Red Tonic / Sweet Apple |
+| I | Items: inventory, weight and gold |
 | Z or Insert | Sit (doubles HP and SP regeneration) |
 | A | Stat window (spend points with +) |
-| ` or F3 | Debug overlay: paths, AI state, kills/min, XP/h, loot gold/h |
+| ` | Debug overlay (also in the menu): paths, AI state, kills/min, XP/h, loot gold/h |
 | Esc / Menu | Save now, export a save file, or save and quit to the title |
 
 ## Layout
@@ -40,16 +42,19 @@ src/
     pathfinding.ts       A* with 8-way moves, no corner cutting
     progression.ts       levels, stat points, derived stats
     sim.ts               fixed-timestep clock with render interpolation
-  data/        JSON content + zod schemas (items, monsters, maps)
+  data/        JSON content + zod schemas (items, monsters, maps, NPC dialogues, shops)
   save/        IndexedDB saves (Dexie), migrations, export/import
-  scenes/      Phaser scenes: Boot, World, UI
+  scenes/      Phaser scenes: Boot, Title, World, UI
+  ui/          windows: dialogue, shop, inventory
   render/      isometric projection and palette
 tests/         Vitest suites
 ```
 
 Scenes send intents to `World` (`moveTo`, `attack`, `pickUp`, `useItem`, ...) and draw from its state and events. Content is validated against the zod schemas on load, and `tests/content.test.ts` runs the same check in CI.
 
-Maps are a row-per-line terrain grid for now (`.` grass, `,` flowers, `=` path, `T` tree, `R` rock, `~` water); Tiled import comes with the vertical slice.
+Maps are a row-per-line terrain grid (`.` grass, `,` flowers, `=` path, `:` cobblestone, `T` tree, `R` rock, `~` water, `#` building) plus spawns, NPCs and edge portals. Every map file in `src/data/maps/` is loaded automatically, and the content check fails the build if a portal, NPC dialogue, shop or drop points at something that doesn't exist.
+
+NPC conversations live in `src/data/dialogues.json`: nodes with text and choices, optional conditions (job, job level, skill level, items held) and actions (set save point, heal, open a shop, take or give items, change job).
 
 ## Deploy
 

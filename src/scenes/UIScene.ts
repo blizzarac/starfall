@@ -7,6 +7,10 @@ import type { World } from '../core/world';
 import { downloadSave, type SaveManager } from '../save/manager';
 import { endSession } from './session';
 import { COLORS, TEXT } from '../render/palette';
+import { DialogueBox } from '../ui/DialogueBox';
+import { InventoryWindow } from '../ui/InventoryWindow';
+import { ShopWindow } from '../ui/ShopWindow';
+import type { Panel } from '../ui/widgets';
 
 const HOTBAR: Array<{ key: string; itemId: string }> = [
   { key: 'F1', itemId: 'red_tonic' },
@@ -45,6 +49,10 @@ export class UIScene extends Phaser.Scene {
   private menuDim!: Phaser.GameObjects.Rectangle;
   private menuPanel!: Phaser.GameObjects.Container;
   private frameMs = 16;
+  private inventory!: InventoryWindow;
+  private shop!: ShopWindow;
+  private dialogue!: DialogueBox;
+  private mapBanner!: Phaser.GameObjects.Text;
 
   constructor() {
     super('UI');
@@ -56,8 +64,8 @@ export class UIScene extends Phaser.Scene {
     this.statLines.clear();
     this.buttons = [];
 
-    this.swallowTaps(this.add.zone(8, 8, 236, 118).setOrigin(0));
-    this.add.graphics().fillStyle(COLORS.ui, 0.82).fillRoundedRect(8, 8, 236, 118, 8).lineStyle(1, COLORS.uiBorder, 0.6).strokeRoundedRect(8, 8, 236, 118, 8);
+    this.swallowTaps(this.add.zone(8, 8, 236, 142).setOrigin(0));
+    this.add.graphics().fillStyle(COLORS.ui, 0.82).fillRoundedRect(8, 8, 236, 142, 8).lineStyle(1, COLORS.uiBorder, 0.6).strokeRoundedRect(8, 8, 236, 142, 8);
     this.bars = this.add.graphics();
     this.statusText = this.add.text(18, 14, '', { ...TEXT, fontSize: '12px', lineSpacing: 6 });
     this.logText = this.add.text(12, 0, '', { ...TEXT, fontSize: '12px', lineSpacing: 2 }).setOrigin(0, 1);
@@ -69,7 +77,11 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '', { ...TEXT, fontSize: '22px', align: 'center', fontStyle: 'bold' })
       .setOrigin(0.5)
       .setVisible(false);
+    this.mapBanner = this.add.text(0, 0, '', { ...TEXT, fontSize: '22px', fontStyle: 'bold', strokeThickness: 5 }).setOrigin(0.5).setAlpha(0);
     this.buildStatWindow();
+    this.inventory = new InventoryWindow(this, this.world);
+    this.shop = new ShopWindow(this, this.world);
+    this.dialogue = new DialogueBox(this, this.world, (shopId) => this.shop.open(shopId));
     this.buildButtons();
     this.buildMenu();
     this.layout();
@@ -78,7 +90,10 @@ export class UIScene extends Phaser.Scene {
 
     this.bindKeys();
     this.bindEvents();
-    this.addLog(`Welcome to the Southern Meadow. ${this.isTouch() ? 'Tap' : 'Click'} a Jellop to attack it.`);
+    this.showMapName();
+    if (this.world.player.baseLevel === 1 && this.world.player.baseXp === 0) {
+      this.addLog(`Welcome to ${this.world.map.name}. ${this.isTouch() ? 'Tap' : 'Click'} Pell for tips, or head south to the meadow.`);
+    }
   }
 
   override update(_time: number, delta: number): void {
@@ -102,10 +117,14 @@ export class UIScene extends Phaser.Scene {
       const fromRight = this.buttons.length - 1 - i;
       b.root.setPosition(width - 12 - BUTTON_R - fromRight * (BUTTON_R * 2 + BUTTON_GAP), height - 12 - BUTTON_R);
     });
-    this.logText.setPosition(12, narrow ? height - 24 - BUTTON_R * 2 : height - 10);
-    this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? 134 : 52);
+    this.logText.setPosition(12, narrow ? height - 24 - BUTTON_R * 2 : height - 10).setWordWrapWidth(narrow ? width - 24 : Math.min(520, width - 400));
+    this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? 158 : 52);
     this.deathText.setPosition(width / 2, height / 2 - 60);
-    this.statWindow.setPosition(8, 134);
+    this.statWindow.setPosition(8, 158);
+    this.mapBanner.setPosition(width / 2, height * 0.28);
+    for (const panel of this.panels()) {
+      if (panel.layout() && panel.visible) this.refreshPanels();
+    }
   }
 
   // ---- Status window -----------------------------------------------------
@@ -125,6 +144,7 @@ export class UIScene extends Phaser.Scene {
     bar(56, p.sp / d.maxSp, COLORS.spBar);
     bar(74, p.baseXp / baseNeed, COLORS.xpBar);
     bar(92, p.jobLevel >= p.maxJobLevel ? 1 : p.jobXp / jobNeed, COLORS.jobXpBar);
+    const ratio = this.world.weightRatio();
 
     const pct = (a: number, b: number) => `${((a / b) * 100).toFixed(1)}%`;
     this.statusText.setText(
@@ -134,6 +154,7 @@ export class UIScene extends Phaser.Scene {
         `SP ${p.sp}/${d.maxSp}`,
         `Base Lv ${p.baseLevel}  ${pct(p.baseXp, baseNeed)}`,
         `Job Lv ${p.jobLevel}  ${p.jobLevel >= p.maxJobLevel ? 'MAX' : pct(p.jobXp, jobNeed)}`,
+        `Gold ${p.gold}   Wt ${Math.round(ratio * 100)}%${ratio >= 0.9 ? ' (overweight)' : ratio >= 0.5 ? ' (heavy)' : ''}`,
       ].join('\n'),
     );
   }
@@ -167,15 +188,15 @@ export class UIScene extends Phaser.Scene {
       lit: this.world.player.sitting,
       enabled: !this.world.player.dead,
     }));
+    this.addButton('Items', 'I', 0xb0873f, () => this.toggleInventory(), () => ({
+      badge: '',
+      lit: this.inventory.panel.visible,
+      enabled: true,
+    }));
     this.addButton('Stats', 'A', 0x4f6fb0, () => this.toggleStats(), () => {
       const pts = this.world.player.statPoints;
       return { badge: pts > 0 ? String(pts) : '', lit: this.statWindow.visible, enabled: true };
     });
-    this.addButton('Debug', '`', 0x5a5f6e, () => this.toggleDebug(), () => ({
-      badge: '',
-      lit: this.debugText.visible,
-      enabled: true,
-    }));
   }
 
   private addButton(label: string, key: string, color: number, onPress: () => void, state: HudButton['state']): void {
@@ -209,7 +230,30 @@ export class UIScene extends Phaser.Scene {
   }
 
   private toggleStats(): void {
-    this.statWindow.setVisible(!this.statWindow.visible);
+    const show = !this.statWindow.visible;
+    this.inventory.close();
+    this.statWindow.setVisible(show);
+  }
+
+  private toggleInventory(): void {
+    this.statWindow.setVisible(false);
+    this.inventory.toggle();
+  }
+
+  private panels(): Panel[] {
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel];
+  }
+
+  private refreshPanels(): void {
+    if (this.inventory.panel.visible) this.inventory.refresh();
+    if (this.shop.panel.visible) this.shop.refresh();
+    if (this.dialogue.panel.visible) this.dialogue.refresh();
+  }
+
+  private showMapName(): void {
+    this.tweens.killTweensOf(this.mapBanner);
+    this.mapBanner.setText(this.world.map.name).setAlpha(1);
+    this.tweens.add({ targets: this.mapBanner, alpha: 0, delay: 1400, duration: 800 });
   }
 
   private toggleDebug(): void {
@@ -269,6 +313,7 @@ export class UIScene extends Phaser.Scene {
     kb.on('keydown-Z', () => this.world.toggleSit());
     kb.on('keydown-INSERT', () => this.world.toggleSit());
     kb.on('keydown-A', () => this.toggleStats());
+    kb.on('keydown-I', () => this.toggleInventory());
     kb.on('keydown-ESC', () => this.toggleMenu());
     kb.on('keydown-BACKTICK', () => this.toggleDebug());
     kb.on('keydown-F3', () => this.toggleDebug());
@@ -301,6 +346,7 @@ export class UIScene extends Phaser.Scene {
     const entries: Array<[string, () => void]> = [
       ['Save now', () => void this.saves().save().then(() => this.addLog('Game saved.'))],
       ['Export save file', () => this.exportSave()],
+      ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
       ['Save and quit to title', () => void endSession(this)],
       ['Close', () => this.toggleMenu()],
     ];
@@ -346,6 +392,16 @@ export class UIScene extends Phaser.Scene {
       ev.on('playerDied', (e) => this.addLog(`You fainted and lost ${e.xpLost} XP.`)),
       ev.on('playerRespawned', () => this.addLog('You wake up at the save point.')),
       ev.on('notice', (e) => this.addLog(e.text)),
+      ev.on('talk', (e) => {
+        this.inventory.close();
+        this.statWindow.setVisible(false);
+        this.dialogue.open(e.npc);
+      }),
+      ev.on('mapChanged', () => {
+        this.dialogue.close();
+        this.shop.close();
+        this.showMapName();
+      }),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
   }

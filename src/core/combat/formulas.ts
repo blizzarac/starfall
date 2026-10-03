@@ -186,6 +186,22 @@ export function spRegenAmount(maxSpValue: number, int: number): number {
   return Math.max(1, Math.floor(maxSpValue / 100) + Math.floor(int / 6));
 }
 
+// ---- Inventory and trade ---------------------------------------------------
+
+export function maxWeight(str: number): number {
+  return 500 + 25 * str;
+}
+
+/** At or above this share of max weight, natural HP/SP regeneration stops. */
+export const WEIGHT_NO_REGEN = 0.5;
+/** At or above this share, the player can't attack. */
+export const WEIGHT_NO_ATTACK = 0.9;
+
+/** What an NPC pays for an item. */
+export function sellPrice(price: number): number {
+  return Math.floor(price / 2);
+}
+
 // ---- Movement ------------------------------------------------------------
 
 /** Diagonal steps take √2 as long as straight ones. */
@@ -196,3 +212,5 @@ export function stepDurationMs(moveMs: number, diagonal: boolean): number {
 export const PLAYER_MOVE_MS = 150;
 export const PLAYER_RESPAWN_MS = 3000;
 export const DROP_LIFETIME_MS = 60_000;
+/** How close (tiles) the player must be to talk to an NPC. */
+export const TALK_RANGE = 2;

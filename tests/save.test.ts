@@ -56,7 +56,7 @@ describe('save serialization', () => {
     w.player.dead = true;
     w.player.hp = 0;
     const doc = toSaveDoc(w, 0);
-    expect({ x: doc.position.x, y: doc.position.y }).toEqual(w.player.savePoint);
+    expect(doc.position).toEqual(w.player.savePoint);
     expect(doc.character.hp).toBeGreaterThan(0);
   });
 
@@ -65,7 +65,7 @@ describe('save serialization', () => {
     doc.position = { map: map.id, x: 0, y: 0 };
     const w = newWorld();
     applySaveDoc(w, doc);
-    expect(w.player.tile).toEqual(w.player.savePoint);
+    expect(w.player.tile).toEqual({ x: w.player.savePoint.x, y: w.player.savePoint.y });
   });
 
   it('drops items the game no longer has', () => {
@@ -79,7 +79,7 @@ describe('save serialization', () => {
 
 describe('migrate', () => {
   it('runs every step from the save version up to the target', () => {
-    const v1 = toSaveDoc(newWorld(), 0) as unknown as Record<string, unknown>;
+    const v1 = { ...toSaveDoc(newWorld(), 0), schemaVersion: 1 } as Record<string, unknown>;
     const steps = {
       2: (d: Record<string, unknown>) => ({ ...d, extra: 'added in v2' }),
       3: (d: Record<string, unknown>) => {

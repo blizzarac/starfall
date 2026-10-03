@@ -9,6 +9,9 @@ export const ItemSchema = z.object({
   price: z.number().int().nonnegative(),
   weight: z.number().int().nonnegative(),
   heal: z.object({ hp: z.number().int().nonnegative(), sp: z.number().int().nonnegative() }).optional(),
+  /** Special use effect: random teleport on the current map, or return to the save point. */
+  effect: z.enum(['teleport', 'return']).optional(),
+  description: z.string().optional(),
 });
 export type ItemDef = z.infer<typeof ItemSchema>;
 
@@ -54,15 +57,37 @@ export const TERRAIN_CHARS = {
   '.': 'grass',
   ',': 'flower',
   '=': 'path',
+  ':': 'cobble',
   T: 'tree',
   R: 'rock',
   '~': 'water',
+  '#': 'wall',
 } as const;
+
+const PlaceSchema = z.object({ map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });
+
+export const NpcSchema = z.object({
+  id: z.string().regex(/^[a-z0-9_]+$/),
+  name: z.string(),
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  dialogue: z.string(),
+  look: z.object({ body: z.string().regex(/^#[0-9a-f]{6}$/i), hair: z.string().regex(/^#[0-9a-f]{6}$/i) }),
+});
+export type NpcDef = z.infer<typeof NpcSchema>;
+
+/** Stepping on any tile of `area` warps to `to`. */
+export const PortalSchema = z.object({
+  area: z.object({ x: z.number().int(), y: z.number().int(), w: z.number().int().positive(), h: z.number().int().positive() }),
+  to: PlaceSchema,
+});
+export type PortalDef = z.infer<typeof PortalSchema>;
 
 export const MapSchema = z
   .object({
     id: z.string(),
     name: z.string(),
+    kind: z.enum(['town', 'field']),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     rows: z.array(z.string()),
@@ -76,6 +101,8 @@ export const MapSchema = z
         area: z.object({ x: z.number().int(), y: z.number().int(), w: z.number().int().positive(), h: z.number().int().positive() }),
       }),
     ),
+    npcs: z.array(NpcSchema).default([]),
+    portals: z.array(PortalSchema).default([]),
   })
   .superRefine((m, ctx) => {
     if (m.rows.length !== m.height) {
@@ -93,3 +120,53 @@ export const MapSchema = z
     });
   });
 export type MapDef = z.infer<typeof MapSchema>;
+
+// ---- Dialogue -------------------------------------------------------------
+
+/** All listed checks must pass. */
+export const ConditionSchema = z.object({
+  job: z.string().optional(),
+  jobLevelMin: z.number().int().optional(),
+  skillMin: z.object({ id: z.string(), level: z.number().int().positive() }).optional(),
+  hasItem: z.object({ id: z.string(), count: z.number().int().positive() }).optional(),
+});
+export type Condition = z.infer<typeof ConditionSchema>;
+
+export const ActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('setSavePoint') }),
+  z.object({ type: z.literal('heal') }),
+  z.object({ type: z.literal('openShop'), shop: z.string() }),
+  z.object({ type: z.literal('takeItem'), id: z.string(), count: z.number().int().positive() }),
+  z.object({ type: z.literal('giveItem'), id: z.string(), count: z.number().int().positive() }),
+  z.object({ type: z.literal('changeJob'), job: z.string() }),
+]);
+export type DialogueAction = z.infer<typeof ActionSchema>;
+
+const ChoiceSchema = z.object({
+  label: z.string(),
+  /** Node to show next; omit to end the conversation. */
+  next: z.string().optional(),
+  do: z.array(ActionSchema).default([]),
+  /** Choice is hidden unless this holds. */
+  if: ConditionSchema.optional(),
+});
+
+/** A line of text with choices, or an invisible branch that picks the next node. */
+const NodeSchema = z.union([
+  z.object({ text: z.string(), choices: z.array(ChoiceSchema).default([]) }),
+  z.object({ branch: z.array(z.object({ if: ConditionSchema, next: z.string() })), else: z.string() }),
+]);
+export type DialogueNode = z.infer<typeof NodeSchema>;
+
+export const DialogueSchema = z.object({
+  id: z.string(),
+  nodes: z.record(z.string(), NodeSchema).refine((n) => 'start' in n, 'needs a start node'),
+});
+export type DialogueDef = z.infer<typeof DialogueSchema>;
+
+export const ShopSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  items: z.array(z.string()).min(1),
+});
+export type ShopDef = z.infer<typeof ShopSchema>;

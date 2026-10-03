@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { STAT_NAMES } from '../core/combat/formulas';
 
-export const SAVE_SCHEMA_VERSION = 1;
+export const SAVE_SCHEMA_VERSION = 2;
 
 const Place = z.object({ map: z.string(), x: z.number().int(), y: z.number().int() });
 const Counts = z.record(z.string(), z.number().int().positive());
@@ -30,6 +30,7 @@ export const SaveDocSchema = z.object({
     sp: z.number().int().nonnegative(),
   }),
   inventory: Counts,
+  gold: z.number().int().nonnegative(),
   /** Kafra-style item storage; unused until towns exist. */
   storage: Counts,
   quests: z.record(z.string(), z.unknown()),

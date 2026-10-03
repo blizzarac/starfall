@@ -1,12 +1,13 @@
 {
   "id": "meadow-1",
   "name": "Southern Meadow",
+  "kind": "field",
   "width": 40,
   "height": 40,
   "rows": [
-    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-    "TTTT.T.TT.TTTTT.TT...T.T.TTTT.T..T.TTTTT",
+    "TTTTTTTTTTTTTTTTTT===TTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTT===TTTTTTTTTTTTTTTTTTT",
+    "TTTT.T.TT.TTTTT.TT===T.T.TTTT.T..T.TTTTT",
     "TT.........,.......=...........,,....TTT",
     "TTT,..,.,......T...=.....,,....,......TT",
     "TTT.........TR....,=.,...............TTT",
@@ -85,6 +86,21 @@
         "y": 24,
         "w": 12,
         "h": 12
+      }
+    }
+  ],
+  "portals": [
+    {
+      "area": {
+        "x": 18,
+        "y": 0,
+        "w": 3,
+        "h": 1
+      },
+      "to": {
+        "map": "town",
+        "x": 15,
+        "y": 25
       }
     }
   ]

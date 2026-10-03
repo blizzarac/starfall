@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { Content } from '../data/content';
+import { START_MAP, type Content } from '../data/content';
 import { World } from '../core/world';
 import type { SaveDb } from '../save/db';
 import { SaveManager } from '../save/manager';
@@ -10,8 +10,7 @@ import { applySaveDoc } from '../save/serialize';
 export async function startSession(scene: Phaser.Scene, slot: number, doc: SaveDoc | null, newName?: string): Promise<void> {
   const content = scene.registry.get('content') as Content;
   const db = scene.registry.get('db') as SaveDb;
-  const mapId = doc?.position.map ?? 'meadow-1';
-  const map = content.maps.get(mapId) ?? content.maps.get('meadow-1')!;
+  const map = content.maps.get(doc?.position.map ?? START_MAP) ?? content.maps.get(START_MAP)!;
   const world = new World(content, map, { playerName: newName });
   if (doc) applySaveDoc(world, doc);
 

@@ -1,11 +1,11 @@
-import type { Content } from '../data/content';
-import { TERRAIN_CHARS, type ItemDef, type MapDef } from '../data/schemas';
+import { buildGrid, type Content } from '../data/content';
+import type { DialogueAction, ItemDef, MapDef, NpcDef, PortalDef } from '../data/schemas';
 import * as F from './combat/formulas';
 import type { StatName } from './combat/formulas';
 import type { GroundDrop, Monster, Mover, Player } from './entities';
 import { createMover } from './entities';
 import { Emitter } from './events';
-import { Grid, sameTile, tileDistance, type Terrain, type Tile } from './grid';
+import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
 import { applyDeathPenalty, createPlayer, derivedStats, gainXp, raiseStat } from './progression';
 import { createRng, randInt, type Rng } from './rng';
@@ -19,10 +19,15 @@ export interface WorldEvents extends Record<string, unknown> {
   monsterDied: { monsterId: number; tile: Tile };
   itemPicked: { item: ItemDef };
   itemUsed: { item: ItemDef };
+  inventoryChanged: Record<string, never>;
   xpGained: { base: number; job: number };
   levelUp: { kind: 'base' | 'job'; level: number };
   playerDied: { xpLost: number };
   playerRespawned: Record<string, never>;
+  /** The player reached an NPC; the UI opens its dialogue. */
+  talk: { npc: NpcDef };
+  /** The current map was swapped for another; scenes rebuild. */
+  mapChanged: { mapId: string };
   notice: { text: string };
 }
 
@@ -41,11 +46,11 @@ const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
 
 /**
- * The whole game simulation for one map. Knows nothing about rendering:
- * scenes call the intent methods and read state or listen to `events`.
+ * The game simulation. Holds the player and the one map they're on; other maps
+ * are not simulated. Knows nothing about rendering: scenes call the intent
+ * methods and read state or listen to `events`.
  */
 export class World {
-  readonly grid: Grid;
   readonly player: Player;
   readonly monsters = new Map<number, Monster>();
   readonly drops = new Map<number, GroundDrop>();
@@ -54,25 +59,33 @@ export class World {
   /** Simulated milliseconds since the world was created. */
   time = 0;
 
+  private currentMap!: MapDef;
+  private currentGrid!: Grid;
   private nextId = 1;
   private respawns: Array<{ spawnIndex: number; at: number }> = [];
   private readonly rng: Rng;
 
   constructor(
     readonly content: Content,
-    readonly map: MapDef,
+    map: MapDef,
     opts: { seed?: number; playerName?: string } = {},
   ) {
     this.rng = createRng(opts.seed ?? Date.now());
-    const terrain: Terrain[] = map.rows.flatMap((row) =>
-      [...row].map((ch) => TERRAIN_CHARS[ch as keyof typeof TERRAIN_CHARS]),
-    );
-    this.grid = new Grid(map.width, map.height, terrain);
     this.player = createPlayer(opts.playerName ?? 'Adventurer', map.playerStart);
-    this.player.savePoint = { ...map.savePoint };
-    map.spawns.forEach((spawn, i) => {
-      for (let n = 0; n < spawn.count; n++) this.spawnMonster(i);
-    });
+    this.player.savePoint = { map: map.id, ...map.savePoint };
+    this.loadMap(map);
+  }
+
+  get map(): MapDef {
+    return this.currentMap;
+  }
+
+  get grid(): Grid {
+    return this.currentGrid;
+  }
+
+  get npcs(): readonly NpcDef[] {
+    return this.currentMap.npcs;
   }
 
   // ---- Intents -----------------------------------------------------------
@@ -90,6 +103,10 @@ export class World {
   attack(monsterId: number): void {
     const p = this.player;
     if (p.dead || !this.monsters.has(monsterId)) return;
+    if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) {
+      this.events.emit('notice', { text: "You're carrying too much to fight. Sell or drop some items." });
+      return;
+    }
     p.intent = { kind: 'attack', targetId: monsterId };
     p.goal = null;
     p.sitting = false;
@@ -104,6 +121,24 @@ export class World {
     if (tileDistance(p.tile, drop.tile) > PICKUP_RANGE || p.next) this.setPath(p, drop.tile);
   }
 
+  talkTo(npcId: string): void {
+    const p = this.player;
+    const npc = this.npcs.find((n) => n.id === npcId);
+    if (p.dead || !npc) return;
+    p.sitting = false;
+    if (!p.next && tileDistance(p.tile, npc) <= F.TALK_RANGE) {
+      p.intent = { kind: 'none' };
+      p.path = [];
+      this.events.emit('talk', { npc });
+      return;
+    }
+    if (!this.setPathNear(p, npc)) {
+      this.events.emit('notice', { text: `You can't reach ${npc.name}.` });
+      return;
+    }
+    p.intent = { kind: 'talk', npcId };
+  }
+
   toggleSit(): void {
     const p = this.player;
     if (p.dead) return;
@@ -116,19 +151,167 @@ export class World {
     const p = this.player;
     const item = this.content.items.get(itemId);
     const count = p.inventory.get(itemId) ?? 0;
-    if (p.dead || !item?.heal || count <= 0) return;
-    const d = derivedStats(p);
-    const hp = Math.min(item.heal.hp, d.maxHp - p.hp);
-    const sp = Math.min(item.heal.sp, d.maxSp - p.sp);
-    p.hp += hp;
-    p.sp += sp;
-    this.removeItem(itemId);
+    if (p.dead || !item || item.type !== 'consumable' || count <= 0) return;
+    if (item.heal) {
+      const d = derivedStats(p);
+      const hp = Math.min(item.heal.hp, d.maxHp - p.hp);
+      const sp = Math.min(item.heal.sp, d.maxSp - p.sp);
+      p.hp += hp;
+      p.sp += sp;
+      this.events.emit('heal', { hp, sp });
+    }
+    if (item.effect === 'teleport') {
+      const tile = this.randomWalkableIn({ x: 0, y: 0, w: this.grid.width, h: this.grid.height });
+      if (tile) this.placePlayer(tile);
+    } else if (item.effect === 'return') {
+      this.goToSavePoint();
+    }
+    this.removeItem(itemId, 1);
     this.events.emit('itemUsed', { item });
-    this.events.emit('heal', { hp, sp });
   }
 
   raiseStat(stat: StatName): boolean {
     return raiseStat(this.player, stat);
+  }
+
+  // ---- Inventory and trade -----------------------------------------------
+
+  /** Total weight carried. */
+  weight(): number {
+    let total = 0;
+    for (const [id, n] of this.player.inventory) total += (this.content.items.get(id)?.weight ?? 0) * n;
+    return total;
+  }
+
+  maxWeight(): number {
+    return F.maxWeight(this.player.stats.str);
+  }
+
+  weightRatio(): number {
+    return this.weight() / this.maxWeight();
+  }
+
+  /** Buys `count` of an item from a shop. Returns an error message, or null on success. */
+  buy(shopId: string, itemId: string, count = 1): string | null {
+    const shop = this.content.shops.get(shopId);
+    const item = this.content.items.get(itemId);
+    if (!shop || !item || !shop.items.includes(itemId) || count < 1) return "That's not for sale here.";
+    const cost = item.price * count;
+    if (cost > this.player.gold) return "You can't afford that.";
+    if (this.weight() + item.weight * count > this.maxWeight()) return "You can't carry that much.";
+    this.player.gold -= cost;
+    this.addItem(itemId, count);
+    return null;
+  }
+
+  /** Sells `count` of an item to any NPC. Returns an error message, or null on success. */
+  sell(itemId: string, count = 1): string | null {
+    const item = this.content.items.get(itemId);
+    const have = this.player.inventory.get(itemId) ?? 0;
+    if (!item || count < 1 || have < count) return "You don't have that many.";
+    this.removeItem(itemId, count);
+    this.player.gold += F.sellPrice(item.price) * count;
+    return null;
+  }
+
+  /** Learned level of a skill; 0 if unknown. */
+  skillLevel(_skillId: string): number {
+    return 0;
+  }
+
+  hasItem(itemId: string, count: number): boolean {
+    return (this.player.inventory.get(itemId) ?? 0) >= count;
+  }
+
+  addItem(itemId: string, count: number): void {
+    const inv = this.player.inventory;
+    inv.set(itemId, (inv.get(itemId) ?? 0) + count);
+    this.events.emit('inventoryChanged', {});
+  }
+
+  removeItem(itemId: string, count: number): void {
+    const inv = this.player.inventory;
+    const left = (inv.get(itemId) ?? 0) - count;
+    if (left > 0) inv.set(itemId, left);
+    else inv.delete(itemId);
+    this.events.emit('inventoryChanged', {});
+  }
+
+  // ---- NPC services ------------------------------------------------------
+
+  /** Runs one dialogue action. Returns a shop id when the action opens a shop. */
+  applyAction(action: DialogueAction): { openShop?: string } {
+    const p = this.player;
+    switch (action.type) {
+      case 'setSavePoint':
+        p.savePoint = { map: this.map.id, ...(p.next ?? p.tile) };
+        return {};
+      case 'heal': {
+        const d = derivedStats(p);
+        const hp = d.maxHp - p.hp;
+        const sp = d.maxSp - p.sp;
+        p.hp = d.maxHp;
+        p.sp = d.maxSp;
+        this.events.emit('heal', { hp, sp });
+        return {};
+      }
+      case 'openShop':
+        return { openShop: action.shop };
+      case 'takeItem':
+        this.removeItem(action.id, action.count);
+        return {};
+      case 'giveItem':
+        this.addItem(action.id, action.count);
+        return {};
+      case 'changeJob':
+        return {};
+    }
+  }
+
+  // ---- Maps --------------------------------------------------------------
+
+  /** Moves the player to another map (or another spot on this one). */
+  changeMap(mapId: string, tile: Tile): void {
+    const map = this.content.maps.get(mapId);
+    if (!map) return;
+    if (map.id === this.map.id) {
+      this.placePlayer(tile);
+      return;
+    }
+    this.loadMap(map);
+    this.placePlayer(tile);
+    this.events.emit('mapChanged', { mapId });
+  }
+
+  private loadMap(map: MapDef): void {
+    this.currentMap = map;
+    this.currentGrid = buildGrid(map);
+    this.monsters.clear();
+    this.drops.clear();
+    this.respawns = [];
+    map.spawns.forEach((spawn, i) => {
+      for (let n = 0; n < spawn.count; n++) this.spawnMonster(i);
+    });
+  }
+
+  /** Puts the player on a tile, cancelling whatever they were doing. */
+  private placePlayer(tile: Tile): void {
+    const p = this.player;
+    Object.assign(p, createMover(tile, p.moveMs));
+    p.intent = { kind: 'none' };
+    p.sitting = false;
+    for (const m of this.monsters.values()) m.hostile = false;
+  }
+
+  private goToSavePoint(): void {
+    const sp = this.player.savePoint;
+    this.changeMap(this.content.maps.has(sp.map) ? sp.map : this.map.id, { x: sp.x, y: sp.y });
+  }
+
+  portalAt(tile: Tile): PortalDef | undefined {
+    return this.map.portals.find(
+      (p) => tile.x >= p.area.x && tile.x < p.area.x + p.area.w && tile.y >= p.area.y && tile.y < p.area.y + p.area.h,
+    );
   }
 
   // ---- Simulation --------------------------------------------------------
@@ -137,7 +320,10 @@ export class World {
   tick(): void {
     const dt = F.TICK_MS;
     this.time += dt;
+    const mapBefore = this.map;
     this.updatePlayer(dt);
+    // A portal swapped the map mid-tick; the new map's monsters start fresh next tick.
+    if (this.map !== mapBefore) return;
     for (const m of [...this.monsters.values()]) this.updateMonster(m, dt);
     this.updateDrops(dt);
     this.updateRespawns();
@@ -189,15 +375,31 @@ export class World {
           p.intent = { kind: 'none' };
         }
       }
+    } else if (intent.kind === 'talk') {
+      const npc = this.npcs.find((n) => n.id === intent.npcId);
+      const inRange = () => !!npc && tileDistance(p.tile, npc) <= F.TALK_RANGE;
+      advance(p, dt, inRange);
+      if (!p.next && (inRange() || p.path.length === 0)) {
+        p.path = [];
+        p.intent = { kind: 'none' };
+        if (npc && inRange()) this.events.emit('talk', { npc });
+      }
     } else {
       advance(p, dt, () => false);
       if (!p.next && p.path.length === 0) p.intent = { kind: 'none' };
     }
 
+    const portal = this.portalAt(p.tile);
+    if (portal) {
+      this.changeMap(portal.to.map, { x: portal.to.x, y: portal.to.y });
+      return;
+    }
     this.regenerate(p, dt);
   }
 
   private regenerate(p: Player, dt: number): void {
+    // A heavy bag stops natural recovery, which is what sends players back to town.
+    if (this.weightRatio() >= F.WEIGHT_NO_REGEN) return;
     const d = derivedStats(p);
     p.hpRegenTimer += dt;
     if (p.hpRegenTimer >= F.hpRegenIntervalMs(p.sitting)) {
@@ -232,7 +434,12 @@ export class World {
       },
       this.rng,
     );
+    this.hurtMonster(target, amount, crit);
+  }
+
+  private hurtMonster(target: Monster, amount: number, crit: boolean): void {
     target.hp -= amount;
+    target.hostile = true;
     this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
     if (target.hp <= 0) this.killMonster(target);
   }
@@ -276,17 +483,14 @@ export class World {
 
   private collect(drop: GroundDrop): void {
     const item = this.content.items.get(drop.itemId)!;
+    if (this.weight() + item.weight > this.maxWeight()) {
+      this.events.emit('notice', { text: "You can't carry any more. Sell something in town." });
+      return;
+    }
     this.drops.delete(drop.id);
-    this.player.inventory.set(item.id, (this.player.inventory.get(item.id) ?? 0) + 1);
-    this.session.lootValue += Math.floor(item.price / 2);
+    this.addItem(item.id, 1);
+    this.session.lootValue += F.sellPrice(item.price);
     this.events.emit('itemPicked', { item });
-  }
-
-  private removeItem(itemId: string): void {
-    const inv = this.player.inventory;
-    const left = (inv.get(itemId) ?? 0) - 1;
-    if (left > 0) inv.set(itemId, left);
-    else inv.delete(itemId);
   }
 
   private updateMonster(m: Monster, dt: number): void {
@@ -377,11 +581,11 @@ export class World {
   private respawnPlayer(): void {
     const p = this.player;
     const d = derivedStats(p);
-    Object.assign(p, createMover(p.savePoint, p.moveMs));
     p.dead = false;
     p.hp = d.maxHp;
     p.sp = d.maxSp;
     p.attackCooldown = 0;
+    this.goToSavePoint();
     this.events.emit('playerRespawned', {});
   }
 
@@ -419,10 +623,10 @@ export class World {
   }
 
   private randomWalkableIn(area: { x: number; y: number; w: number; h: number }): Tile | null {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 200; i++) {
       const x = area.x + randInt(this.rng, 0, area.w - 1);
       const y = area.y + randInt(this.rng, 0, area.h - 1);
-      if (this.grid.isWalkable(x, y)) return { x, y };
+      if (this.grid.isWalkable(x, y) && !this.portalAt({ x, y })) return { x, y };
     }
     return null;
   }
@@ -440,6 +644,20 @@ export class World {
     m.path = path;
     m.goal = { ...target };
     return true;
+  }
+
+  /** Paths to the closest reachable tile next to `target` (for NPCs, who block their own tile). */
+  private setPathNear(m: Mover, target: Tile): boolean {
+    const from = m.next ?? m.tile;
+    const candidates: Tile[] = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const t = { x: target.x + dx, y: target.y + dy };
+        if ((dx || dy) && this.grid.isWalkable(t.x, t.y)) candidates.push(t);
+      }
+    }
+    candidates.sort((a, b) => tileDistance(from, a) - tileDistance(from, b));
+    return candidates.some((t) => this.setPath(m, t));
   }
 }
 

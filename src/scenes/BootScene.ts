@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { loadContent } from '../data/content';
 import { SaveDb } from '../save/db';
+import { ensureChibi } from '../render/chibi';
 import { COLORS } from '../render/palette';
 
 /**
@@ -18,6 +19,7 @@ export class BootScene extends Phaser.Scene {
     this.registry.set('debug', false);
 
     this.makeTextures();
+    ensureChibi(this, 'job-novice', COLORS.playerBody, COLORS.playerHair);
     this.scene.start('Title');
   }
 
@@ -54,24 +56,33 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1.5, 0x2a1e2e).beginPath().arc(24, 30, 3, 0.2, Math.PI - 0.2).strokePath();
     g.generateTexture('blob', 48, 40).clear();
 
-    // Chibi novice facing right, feet at (20, 54).
-    g.fillStyle(0x3b3f52).fillRoundedRect(12, 44, 7, 10, 2).fillRoundedRect(21, 44, 7, 10, 2);
-    g.fillStyle(COLORS.playerBody).fillRoundedRect(10, 28, 20, 19, 6);
-    g.fillStyle(0xffffff, 0.2).fillRoundedRect(12, 30, 6, 12, 3);
-    g.fillStyle(0x8a5a3b).fillRect(10, 40, 20, 3);
-    g.fillStyle(COLORS.playerSkin).fillCircle(20, 18, 14);
-    g.fillStyle(COLORS.playerHair).fillEllipse(18, 9, 30, 15).fillCircle(8, 16, 6);
-    g.fillStyle(0x2a1e2e).fillEllipse(23, 20, 3.5, 6).fillEllipse(30, 20, 3.5, 6);
-    g.fillStyle(0xffffff).fillCircle(23.6, 18.5, 1).fillCircle(30.6, 18.5, 1);
-    g.fillStyle(0xff9aa8, 0.6).fillCircle(21, 25, 2.2).fillCircle(32, 25, 2);
-    g.generateTexture('novice', 40, 56).clear();
-
     // Loot bag, tinted per item type.
     g.fillStyle(COLORS.shadow, 0.25).fillEllipse(10, 18, 16, 5);
     g.fillStyle(0xffffff).fillCircle(10, 11, 7).fillRect(7, 2, 6, 5);
     g.lineStyle(1.5, 0x333333, 0.6).strokeCircle(10, 11, 7);
     g.fillStyle(0xffffff, 0.6).fillCircle(7, 9, 2);
     g.generateTexture('drop', 20, 20).clear();
+
+    // House block: an isometric cube whose neighbors merge into buildings. Ground center at (32, 56).
+    const V = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
+    for (const windows of [false, true]) {
+      g.fillStyle(COLORS.houseWall).fillPoints([V(0, 56), V(32, 72), V(32, 34), V(0, 18)], true);
+      g.fillStyle(COLORS.houseShade).fillPoints([V(32, 72), V(64, 56), V(64, 18), V(32, 34)], true);
+      g.fillStyle(COLORS.houseRoof).fillPoints([V(0, 18), V(32, 2), V(64, 18), V(32, 34)], true);
+      g.fillStyle(COLORS.houseRoofShade).fillPoints([V(32, 34), V(64, 18), V(64, 22), V(32, 38)], true);
+      g.fillStyle(COLORS.houseRoofShade).fillPoints([V(0, 18), V(32, 34), V(32, 38), V(0, 22)], true);
+      if (windows) {
+        g.fillStyle(0x5a7bb8).fillPoints([V(10, 38), V(20, 43), V(20, 53), V(10, 48)], true);
+        g.fillStyle(0x4a6aa3).fillPoints([V(44, 43), V(54, 38), V(54, 48), V(44, 53)], true);
+      }
+      g.generateTexture(windows ? 'house-window' : 'house', 64, 72).clear();
+    }
+
+    // Portal swirl lying on the ground.
+    g.fillStyle(0x6fd6ff, 0.35).fillEllipse(32, 16, 60, 28);
+    g.lineStyle(3, 0xbff0ff, 0.9).strokeEllipse(32, 16, 46, 20);
+    g.lineStyle(2, 0xffffff, 0.8).strokeEllipse(32, 16, 26, 11);
+    g.generateTexture('portal', 64, 32).clear();
 
     // Tile outline for hover and click markers.
     g.lineStyle(2, 0xffffff, 1).strokePoints(

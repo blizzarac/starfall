@@ -8,7 +8,10 @@ type Migration = (prev: Record<string, unknown>) => Record<string, unknown>;
  * When the save format changes: bump SAVE_SCHEMA_VERSION, update the schema,
  * and add the step here. Never edit a released step.
  */
-export const MIGRATIONS: Record<number, Migration> = {};
+export const MIGRATIONS: Record<number, Migration> = {
+  // v2: gold and shops arrive.
+  2: (d) => ({ ...d, gold: 0 }),
+};
 
 /** Upgrades any older save to the current version, then validates it. Throws if it can't. */
 export function migrate(raw: unknown): SaveDoc;

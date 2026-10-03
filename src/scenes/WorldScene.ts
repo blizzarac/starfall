@@ -4,6 +4,7 @@ import type { Tile } from '../core/grid';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
+import { CHIBI_FEET_Y, CHIBI_H, ensureChibi, hexColor } from '../render/chibi';
 import { COLORS, TEXT } from '../render/palette';
 import { depthFor, TILE_H, TILE_W, tileToWorld, worldToTile } from '../render/iso';
 
@@ -29,7 +30,9 @@ export class WorldScene extends Phaser.Scene {
   private playerBody!: Phaser.GameObjects.Image;
   private monsterViews = new Map<number, MonsterView>();
   private dropViews = new Map<number, Phaser.GameObjects.Image>();
+  /** Trees and buildings that fade when the player walks behind them. */
   private trees: Array<{ img: Phaser.GameObjects.Image; tile: Tile }> = [];
+  private npcViews = new Map<string, Phaser.GameObjects.Container>();
   private hover!: Phaser.GameObjects.Image;
   private debugGfx!: Phaser.GameObjects.Graphics;
   private holdTimer = 0;
@@ -49,16 +52,19 @@ export class WorldScene extends Phaser.Scene {
     this.monsterViews.clear();
     this.dropViews.clear();
     this.trees = [];
+    this.npcViews.clear();
     this.registry.set('clock', this.clock);
 
     this.cameras.main.setBackgroundColor('#2f5d3a');
     this.drawGround();
     this.placeObstacles();
+    this.placePortals();
+    this.placeNpcs();
 
     this.hover = this.add.image(0, 0, 'tile-outline').setDepth(2).setAlpha(0.6);
     this.debugGfx = this.add.graphics().setDepth(5000);
 
-    this.playerBody = this.add.image(0, 0, 'novice').setOrigin(0.5, 54 / 56);
+    this.playerBody = this.add.image(0, 0, 'job-novice').setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody]);
 
     const cam = this.cameras.main;
@@ -68,10 +74,12 @@ export class WorldScene extends Phaser.Scene {
     const bottom = tileToWorld(width - 1, height - 1).y + TILE_H;
     cam.setBounds(left, -TILE_H * 3, right - left, bottom + TILE_H * 3);
     cam.startFollow(this.player, true, 0.15, 0.15);
-    cam.setZoom(window.devicePixelRatio > 1 ? 1.25 : 1);
+    // Phones in portrait need to see more of the map; big screens get a closer view.
+    cam.setZoom(this.scale.width < 500 ? 0.9 : window.devicePixelRatio > 1 ? 1.25 : 1);
 
     this.bindInput();
     this.bindEvents();
+    cam.fadeIn(250, 47, 93, 58);
   }
 
   override update(_time: number, delta: number): void {
@@ -141,18 +149,46 @@ export class WorldScene extends Phaser.Scene {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const t = this.world.grid.terrainAt(x, y);
-        if (t !== 'tree' && t !== 'rock') continue;
+        if (t !== 'tree' && t !== 'rock' && t !== 'wall') continue;
         const p = tileToWorld(x, y);
-        const img =
-          t === 'tree'
-            ? this.add.image(p.x, p.y + 4, 'tree').setOrigin(0.5, 88 / 96)
-            : this.add.image(p.x, p.y + 2, 'rock').setOrigin(0.5, 28 / 32);
+        let img: Phaser.GameObjects.Image;
         if (t === 'tree') {
-          img.setScale(0.9 + (hash(x, y) % 5) * 0.05);
+          img = this.add.image(p.x, p.y + 4, 'tree').setOrigin(0.5, 88 / 96).setScale(0.9 + (hash(x, y) % 5) * 0.05);
           this.trees.push({ img, tile: { x, y } });
+        } else if (t === 'wall') {
+          img = this.add.image(p.x, p.y, hash(x, y) % 3 === 0 ? 'house-window' : 'house').setOrigin(0.5, 56 / 72);
+          this.trees.push({ img, tile: { x, y } });
+        } else {
+          img = this.add.image(p.x, p.y + 2, 'rock').setOrigin(0.5, 28 / 32);
         }
         img.setDepth(depthFor(p.y));
       }
+    }
+  }
+
+  private placePortals(): void {
+    for (const portal of this.world.map.portals) {
+      for (let y = portal.area.y; y < portal.area.y + portal.area.h; y++) {
+        for (let x = portal.area.x; x < portal.area.x + portal.area.w; x++) {
+          const p = tileToWorld(x, y);
+          const swirl = this.add.image(p.x, p.y, 'portal').setDepth(3).setBlendMode(Phaser.BlendModes.ADD);
+          this.tweens.add({ targets: swirl, scale: { from: 0.85, to: 1.1 }, alpha: { from: 0.7, to: 1 }, yoyo: true, repeat: -1, duration: 900 });
+        }
+      }
+    }
+  }
+
+  private placeNpcs(): void {
+    for (const npc of this.world.npcs) {
+      const key = ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), hexColor(npc.look.hair));
+      const p = tileToWorld(npc.x, npc.y);
+      const body = this.add.image(0, 0, key).setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H).setFlipX(hash(npc.x, npc.y) % 2 === 0);
+      const label = this.add
+        .text(0, -62, npc.name, { ...TEXT, fontSize: '12px', color: '#ffe9a8' })
+        .setOrigin(0.5, 1);
+      const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
+      this.tweens.add({ targets: body, scaleY: { from: 1, to: 0.97 }, yoyo: true, repeat: -1, duration: 1200 + (hash(npc.x, npc.y) % 400) });
+      this.npcViews.set(npc.id, view);
     }
   }
 
@@ -286,6 +322,11 @@ export class WorldScene extends Phaser.Scene {
       this.world.attack(monster.id);
       return;
     }
+    const npcId = this.npcAt(ptr.worldX, ptr.worldY);
+    if (npcId) {
+      this.world.talkTo(npcId);
+      return;
+    }
     const dropId = this.dropAt(ptr.worldX, ptr.worldY);
     if (dropId !== null) {
       this.world.pickUp(dropId);
@@ -299,7 +340,7 @@ export class WorldScene extends Phaser.Scene {
   private updateHold(delta: number): void {
     const ptr = this.input.activePointer;
     if (!ptr.isDown) this.pressOnMap = false;
-    if (!this.pressOnMap || !ptr.isDown || ptr.rightButtonDown() || this.world.player.intent.kind === 'attack' || this.world.player.intent.kind === 'pickup') return;
+    if (!this.pressOnMap || !ptr.isDown || ptr.rightButtonDown() || this.world.player.intent.kind !== 'move' && this.world.player.intent.kind !== 'none') return;
     this.holdTimer -= delta;
     if (this.holdTimer > 0) return;
     this.holdTimer = HOLD_REPATH_MS;
@@ -324,6 +365,13 @@ export class WorldScene extends Phaser.Scene {
     return best;
   }
 
+  private npcAt(wx: number, wy: number): string | null {
+    for (const [id, view] of this.npcViews) {
+      if (Phaser.Math.Distance.Between(wx, wy, view.x, view.y - 24) < this.pickRadius() * 1.2) return id;
+    }
+    return null;
+  }
+
   private dropAt(wx: number, wy: number): number | null {
     for (const [id, img] of this.dropViews) {
       if (Phaser.Math.Distance.Between(wx, wy, img.x, img.y - 8) < this.pickRadius() * 0.7) return id;
@@ -340,7 +388,7 @@ export class WorldScene extends Phaser.Scene {
     const ptr = this.input.activePointer;
     ptr.updateWorldPoint(this.cameras.main);
     const overMonster = this.monsterAt(ptr.worldX, ptr.worldY) !== null;
-    const overDrop = !overMonster && this.dropAt(ptr.worldX, ptr.worldY) !== null;
+    const overDrop = !overMonster && (this.dropAt(ptr.worldX, ptr.worldY) !== null || this.npcAt(ptr.worldX, ptr.worldY) !== null);
     this.input.setDefaultCursor(overMonster ? 'crosshair' : overDrop ? 'pointer' : 'default');
     const tile = worldToTile(ptr.worldX, ptr.worldY);
     const w = tileToWorld(tile.x, tile.y);
@@ -361,6 +409,8 @@ export class WorldScene extends Phaser.Scene {
   private bindEvents(): void {
     const ev = this.world.events;
     const offs = [
+      // Rebuild everything for the new map; the UI scene stays up.
+      ev.on('mapChanged', () => this.scene.restart()),
       ev.on('damage', (e) => {
         const crit = e.crit;
         const color = e.targetId === 'player' ? '#ff6b6b' : crit ? '#ffd84a' : '#ffffff';

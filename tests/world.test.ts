@@ -85,7 +85,8 @@ describe('World', () => {
     m.hostile = true;
     run(world, 120_000, () => events.length === 2);
     expect(events).toEqual(['died', 'respawned']);
-    expect(world.player.tile).toEqual(world.player.savePoint);
+    expect(world.player.tile).toEqual({ x: world.player.savePoint.x, y: world.player.savePoint.y });
+    expect(world.map.id).toBe(world.player.savePoint.map);
     expect(world.player.dead).toBe(false);
   });
 });

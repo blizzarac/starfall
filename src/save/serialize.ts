@@ -1,4 +1,5 @@
 import { createMover } from '../core/entities';
+import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
 import { SAVE_SCHEMA_VERSION, type SaveDoc } from './schema';
@@ -30,11 +31,12 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
       sp: p.dead ? d.maxSp : p.sp,
     },
     inventory: Object.fromEntries(p.inventory),
+    gold: p.gold,
     storage: {},
     quests: {},
     flags: {},
-    position: p.dead ? { map: world.map.id, ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
-    savePoint: { map: world.map.id, ...p.savePoint },
+    position: p.dead ? { ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
+    savePoint: { ...p.savePoint },
   };
 }
 
@@ -56,11 +58,19 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     weapon: { ...c.weapon },
   });
   p.inventory = new Map(Object.entries(doc.inventory).filter(([id]) => world.content.items.has(id)));
+  p.gold = doc.gold;
 
-  const onMap = (place: SaveDoc['position']) =>
-    place.map === world.map.id && world.grid.isWalkable(place.x, place.y) ? { x: place.x, y: place.y } : null;
-  p.savePoint = onMap(doc.savePoint) ?? { ...world.map.savePoint };
-  Object.assign(p, createMover(onMap(doc.position) ?? p.savePoint, p.moveMs));
+  // Places on maps that no longer exist, or tiles that are now blocked, fall back to safe spots.
+  const valid = (place: SaveDoc['position']) => {
+    const map = world.content.maps.get(place.map);
+    return !!map && buildGrid(map).isWalkable(place.x, place.y);
+  };
+  const start = world.content.maps.get(START_MAP)!;
+  p.savePoint = valid(doc.savePoint) ? { ...doc.savePoint } : { map: START_MAP, ...start.savePoint };
+  // The world was built on the saved position's map when that map exists.
+  const here = doc.position.map === world.map.id && valid(doc.position) ? doc.position : null;
+  if (here) Object.assign(p, createMover(here, p.moveMs));
+  else world.changeMap(p.savePoint.map, p.savePoint);
 
   const d = derivedStats(p);
   p.hp = Math.min(Math.max(1, c.hp), d.maxHp);

@@ -3,6 +3,13 @@ import type { Stats, WeaponType } from './combat/formulas';
 import type { Tile } from './grid';
 
 /** Tile-to-tile movement state shared by the player and monsters. */
+/** A tile on a specific map. */
+export interface Place {
+  map: string;
+  x: number;
+  y: number;
+}
+
 export interface Mover {
   /** Last tile fully arrived at; the logical position for range checks. */
   tile: Tile;
@@ -40,14 +47,16 @@ export interface Player extends Mover {
   hpRegenTimer: number;
   spRegenTimer: number;
   inventory: Map<string, number>;
-  savePoint: Tile;
+  gold: number;
+  savePoint: Place;
 }
 
 export type PlayerIntent =
   | { kind: 'none' }
   | { kind: 'move' }
   | { kind: 'attack'; targetId: number }
-  | { kind: 'pickup'; dropId: number };
+  | { kind: 'pickup'; dropId: number }
+  | { kind: 'talk'; npcId: string };
 
 export type MonsterState = 'idle' | 'wander' | 'chase' | 'attack';
 
@@ -71,5 +80,5 @@ export interface GroundDrop {
 }
 
 export function createMover(tile: Tile, moveMs: number): Mover {
-  return { tile: { ...tile }, next: null, stepElapsed: 0, stepDuration: 0, path: [], goal: null, moveMs };
+  return { tile: { x: tile.x, y: tile.y }, next: null, stepElapsed: 0, stepDuration: 0, path: [], goal: null, moveMs };
 }
