@@ -3,6 +3,7 @@ import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
 import { weaponOf } from '../core/equipment';
 import { jobOf } from '../core/jobs';
+import { auraRadius, skillLevel } from '../core/skills';
 import { STATUS_INFO } from '../core/status';
 import type { MonsterDef, NpcDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
@@ -122,6 +123,8 @@ export class WorldScene extends Phaser.Scene {
     biteUntil: number;
   } | null = null;
   private hover!: Phaser.GameObjects.Image;
+  /** Battle Aura's reach, drawn on the ground around the player; null without the skill. */
+  private aura: { shape: Phaser.GameObjects.Polygon; radius: number } | null = null;
   /** Pulsing ring under whatever the player is fighting. */
   private targetRing!: Phaser.GameObjects.Ellipse;
   private debugGfx!: Phaser.GameObjects.Graphics;
@@ -188,6 +191,7 @@ export class WorldScene extends Phaser.Scene {
     this.castBar = this.add.graphics();
     this.statusLabel = this.add.text(0, -86, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
+    this.aura = null;
 
     const cam = this.cameras.main;
     const { width, height } = this.world.map;
@@ -337,6 +341,7 @@ export class WorldScene extends Phaser.Scene {
 
   private syncPlayer(): void {
     const p = this.world.player;
+    this.syncAura();
     const statuses = [...p.statuses.keys()];
     this.statusLabel
       .setText(statuses.map((s) => STATUS_INFO[s].name).join(' · '))
@@ -803,6 +808,15 @@ export class WorldScene extends Phaser.Scene {
         pet.body.play(pet.anim);
         pet.biteUntil = this.time.now + 400;
       }),
+      ev.on('auraHit', (e) => {
+        this.damageNumber(e.targetId, String(e.amount), '#8ff4ff', 18);
+        this.hitSpark(e.targetId, false);
+        this.flashHit(e.targetId);
+        if (this.aura) {
+          this.aura.shape.setScale(1.08);
+          this.tweens.add({ targets: this.aura.shape, scale: 1, duration: 250 });
+        }
+      }),
       ev.on('petLevelUp', (e) => {
         if (!this.petView) return;
         const at = { x: this.petView.root.x, y: this.petView.root.y - 40 };
@@ -863,6 +877,23 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** The tiles a slam hits (every tile within `radius` steps), as one diamond on screen. */
+  /** Keeps the Battle Aura's glow under the player, sized to its reach (cyan, so it never looks like a red slam warning). */
+  private syncAura(): void {
+    const lv = skillLevel(this.world.player, 'battle_aura');
+    const radius = lv > 0 ? auraRadius(lv) : 0;
+    if (this.aura && this.aura.radius !== radius) {
+      this.tweens.killTweensOf(this.aura.shape);
+      this.aura.shape.destroy();
+      this.aura = null;
+    }
+    if (radius > 0 && !this.aura) {
+      const shape = this.add.polygon(0, 0, this.slamArea(radius), 0x4fe6ff, 0.18).setStrokeStyle(3, 0x4fe6ff, 0.95).setDepth(2.5);
+      this.tweens.add({ targets: shape, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
+      this.aura = { shape, radius };
+    }
+    this.aura?.shape.setPosition(this.player.x, this.player.y);
+  }
+
   private slamArea(radius: number): number[] {
     const w = TILE_W * (radius * 2 + 1);
     const h = TILE_H * (radius * 2 + 1);

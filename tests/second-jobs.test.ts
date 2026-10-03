@@ -133,6 +133,28 @@ describe('Knight', () => {
     expect(w.player.moveMs).toBe(Math.round(F.PLAYER_MOVE_MS * S.RIDING_MOVE));
   });
 
+  it('Battle Aura burns monsters attacking you every second, and leaves peaceful ones alone', () => {
+    const w = promoted('swordsman', 'knight');
+    const m = duel(w, 'sandworm');
+    w.player.hp = 1e6;
+    const hits: number[] = [];
+    w.events.on('auraHit', (e) => e.targetId === m.id && hits.push(e.amount));
+    // Not learned: nothing.
+    m.hostile = true;
+    for (let t = 0; t < 3000; t += F.TICK_MS) w.tick();
+    expect(hits).toEqual([]);
+    for (let i = 0; i < 5; i++) expect(w.learnSkill('battle_aura')).toBeNull();
+    // A monster standing next to you but not fighting is spared.
+    m.hostile = false;
+    for (let t = 0; t < 3000; t += F.TICK_MS) w.tick();
+    expect(hits).toEqual([]);
+    m.hostile = true;
+    for (let t = 0; t < 3000; t += F.TICK_MS) w.tick();
+    expect(hits.length).toBeGreaterThanOrEqual(2);
+    expect(hits.length).toBeLessThanOrEqual(4);
+    expect(Math.min(...hits)).toBeGreaterThan(0);
+  });
+
   it('Two-Hand Mastery adds ATK and crit with a two-handed sword only', () => {
     const w = promoted('swordsman', 'knight');
     w.addItem('short_sword', 1);

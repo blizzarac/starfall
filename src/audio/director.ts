@@ -42,6 +42,7 @@ export function themeFor(map: MapDef): ThemeId {
 export function bindWorldAudio(world: World): () => void {
   const ev = world.events;
   audio.setTheme(themeFor(world.map));
+  let lastAura = -Infinity;
   const offs = [
     ev.on('damage', (e) => {
       if (e.sourceId === 'player' && e.targetId !== 'player') {
@@ -53,6 +54,12 @@ export function bindWorldAudio(world: World): () => void {
     }),
     ev.on('miss', () => audio.play('miss')),
     ev.on('petAttack', () => audio.play('hit')),
+    // One sound per aura pulse, however many monsters it burns.
+    ev.on('auraHit', () => {
+      if (world.time - lastAura < 500) return;
+      lastAura = world.time;
+      audio.play('hit');
+    }),
     ev.on('skillUsed', (e) => {
       const s = SKILL_SFX[e.skillId];
       if (s) audio.play(s);

@@ -68,6 +68,8 @@ export interface WorldEvents extends Record<string, unknown> {
   petChanged: Record<string, never>;
   /** The pet bit a monster. */
   petAttack: { targetId: number; amount: number };
+  /** Battle Aura burned a monster. */
+  auraHit: { targetId: number; amount: number };
   petLevelUp: { name: string; level: number };
   notice: { text: string };
 }
@@ -125,6 +127,7 @@ export class World {
   petMover: Mover | null = null;
   private petHungerMs = 0;
   private petAttackMs = 0;
+  private auraMs = 0;
   /** Drops the pet couldn't pick up (too heavy), so it doesn't keep trying. */
   private petSkips = new Set<number>();
 
@@ -551,6 +554,25 @@ export class World {
     const target = p.next ?? p.tile;
     if (dist > 2 && !mover.next && (!mover.goal || tileDistance(mover.goal, target) > 1)) this.setPathNear(mover, target);
     advance(mover, dt, () => tileDistance(mover.tile, target) <= 1);
+  }
+
+  /**
+   * Battle Aura: every second, burns the monsters that are attacking the player
+   * up close. Passive monsters you walk past are left alone.
+   */
+  private updateAura(dt: number): void {
+    const p = this.player;
+    const lv = S.skillLevel(p, 'battle_aura');
+    if (lv === 0 || p.dead) return;
+    this.auraMs -= dt;
+    if (this.auraMs > 0) return;
+    this.auraMs = S.AURA_TICK_MS;
+    const radius = S.auraRadius(lv);
+    const atk = derivedStats(p).atk * (S.auraPercent(lv) / 100);
+    for (const m of [...this.monsters.values()]) {
+      if (!m.hostile || tileDistance(m.tile, p.tile) > radius) continue;
+      this.hurtMonster(m, F.damage({ atk, def: m.def.def }, this.rng), false, 'aura');
+    }
   }
 
   /** The pet joins the fight: it bites what you're attacking, or whatever is attacking you. */
@@ -1340,6 +1362,7 @@ export class World {
     if (this.map !== mapBefore) return;
     for (const m of [...this.monsters.values()]) this.updateMonster(m, dt);
     this.updatePet(dt);
+    this.updateAura(dt);
     this.updateDrops(dt);
     this.updateRespawns();
   }
@@ -1529,10 +1552,11 @@ export class World {
     return 1 + (fx.vsElement[target.def.element] ?? 0) + (fx.vsSize[target.def.size] ?? 0);
   }
 
-  private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' = 'player'): void {
+  private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' | 'aura' = 'player'): void {
     target.hp -= amount;
     target.hostile = true;
     if (source === 'pet') this.events.emit('petAttack', { targetId: target.id, amount });
+    else if (source === 'aura') this.events.emit('auraHit', { targetId: target.id, amount });
     else this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
     if (target.hp <= 0) this.killMonster(target);
     else if (target.def.phases.length > 0) this.checkPhase(target);

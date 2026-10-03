@@ -29,6 +29,7 @@ export type SkillId =
   | 'two_hand_quicken'
   | 'riding'
   | 'two_hand_mastery'
+  | 'battle_aura'
   | 'sight_rasher'
   | 'thunderstorm'
   | 'meteor_storm'
@@ -393,6 +394,18 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     describe: (lv) => `+${TWO_HAND_MASTERY_ATK * lv} ATK and +${lv}% critical chance with a two-handed sword.`,
     short: '2H Mastery',
   },
+  battle_aura: {
+    id: 'battle_aura',
+    name: 'Battle Aura',
+    job: 'knight',
+    maxLevel: 10,
+    kind: 'passive',
+    requires: [],
+    spCost: () => 0,
+    cooldownMs: 0,
+    describe: (lv) => `A fighting spirit burns around you: every second, monsters attacking you within ${auraRadius(lv)} tile${auraRadius(lv) > 1 ? 's' : ''} take ${auraPercent(lv)}% of your ATK. It never misses.`,
+    short: 'Aura',
+  },
 
   // ---- Wizard ----
   sight_rasher: {
@@ -656,6 +669,18 @@ export const BOWLING_RADIUS = 1;
 export const QUICKEN_DELAY = 0.7;
 /** Riding multiplies step time by this. */
 export const RIDING_MOVE = 0.8;
+/** Battle Aura: share of ATK dealt each second to monsters attacking you nearby. */
+export function auraPercent(level: number): number {
+  return 15 + 5 * level;
+}
+
+/** Battle Aura reaches farther from level 6. */
+export function auraRadius(level: number): number {
+  return level >= 6 ? 2 : 1;
+}
+
+export const AURA_TICK_MS = 1000;
+
 /** ATK per level of Two-Hand Mastery, with a two-handed sword. */
 export const TWO_HAND_MASTERY_ATK = 5;
 
