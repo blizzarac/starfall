@@ -3,6 +3,7 @@ import type { World } from '../core/world';
 import type { RecipeDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
+import { itemName } from './ItemInfo';
 
 const ROW_H = 62;
 
@@ -65,7 +66,7 @@ export class CraftWindow {
     const item = w.content.items.get(r.result)!;
     const can = w.craftShortfall(r.id).length === 0;
     const level = item.equip?.minLevel && item.equip.minLevel > 1 ? `  · Lv ${item.equip.minLevel}` : '';
-    this.panel.add(this.scene.add.text(12, y + 2, `${item.name}${r.count > 1 ? ` ×${r.count}` : ''}${level}`, { ...TEXT, fontSize: '13px', fontStyle: 'bold' }));
+    this.panel.add(itemName(this.scene, w, 12, y + 2, `${item.name}${r.count > 1 ? ` ×${r.count}` : ''}${level}`, item));
     // Each material with how many you have, red when short.
     const parts = r.materials.map((m) => {
       const have = w.itemCount(m.item);

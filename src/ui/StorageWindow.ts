@@ -1,11 +1,13 @@
 import type Phaser from 'phaser';
 import { describePiece, pieceName, type GearPiece } from '../core/equipment';
+import { itemInfo } from '../core/items';
+import { itemName } from './ItemInfo';
 import { STORAGE_CAPACITY, type World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
-const ROW_H = 50;
+const ROW_H = 56;
 type Tab = 'bag' | 'storage';
 type Row = { kind: 'stack'; item: ItemDef; count: number } | { kind: 'piece'; piece: GearPiece };
 
@@ -83,14 +85,14 @@ export class StorageWindow {
   private row(row: Row, y: number, pw: number): void {
     const toStorage = this.tab === 'bag';
     if (row.kind === 'piece') {
-      this.line(pieceName(row.piece), describePiece(row.piece), y, pw);
+      this.line(pieceName(row.piece), describePiece(row.piece), y, pw, row.piece.item, row.piece);
       this.button(toStorage ? 'Store' : 'Take', pw - 76, 64, y, () =>
         this.result(toStorage ? this.world.storePiece(row.piece.uid) : this.world.takePiece(row.piece.uid), pieceName(row.piece)),
       );
       return;
     }
     const { item, count } = row;
-    this.line(`${item.name} ×${count}`, item.description ?? item.type, y, pw);
+    this.line(`${item.name} ×${count}`, itemInfo(item, this.world.content), y, pw, item);
     const move = (n: number) =>
       this.result(toStorage ? this.world.store(item.id, n) : this.world.takeOut(item.id, n), n > 1 ? `${item.name} ×${n}` : item.name);
     this.button('All', pw - 64, 52, y, () => move(count));
@@ -103,9 +105,10 @@ export class StorageWindow {
     this.refresh();
   }
 
-  private line(title: string, detail: string, y: number, pw: number): void {
-    this.panel.add(this.scene.add.text(12, y + 2, title, { ...TEXT, fontSize: '13px' }));
-    this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 136 } }));
+  /** A row's title (tap it for the item card) and a short description. */
+  private line(title: string, detail: string, y: number, pw: number, item: ItemDef, piece?: GearPiece): void {
+    this.panel.add(itemName(this.scene, this.world, 12, y + 2, title, item, piece));
+    this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 136 }, maxLines: 2 }));
   }
 
   private button(label: string, x: number, w: number, y: number, onTap: () => void): void {

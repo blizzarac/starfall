@@ -4,6 +4,8 @@ import { derivedStats, formatDeltas, previewEquip } from '../core/progression';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
+import { itemInfo } from '../core/items';
+import { itemName } from './ItemInfo';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 const ROW_H = 64;
@@ -116,7 +118,7 @@ export class InventoryWindow {
     const w = this.world;
     if (row.kind === 'piece') {
       const piece = row.piece;
-      const detail = this.line(pieceName(piece), `${describePiece(piece)} · wt ${piece.item.weight}`, y, pw);
+      const detail = this.line(pieceName(piece), `${describePiece(piece)} · wt ${piece.item.weight}`, y, pw, piece.item, piece);
       this.compare(piece, Math.max(y + 40, detail.y + detail.height + 1), pw);
       this.button('Equip', pw, y, () => {
         const err = w.equip(piece.uid);
@@ -127,8 +129,7 @@ export class InventoryWindow {
     }
     const item = row.item;
     const count = w.player.inventory.get(item.id) ?? 0;
-    const detail = item.card ? describeCard(item.card) : (item.description ?? item.type);
-    this.line(`${item.name} ×${count}`, `${detail} · wt ${item.weight}`, y, pw);
+    this.line(`${item.name} ×${count}`, `${itemInfo(item, w.content)} · wt ${item.weight}`, y, pw, item);
     if (item.type === 'consumable') {
       this.button('Use', pw, y, () => w.useItem(item.id));
       const onBar = w.player.hotbar.includes(item.id);
@@ -166,7 +167,7 @@ export class InventoryWindow {
     }
     this.page = pagedList(p, pieces, this.page, 86, 80, ROW_H, (piece, y, pw) => {
       const worn = w.wornPieces().some(([, g]) => g === piece);
-      this.line(`${pieceName(piece)}${worn ? ' (worn)' : ''}`, describePiece(piece), y, pw);
+      this.line(`${pieceName(piece)}${worn ? ' (worn)' : ''}`, describePiece(piece), y, pw, piece.item, piece);
       this.button('Insert', pw, y, () => {
         const err = w.insertCard(card.id, piece.uid);
         this.message = err ?? `${card.name} is now in ${pieceName(piece)}.`;
@@ -219,9 +220,10 @@ export class InventoryWindow {
     );
   }
 
-  private line(title: string, detail: string, y: number, pw: number): Phaser.GameObjects.Text {
-    this.panel.add(this.scene.add.text(12, y + 2, title, { ...TEXT, fontSize: '13px' }));
-    return this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 150 } }));
+  /** A row's title (tap it for the item card) and a short description beside the buttons. */
+  private line(title: string, detail: string, y: number, pw: number, item?: ItemDef, piece?: GearPiece): Phaser.GameObjects.Text {
+    this.panel.add(item ? itemName(this.scene, this.world, 12, y + 2, title, item, piece) : this.scene.add.text(12, y + 2, title, { ...TEXT, fontSize: '13px' }));
+    return this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 150 }, maxLines: 2 }));
   }
 
   private button(label: string, pw: number, y: number, onTap: () => void): void {

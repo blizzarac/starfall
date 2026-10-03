@@ -1,14 +1,16 @@
 import type Phaser from 'phaser';
 import { sellPrice } from '../core/combat/formulas';
-import { describeGear, equipBlocker, isPlain, pieceName, type GearPiece } from '../core/equipment';
+import { equipBlocker, isPlain, pieceName, type GearPiece } from '../core/equipment';
 import { formatDeltas, previewEquip } from '../core/progression';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
+import { itemInfo } from '../core/items';
+import { itemName } from './ItemInfo';
 
 type Tab = 'buy' | 'sell';
-const ROW_H = 74;
+const ROW_H = 86;
 type SellRow = { kind: 'stack'; item: ItemDef } | { kind: 'piece'; piece: GearPiece };
 
 /** Buy from an NPC's stock, or sell anything you carry at half price. */
@@ -98,7 +100,7 @@ export class ShopWindow {
   }
 
   private pieceRow(piece: GearPiece, y: number, pw: number): void {
-    this.panel.add(this.scene.add.text(12, y + 4, pieceName(piece), { ...TEXT, fontSize: '13px' }));
+    this.panel.add(itemName(this.scene, this.world, 12, y + 4, pieceName(piece), piece.item, piece));
     const warn = isPlain(piece) ? '' : ' · refined/carded!';
     this.panel.add(
       this.scene.add.text(12, y + 20, `${sellPrice(piece.item.price)} gold · wt ${piece.item.weight}${warn}`, {
@@ -107,6 +109,7 @@ export class ShopWindow {
         color: isPlain(piece) ? TONE.muted : TONE.warn,
       }),
     );
+    this.panel.add(this.scene.add.text(12, y + 40, itemInfo(piece.item, this.world.content), { ...TEXT, fontSize: '10px', color: TONE.accent, wordWrap: { width: pw - 24 }, maxLines: 3 }));
     this.panel.add(
       makeButton(this.scene, pw - 68, y + 4, 56, 34, 'Sell', () => {
         const err = this.world.sellPiece(piece.uid);
@@ -120,14 +123,15 @@ export class ShopWindow {
     const w = this.world;
     const have = w.itemCount(item.id);
     const price = this.tab === 'buy' ? item.price : sellPrice(item.price);
-    this.panel.add(this.scene.add.text(12, y + 4, item.name, { ...TEXT, fontSize: '13px' }));
+    this.panel.add(itemName(this.scene, w, 12, y + 4, item.name, item));
     this.panel.add(
       this.scene.add.text(12, y + 20, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: TONE.muted }),
     );
+    // What it is and does, for every kind of item; tap the name for the full card.
+    const desc = this.panel.add(
+      this.scene.add.text(12, y + 40, itemInfo(item, w.content), { ...TEXT, fontSize: '10px', color: TONE.accent, wordWrap: { width: pw - 24 }, maxLines: item.equip ? 2 : 3 }),
+    );
     if (item.equip) {
-      const desc = this.panel.add(
-        this.scene.add.text(12, y + 38, describeGear(item.equip), { ...TEXT, fontSize: '10px', color: TONE.accent, wordWrap: { width: pw - 24 } }),
-      );
       if (this.tab === 'buy') {
         const blocker = equipBlocker(w.player, item);
         const deltas = blocker ? [] : previewEquip(w.player, w.newPiece(item));
