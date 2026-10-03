@@ -54,7 +54,7 @@ tests/         Vitest suites
 
 Scenes send intents to `World` (`moveTo`, `attack`, `pickUp`, `useItem`, ...) and draw from its state and events. Content is validated against the zod schemas on load, and `tests/content.test.ts` runs the same check in CI.
 
-**Jobs.** Everyone starts as a Novice. At job level 10, with Basic Training at level 9, Captain Harlan in Brightmoor runs the Swordsman trial (bring 10 Jelly Drops). Swordsmen learn Sword Mastery, Increase HP Recovery, Bash, Magnum Break and Endure. Jobs and skill rules live in `src/core/jobs.ts` and `src/core/skills.ts`.
+**Jobs.** Everyone starts as a Novice. At job level 10, with Basic Training at level 9, Captain Harlan in Brightmoor runs the Swordsman trial (bring 10 Jelly Drops). Swordsmen learn Sword Mastery, Increase HP Recovery, Bash, Magnum Break and Endure. Or join the Circle of Mages (Magister Ilse, bring 5 Beetle Shells): Fire, Cold and Lightning Bolt, Soul Strike and Increase SP Recovery. Spells cast from 9 tiles away, show a cast bar, are cut short if you take damage, and cast faster with more DEX. Jobs and skill rules live in `src/core/jobs.ts` and `src/core/skills.ts`.
 
 **Gear.** Eight slots (weapon, shield, head, body, cloak, shoes, two accessories). Greta the blacksmith in Brightmoor sells the basics; rarer pieces drop from monsters (Beetle Buckler, Moss Cap, Clover Charm, Tusk Blade). Equip from *Items → Bag*, see what you wear in *Items → Gear*. Gear is plain item data (`equip` block in `src/data/items.json`): ATK, DEF, stat bonuses, job and level limits.
 

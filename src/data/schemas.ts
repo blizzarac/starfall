@@ -21,6 +21,8 @@ export const EquipSchema = z
   .object({
     slot: z.enum(['weapon', 'shield', 'head', 'body', 'cloak', 'shoes', 'accessory']),
     atk: z.number().int().nonnegative().default(0),
+    /** Magic attack, for staves. */
+    matk: z.number().int().nonnegative().default(0),
     def: z.number().int().nonnegative().default(0),
     weaponType: z.enum(['dagger', 'sword', 'bow', 'staff']).optional(),
     twoHanded: z.boolean().default(false),

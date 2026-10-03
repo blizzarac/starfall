@@ -18,6 +18,12 @@ interface MonsterView {
 }
 
 const DROP_TINT: Record<string, number> = { etc: 0xc9d4e6, consumable: 0xff7a7a, card: 0xffd84a, equipment: 0x9be38f };
+const BOLT_COLORS: Record<string, number> = {
+  fire_bolt: 0xff7a3a,
+  cold_bolt: 0x7fd3ff,
+  lightning_bolt: 0xfff27a,
+  soul_strike: 0xd9b8ff,
+};
 /** Feet position (origin Y) of each monster texture. */
 const MONSTER_LOOKS: Record<MonsterDef['look']['shape'], { feet: number }> = {
   blob: { feet: 38 / 40 },
@@ -44,6 +50,7 @@ export class WorldScene extends Phaser.Scene {
   private npcViews = new Map<string, Phaser.GameObjects.Container>();
   private hover!: Phaser.GameObjects.Image;
   private debugGfx!: Phaser.GameObjects.Graphics;
+  private castBar!: Phaser.GameObjects.Graphics;
   private holdTimer = 0;
   /** True while a press that started on the map (not on a HUD button) is held. */
   private pressOnMap = false;
@@ -74,7 +81,8 @@ export class WorldScene extends Phaser.Scene {
     this.debugGfx = this.add.graphics().setDepth(5000);
 
     this.playerBody = this.add.image(0, 0, this.playerTexture()).setOrigin(0.5, CHIBI_FEET_Y / CHIBI_H);
-    this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody]);
+    this.castBar = this.add.graphics();
+    this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar]);
 
     const cam = this.cameras.main;
     const { width, height } = this.world.map;
@@ -213,6 +221,12 @@ export class WorldScene extends Phaser.Scene {
 
   private syncPlayer(): void {
     const p = this.world.player;
+    this.castBar.clear();
+    if (p.casting) {
+      const frac = 1 - Math.max(0, p.casting.remainingMs) / p.casting.totalMs;
+      this.castBar.fillStyle(0x141a24, 0.85).fillRoundedRect(-22, 8, 44, 7, 3);
+      this.castBar.fillStyle(0x9be3ff).fillRoundedRect(-21, 9, Math.max(2, 42 * frac), 5, 2);
+    }
     const pos = renderPosition(p, this.alpha);
     const w = tileToWorld(pos.x, pos.y);
     let ox = 0;
@@ -448,7 +462,8 @@ export class WorldScene extends Phaser.Scene {
         this.floatText('player', 'JOB CHANGE!', '#ffe27a', 20, 1600);
         this.cameras.main.flash(300, 255, 240, 180);
       }),
-      ev.on('skillUsed', (e) => this.skillEffect(e.skillId)),
+      ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets)),
+      ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('levelUp', (e) => {
         this.floatText('player', e.kind === 'base' ? 'LEVEL UP!' : 'JOB LEVEL UP!', '#ffe27a', 20, 1400);
         this.cameras.main.flash(200, 255, 240, 180);
@@ -457,7 +472,27 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
   }
 
-  private skillEffect(skillId: string): void {
+  /** A streak from the caster to the target for each bolt. */
+  private boltEffect(targets: number[], color: number): void {
+    const view = targets[0] !== undefined ? this.monsterViews.get(targets[0]) : undefined;
+    if (!view) return;
+    const from = { x: this.player.x, y: this.player.y - 40 };
+    const to = { x: view.root.x, y: view.root.y - 18 };
+    const orb = this.add.circle(from.x, from.y, 7, color, 0.95).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: orb,
+      x: to.x,
+      y: to.y,
+      duration: 180,
+      onComplete: () => {
+        const burst = this.add.circle(to.x, to.y, 10, color, 0.7).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: burst, scale: 2.4, alpha: 0, duration: 260, onComplete: () => burst.destroy() });
+        orb.destroy();
+      },
+    });
+  }
+
+  private skillEffect(skillId: string, targets: number[]): void {
     const at = { x: this.player.x, y: this.player.y };
     if (skillId === 'bash') {
       this.floatText('player', 'Bash!', '#ffb15a', 15, 600);
@@ -468,6 +503,8 @@ export class WorldScene extends Phaser.Scene {
       // Radius 2 tiles: 5 tiles across in iso space.
       this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * 5) / 40, scaleY: (TILE_H * 5) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
       this.cameras.main.shake(150, 0.006);
+    } else if (skillId in BOLT_COLORS) {
+      this.boltEffect(targets, BOLT_COLORS[skillId]!);
     } else if (skillId === 'endure') {
       this.floatText('player', 'Endure', '#ffe27a', 15, 900);
       this.playerBody.setTint(0xffe9a8);

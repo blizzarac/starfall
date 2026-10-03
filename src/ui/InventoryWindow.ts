@@ -104,7 +104,7 @@ export class InventoryWindow {
   private gear(): void {
     const p = this.world.player;
     const d = derivedStats(p);
-    this.panel.add(this.scene.add.text(12, 100, `ATK ${d.atk}   DEF ${d.def}   HIT ${d.hit}   FLEE ${d.flee}`, { ...TEXT, fontSize: '12px' }));
+    this.panel.add(this.scene.add.text(12, 100, `ATK ${d.atk}  MATK ${d.matk}  DEF ${d.def}  FLEE ${d.flee}`, { ...TEXT, fontSize: '12px' }));
     const rowH = Math.max(40, Math.min(ROW_H, Math.floor((this.panel.h - 160) / EQUIP_SLOTS.length)));
     EQUIP_SLOTS.forEach((slot, i) => {
       const y = 124 + i * rowH;

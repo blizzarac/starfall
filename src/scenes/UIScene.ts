@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import * as F from '../core/combat/formulas';
 import { STAT_NAMES, type StatName } from '../core/combat/formulas';
 import { gearBonus } from '../core/equipment';
-import { jobOf } from '../core/jobs';
+import { isJobId, jobOf, JOBS } from '../core/jobs';
 import type { SimClock } from '../core/sim';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
@@ -371,8 +371,8 @@ export class UIScene extends Phaser.Scene {
     this.statSummary.setText(
       [
         `Points left: ${p.statPoints}`,
-        `ATK ${d.atk}   DEF ${d.def}   HIT ${d.hit}`,
-        `FLEE ${d.flee}   CRIT ${(d.crit * 100).toFixed(1)}%`,
+        `ATK ${d.atk}   MATK ${d.matk}   DEF ${d.def}`,
+        `HIT ${d.hit}  FLEE ${d.flee}  CRIT ${(d.crit * 100).toFixed(1)}%`,
         `ASPD ${d.aspd}  (${(1000 / d.attackDelayMs).toFixed(2)} hits/s)`,
       ].join('\n'),
     );
@@ -468,9 +468,10 @@ export class UIScene extends Phaser.Scene {
       ev.on('playerDied', (e) => this.addLog(`You fainted and lost ${e.xpLost} XP.`)),
       ev.on('playerRespawned', () => this.addLog('You wake up at the save point.')),
       ev.on('notice', (e) => this.addLog(e.text)),
+      ev.on('castInterrupted', () => this.addLog('Your cast was interrupted.')),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
       ev.on('jobChanged', (e) => {
-        this.addLog(`You are now a ${e.jobId === 'swordsman' ? 'Swordsman' : e.jobId}! Open Skills to learn new skills.`);
+        this.addLog(`You are now a ${isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId}! Open Skills to learn new skills.`);
         this.buildSkillButtons();
       }),
       ev.on('talk', (e) => {

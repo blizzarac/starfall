@@ -37,6 +37,8 @@ export interface Player extends Mover {
   buffs: Map<string, { level: number; remainingMs: number }>;
   /** Milliseconds until each skill can be used again. */
   cooldowns: Map<string, number>;
+  /** A spell being cast; taking damage or moving cancels it. */
+  casting: { skillId: string; targetId: number; remainingMs: number; totalMs: number } | null;
   baseXp: number;
   jobXp: number;
   stats: Stats;

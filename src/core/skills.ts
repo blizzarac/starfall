@@ -1,7 +1,19 @@
 import type { Player } from './entities';
+import type { Element } from './combat/formulas';
 import { jobLineage, type JobId } from './jobs';
 
-export type SkillId = 'basic_training' | 'sword_mastery' | 'hp_recovery' | 'bash' | 'magnum_break' | 'endure';
+export type SkillId =
+  | 'basic_training'
+  | 'sword_mastery'
+  | 'hp_recovery'
+  | 'bash'
+  | 'magnum_break'
+  | 'endure'
+  | 'sp_recovery'
+  | 'fire_bolt'
+  | 'cold_bolt'
+  | 'lightning_bolt'
+  | 'soul_strike';
 
 export interface SkillDef {
   id: SkillId;
@@ -17,6 +29,36 @@ export interface SkillDef {
   describe: (level: number) => string;
   /** Short label for the HUD button. */
   short: string;
+  /** How far away (tiles) an enemy skill can be used from. Defaults to melee. */
+  range?: number;
+  /** Base cast time in ms before DEX reduction; 0 or absent means instant. */
+  castMs?: (level: number) => number;
+  /** Magic attacks: always hit, use MATK, one damage number per hit. */
+  magic?: { element: Element; hits: (level: number) => number; perHit: number };
+}
+
+const SPELL_RANGE = 9;
+
+function bolt(id: SkillId, name: string, element: Element, short: string): SkillDef {
+  return {
+    id,
+    name,
+    job: 'mage',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [],
+    spCost: (lv) => 10 + 2 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `${lv} ${element} bolt${lv > 1 ? 's' : ''}, each for 100% MATK. Cast ${(boltCast(lv) / 1000).toFixed(1)} s before DEX.`,
+    short,
+    range: SPELL_RANGE,
+    castMs: boltCast,
+    magic: { element, hits: (lv) => lv, perHit: 1 },
+  };
+}
+
+function boltCast(lv: number): number {
+  return 300 + 250 * lv;
 }
 
 export const SKILLS: Record<SkillId, SkillDef> = {
@@ -91,6 +133,36 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     cooldownMs: 10_000,
     describe: (lv) => `Take ${3 * lv}% less damage for ${10 + 3 * lv} s.`,
     short: 'Endure',
+  },
+  sp_recovery: {
+    id: 'sp_recovery',
+    name: 'Increase SP Recovery',
+    job: 'mage',
+    maxLevel: 10,
+    kind: 'passive',
+    requires: [],
+    spCost: () => 0,
+    cooldownMs: 0,
+    describe: (lv) => `+${lv} SP per natural recovery tick.`,
+    short: 'SP Rec',
+  },
+  fire_bolt: bolt('fire_bolt', 'Fire Bolt', 'fire', 'Fire'),
+  cold_bolt: bolt('cold_bolt', 'Cold Bolt', 'water', 'Cold'),
+  lightning_bolt: bolt('lightning_bolt', 'Lightning Bolt', 'wind', 'Bolt'),
+  soul_strike: {
+    id: 'soul_strike',
+    name: 'Soul Strike',
+    job: 'mage',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [],
+    spCost: (lv) => 14 + 2 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `${Math.ceil(lv / 2)} ghost strike${lv > 1 ? 's' : ''}, each for 100% MATK. Almost instant.`,
+    short: 'Soul',
+    range: SPELL_RANGE,
+    castMs: () => 300,
+    magic: { element: 'ghost', hits: (lv) => Math.ceil(lv / 2), perHit: 1 },
   },
 };
 

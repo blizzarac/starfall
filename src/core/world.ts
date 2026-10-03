@@ -31,6 +31,7 @@ export interface WorldEvents extends Record<string, unknown> {
   /** The player reached an NPC; the UI opens its dialogue. */
   talk: { npc: NpcDef };
   skillUsed: { skillId: S.SkillId; targets: number[] };
+  castInterrupted: Record<string, never>;
   skillsChanged: Record<string, never>;
   equipmentChanged: Record<string, never>;
   jobChanged: { jobId: string };
@@ -109,6 +110,7 @@ export class World {
     const p = this.player;
     if (p.dead) return false;
     if (!this.setPath(p, target)) return false;
+    p.casting = null;
     p.intent = { kind: 'move' };
     p.sitting = false;
     return true;
@@ -124,6 +126,7 @@ export class World {
     p.intent = { kind: 'attack', targetId: monsterId };
     p.goal = null;
     p.sitting = false;
+    p.casting = null;
   }
 
   pickUp(dropId: number): void {
@@ -132,6 +135,7 @@ export class World {
     if (p.dead || !drop) return;
     p.intent = { kind: 'pickup', dropId };
     p.sitting = false;
+    p.casting = null;
     if (tileDistance(p.tile, drop.tile) > PICKUP_RANGE || p.next) this.setPath(p, drop.tile);
   }
 
@@ -140,6 +144,7 @@ export class World {
     const npc = this.npcs.find((n) => n.id === npcId);
     if (p.dead || !npc) return;
     p.sitting = false;
+    p.casting = null;
     if (!p.next && tileDistance(p.tile, npc) <= F.TALK_RANGE) {
       p.intent = { kind: 'none' };
       p.path = [];
@@ -156,7 +161,7 @@ export class World {
   toggleSit(): void {
     const p = this.player;
     if (p.dead) return;
-    if (!p.sitting && (p.next || p.path.length > 0)) return;
+    if (!p.sitting && (p.next || p.path.length > 0 || p.casting)) return;
     p.sitting = !p.sitting;
     p.intent = { kind: 'none' };
   }
@@ -208,6 +213,7 @@ export class World {
     if ((p.cooldowns.get(id) ?? 0) > 0) return notice(`${skill.name} isn't ready yet.`);
     if (p.sp < skill.spCost(lv)) return notice('Not enough SP.');
     p.sitting = false;
+    p.casting = null;
     if (skill.kind === 'enemy') {
       const target = this.skillTarget();
       if (!target) return notice('No monster nearby.');
@@ -227,7 +233,7 @@ export class World {
     let bestScore = Infinity;
     for (const m of this.monsters.values()) {
       const d = tileDistance(p.tile, m.tile);
-      if (d > SKILL_AUTO_TARGET_RANGE) continue;
+      if (d > Math.max(SKILL_AUTO_TARGET_RANGE, 9)) continue;
       const score = d - (m.hostile ? 100 : 0);
       if (score < bestScore) {
         best = m;
@@ -244,7 +250,16 @@ export class World {
     p.sp -= skill.spCost(lv);
     if (skill.cooldownMs > 0) p.cooldowns.set(id, skill.cooldownMs);
     const hit: number[] = [];
-    if (id === 'bash' && target) {
+    if (skill.magic && target) {
+      hit.push(target.id);
+      this.events.emit('skillUsed', { skillId: id, targets: hit });
+      const d = derivedStats(p);
+      const elem = F.elementModifier(skill.magic.element, target.def.element);
+      for (let i = 0; i < skill.magic.hits(lv) && this.monsters.has(target.id); i++) {
+        target.hostile = true;
+        this.hurtMonster(target, F.magicDamage(d.matk, skill.magic.perHit, elem, target.def.def, this.rng), false);
+      }
+    } else if (id === 'bash' && target) {
       hit.push(target.id);
       this.events.emit('skillUsed', { skillId: id, targets: hit });
       this.playerHit(target, { modifier: S.bashModifier(lv), hitBonus: S.bashHitBonus(lv), element: 'neutral' });
@@ -441,6 +456,7 @@ export class World {
     Object.assign(p, createMover(tile, p.moveMs));
     p.intent = { kind: 'none' };
     p.sitting = false;
+    p.casting = null;
     for (const m of this.monsters.values()) m.hostile = false;
   }
 
@@ -486,15 +502,26 @@ export class World {
       if (!target) {
         p.intent = { kind: 'none' };
         p.path = [];
-      } else if (this.approach(p, target, dt)) {
+      } else if (intent.kind === 'skill' && p.casting) {
+        // Once a cast starts the target may walk away; the spell still lands, as in the original.
+        p.casting.remainingMs -= dt;
+        if (p.casting.remainingMs <= 0) {
+          p.casting = null;
+          this.finishSkill(intent.skillId, target);
+        }
+      } else if (this.approach(p, target, dt, intent.kind === 'skill' ? this.skillRange(intent.skillId) : PLAYER_ATTACK_RANGE)) {
         if (intent.kind === 'skill' && S.isSkillId(intent.skillId)) {
-          // Re-check SP: it may have dropped while walking over.
           const skill = S.SKILLS[intent.skillId];
-          if (p.sp >= skill.spCost(S.skillLevel(p, intent.skillId))) this.castSkill(intent.skillId, target);
-          else this.events.emit('notice', { text: 'Not enough SP.' });
-          // Keep fighting the same monster with normal attacks afterwards.
-          if (this.monsters.has(target.id)) p.intent = { kind: 'attack', targetId: target.id };
-          else p.intent = { kind: 'none' };
+          const lv = S.skillLevel(p, intent.skillId);
+          const cast = skill.castMs ? F.castTimeMs(skill.castMs(lv), effectiveStats(p).dex) : 0;
+          if (p.sp < skill.spCost(lv)) {
+            this.events.emit('notice', { text: 'Not enough SP.' });
+            p.intent = { kind: 'none' };
+          } else if (cast > 0) {
+            p.casting = { skillId: intent.skillId, targetId: target.id, remainingMs: cast, totalMs: cast };
+          } else {
+            this.finishSkill(intent.skillId, target);
+          }
         } else if (p.attackCooldown === 0) {
           this.playerAttack(target);
         }
@@ -536,9 +563,25 @@ export class World {
     this.regenerate(p, dt);
   }
 
-  /** Walks toward a monster until in melee range. True once standing in range. */
-  private approach(p: Player, target: Monster, dt: number): boolean {
-    const inRange = () => tileDistance(p.tile, target.tile) <= PLAYER_ATTACK_RANGE;
+  private skillRange(id: string): number {
+    return S.isSkillId(id) ? (S.SKILLS[id].range ?? PLAYER_ATTACK_RANGE) : PLAYER_ATTACK_RANGE;
+  }
+
+  /** Fires a targeted skill whose cast (if any) has finished, then picks what to do next. */
+  private finishSkill(id: string, target: Monster): void {
+    const p = this.player;
+    if (!S.isSkillId(id)) return;
+    const skill = S.SKILLS[id];
+    // Re-check SP: it may have dropped while walking over or casting.
+    if (p.sp >= skill.spCost(S.skillLevel(p, id))) this.castSkill(id, target);
+    else this.events.emit('notice', { text: 'Not enough SP.' });
+    // Melee skills keep fighting with normal attacks; casters stay put for the next spell.
+    p.intent = this.monsters.has(target.id) && !skill.magic ? { kind: 'attack', targetId: target.id } : { kind: 'none' };
+  }
+
+  /** Walks toward a monster until within `range` tiles. True once standing in range. */
+  private approach(p: Player, target: Monster, dt: number, range = PLAYER_ATTACK_RANGE): boolean {
+    const inRange = () => tileDistance(p.tile, target.tile) <= range;
     if (!p.next && inRange()) {
       p.path = [];
       return true;
@@ -580,7 +623,7 @@ export class World {
     p.spRegenTimer += dt;
     if (p.spRegenTimer >= F.spRegenIntervalMs(p.sitting)) {
       p.spRegenTimer = 0;
-      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int));
+      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int) + S.skillLevel(p, 'sp_recovery'));
     }
   }
 
@@ -738,6 +781,11 @@ export class World {
     p.hp -= amount;
     p.sitting = false;
     this.events.emit('damage', { sourceId: m.id, targetId: 'player', amount, crit: false });
+    if (p.casting) {
+      p.casting = null;
+      p.intent = { kind: 'none' };
+      this.events.emit('castInterrupted', {});
+    }
     if (p.hp <= 0) this.killPlayer();
   }
 
@@ -750,6 +798,7 @@ export class World {
     p.path = [];
     p.next = null;
     p.sitting = false;
+    p.casting = null;
     p.buffs.clear();
     this.session.deaths += 1;
     const xpLost = applyDeathPenalty(p);

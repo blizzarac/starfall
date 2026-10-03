@@ -57,6 +57,7 @@ export function slotFor(p: Pick<Player, 'equipment'>, e: EquipDef): EquipSlot {
 export function describeGear(e: EquipDef): string {
   const parts: string[] = [];
   if (e.weaponType) parts.push(`${e.weaponType}${e.twoHanded ? ' (two-handed)' : ''}, ATK ${e.atk}`);
+  if (e.matk) parts.push(`MATK ${e.matk}`);
   if (e.def) parts.push(`DEF ${e.def}`);
   for (const [k, v] of Object.entries(e.bonus)) if (v) parts.push(`${k.toUpperCase()} ${v > 0 ? '+' : ''}${v}`);
   if (e.minLevel > 1) parts.push(`Lv ${e.minLevel}+`);

@@ -127,7 +127,7 @@
         ]
       },
       "stronger": {
-        "text": "Every level gives stat points: open Stats to spend them. Sell your loot to the Tool Dealer and carry less, or you'll stop healing when your bag gets heavy.",
+        "text": "Every level gives stat points: open Stats to spend them. At job level 10 you can join the Swordsman Guild (Captain Harlan) or the Circle of Mages (Magister Ilse). Sell loot to Bram so your bag never gets too heavy.",
         "choices": [
           {
             "label": "Anything else?",
@@ -285,6 +285,116 @@
                 "shop": "blacksmith"
               }
             ]
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "mage_guild",
+    "nodes": {
+      "start": {
+        "text": "The Circle of Mages. Magic is patience, {name}, and a good deal of standing still.",
+        "choices": [
+          {
+            "label": "I want to become a Mage",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
+          },
+          {
+            "label": "What does a Mage do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              },
+              "hasItem": {
+                "id": "beetle_shell",
+                "count": 5
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 10,
+              "skillMin": {
+                "id": "basic_training",
+                "level": 9
+              }
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial: bring me 5 Beetle Shells from Thornfield, east of the Southern Meadow. Their shells focus mana. Mind the beetles: they bite first.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Five shells, still warm. Hand them over and take the Circle's vow?",
+        "choices": [
+          {
+            "label": "I vow it",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "beetle_shell",
+                "count": 5
+              },
+              {
+                "type": "changeJob",
+                "job": "mage"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome to the Circle, Mage {name}! Learn a bolt in Skills. Casting takes time and a hit will break your focus, so strike from afar. Greta sells staves."
+      },
+      "about": {
+        "text": "Mages hurl Fire, Cold and Lightning Bolts from nine tiles away and pick the element a monster is weak to. Soul Strike hits anything. Raise INT for power and DEX to cast faster.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "novice"
+            }
           },
           {
             "label": "Thanks"

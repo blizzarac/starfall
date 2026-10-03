@@ -82,6 +82,24 @@ export function flee(level: number, agi: number): number {
   return level + agi;
 }
 
+/** Magic attack from INT, before weapon MATK. */
+export function statusMatk(int: number): number {
+  const bonus = Math.floor(int / 7);
+  return int + bonus * bonus;
+}
+
+/** DEX shortens casting; 150 DEX means instant casts. */
+export function castTimeMs(baseMs: number, dex: number): number {
+  return Math.round(baseMs * Math.max(0, 1 - dex / 150));
+}
+
+/** Magic always hits; monster DEF counts half against it. */
+export function magicDamage(matk: number, perHit: number, elementMod: number, def: number, rng: Rng): number {
+  if (elementMod === 0) return 0;
+  const raw = matk * perHit * elementMod * (0.9 + rng() * 0.2);
+  return Math.max(1, Math.floor(raw - def / 2));
+}
+
 /** Soft defense from VIT, subtracted after multipliers. */
 export function softDef(vit: number): number {
   return Math.floor(vit / 2);

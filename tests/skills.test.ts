@@ -186,3 +186,61 @@ describe('saving jobs and skills', () => {
     expect(w.skillLevel('basic_training')).toBe(9);
   });
 });
+
+describe('Mage', () => {
+  function mage(): World {
+    const w = readyNovice();
+    w.addItem('beetle_shell', 5);
+    const npc = town.npcs.find((n) => n.dialogue === 'mage_guild')!;
+    const d = new DialogueRunner(w, content.dialogues.get('mage_guild')!, npc);
+    d.choose(0);
+    d.choose(0); // I vow it
+    expect(w.player.jobId).toBe('mage');
+    w.player.skillPoints = 30;
+    return w;
+  }
+
+  it('joins through the Circle trial and gets lots of SP', () => {
+    const w = mage();
+    expect(w.player.inventory.has('beetle_shell')).toBe(false);
+    expect(derivedStats(w.player).maxSp).toBeGreaterThan(derivedStats(readyNovice().player).maxSp * 2 - 2);
+    expect(w.learnSkill('bash')).toMatch(/swordsman/);
+    expect(w.learnSkill('fire_bolt')).toBeNull();
+  });
+
+  it('casts a bolt from range, one damage number per bolt', () => {
+    const w = mage();
+    for (let i = 0; i < 3; i++) w.learnSkill('cold_bolt');
+    w.changeMap('meadow-2', content.maps.get('meadow-2')!.playerStart);
+    w.player.sp = 500;
+    const target = [...w.monsters.values()].find((m) => m.def.id === 'jellop')!;
+    w.changeMap('meadow-2', { x: target.tile.x - 5 > 2 ? target.tile.x - 5 : target.tile.x + 5, y: target.tile.y });
+    w.attack(target.id);
+    w.player.intent = { kind: 'skill', skillId: 'cold_bolt', targetId: target.id };
+    const hits: number[] = [];
+    w.events.on('damage', (e) => e.sourceId === 'player' && hits.push(e.amount));
+    run(w, 20_000, () => hits.length > 0);
+    expect(hits.length).toBe(3);
+    expect(w.player.next).toBeNull();
+  });
+
+  it('DEX shortens casts and damage interrupts them', () => {
+    expect(F.castTimeMs(1000, 75)).toBe(500);
+    expect(F.castTimeMs(1000, 200)).toBe(0);
+    const w = mage();
+    for (let i = 0; i < 10; i++) w.learnSkill('fire_bolt');
+    w.changeMap('meadow-2', content.maps.get('meadow-2')!.playerStart);
+    w.player.sp = 500;
+    w.player.hp = 9999;
+    const beetle = [...w.monsters.values()].find((m) => m.def.id === 'thornbeetle')!;
+    w.changeMap('meadow-2', beetle.tile);
+    const b = [...w.monsters.values()].find((m) => m.def.id === 'thornbeetle' && Math.abs(m.tile.x - w.player.tile.x) <= 1 && Math.abs(m.tile.y - w.player.tile.y) <= 1)!;
+    b.hostile = true;
+    w.player.intent = { kind: 'skill', skillId: 'fire_bolt', targetId: b.id };
+    let interrupted = false;
+    w.events.on('castInterrupted', () => (interrupted = true));
+    run(w, 15_000, () => interrupted);
+    expect(interrupted).toBe(true);
+    expect(w.player.casting).toBeNull();
+  });
+});

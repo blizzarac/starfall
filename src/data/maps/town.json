@@ -98,6 +98,17 @@
         "body": "#5a4a3a",
         "hair": "#b8b0a8"
       }
+    },
+    {
+      "id": "mage_magister",
+      "name": "Magister Ilse",
+      "x": 22,
+      "y": 11,
+      "dialogue": "mage_guild",
+      "look": {
+        "body": "#6a4fa0",
+        "hair": "#e8e0f0"
+      }
     }
   ],
   "portals": [

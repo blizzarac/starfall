@@ -10,6 +10,7 @@ export interface DerivedStats {
   maxHp: number;
   maxSp: number;
   atk: number;
+  matk: number;
   hit: number;
   flee: number;
   def: number;
@@ -35,6 +36,7 @@ export function derivedStats(p: Player): DerivedStats {
     maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))) + gear.hp,
     maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
     atk: F.statusAtk(s) + weapon.atk + mastery,
+    matk: F.statusMatk(s.int) + (p.equipment.weapon?.equip?.matk ?? 0),
     hit: F.hit(p.baseLevel, s.dex) + gear.hit,
     flee: F.flee(p.baseLevel, s.agi) + gear.flee,
     def: F.softDef(s.vit) + gear.def,
@@ -55,6 +57,7 @@ export function createPlayer(name: string, start: Tile): Player {
     skills: new Map(),
     buffs: new Map(),
     cooldowns: new Map(),
+    casting: null,
     baseXp: 0,
     jobXp: 0,
     stats: { str: 5, agi: 5, vit: 5, int: 1, dex: 5, luk: 1 },

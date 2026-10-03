@@ -1,6 +1,6 @@
 import type { Player } from './entities';
 
-export type JobId = 'novice' | 'swordsman';
+export type JobId = 'novice' | 'swordsman' | 'mage';
 
 export interface JobDef {
   id: JobId;
@@ -14,7 +14,7 @@ export interface JobDef {
   jobXpFactor: number;
   /** Jobs this one can change into. */
   next: JobId[];
-  look: { body: number; extra?: 'sword' };
+  look: { body: number; extra?: 'sword' | 'staff' };
 }
 
 export const JOBS: Record<JobId, JobDef> = {
@@ -26,7 +26,7 @@ export const JOBS: Record<JobId, JobDef> = {
     hpFactor: 1,
     spFactor: 1,
     jobXpFactor: 1,
-    next: ['swordsman'],
+    next: ['swordsman', 'mage'],
     look: { body: 0x4f7bd9 },
   },
   swordsman: {
@@ -39,6 +39,17 @@ export const JOBS: Record<JobId, JobDef> = {
     jobXpFactor: 2.5,
     next: [],
     look: { body: 0x8a96ad, extra: 'sword' },
+  },
+  mage: {
+    id: 'mage',
+    name: 'Mage',
+    tier: 1,
+    maxJobLevel: 50,
+    hpFactor: 0.9,
+    spFactor: 2.2,
+    jobXpFactor: 2.5,
+    next: [],
+    look: { body: 0x6a4fa0, extra: 'staff' },
   },
 };
 
