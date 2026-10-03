@@ -29,6 +29,24 @@ Phaser.GameObjects.GameObjectFactory.prototype.text = function (this: Phaser.Gam
   return addText.call(this, x, y, text, { resolution: DPR, ...style });
 };
 
+// Phaser asks for the next frame only after a frame finishes, so one uncaught error would freeze
+// the game for good. Log it and carry on with the next frame instead.
+const step = Phaser.Game.prototype.step;
+const reported = new Set<string>();
+Phaser.Game.prototype.step = function (this: Phaser.Game, time, delta) {
+  try {
+    step.call(this, time, delta);
+  } catch (err) {
+    // Normally cleared at the end of rendering; left set, scene changes would queue forever.
+    (this.scene as { isProcessing: boolean }).isProcessing = false;
+    const key = String(err);
+    if (!reported.has(key)) {
+      reported.add(key);
+      console.error('Frame error (game keeps running):', err);
+    }
+  }
+};
+
 const parent = document.getElementById('game')!;
 const physicalSize = () => ({ width: Math.round(parent.clientWidth * DPR), height: Math.round(parent.clientHeight * DPR) });
 

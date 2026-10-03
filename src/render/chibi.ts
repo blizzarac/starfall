@@ -85,7 +85,7 @@ export function playerChibi(scene: Phaser.Scene, job: JobDef, a: Appearance, equ
 /**
  * An NPC's sprite sheet in its own colors. Guild masters (ids starting with a
  * job, like "knight_commander") wear that job's gear; everyone else dresses as
- * townsfolk, and harbor captains as guards.
+ * townsfolk, and harbor captains as guards. NPCs only stand, so only the front idle row is painted.
  */
 export function ensureChibi(scene: Phaser.Scene, key: string, body: number, look: ChibiLook): string {
   const id = key.replace(/^npc-/, '');
@@ -97,7 +97,7 @@ export function ensureChibi(scene: Phaser.Scene, key: string, body: number, look
     glow: style?.glow ?? 0x4fe6ff,
     gear: style?.gear ?? 'townsfolk',
     weapon: style?.weapon ?? 'none',
-  });
+  }, { facing: 'F', anim: 'idle' });
 }
 
 /** Origin Y that puts a character's feet on the tile. */

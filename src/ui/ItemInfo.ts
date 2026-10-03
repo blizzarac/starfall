@@ -57,10 +57,11 @@ class ItemInfoPanel {
 
 const panels = new WeakMap<Phaser.Scene, ItemInfoPanel>();
 
-/** Opens the detail card for an item (one shared card per scene). */
+/** Opens the detail card for an item (one shared card per scene run). */
 export function showItemInfo(scene: Phaser.Scene, world: World, item: ItemDef, piece?: GearPiece): void {
   let panel = panels.get(scene);
-  if (!panel) {
+  // Scenes are reused across sessions: a card from an earlier run was destroyed with it.
+  if (!panel || !panel.panel.root.scene) {
     panel = new ItemInfoPanel(scene, world);
     panels.set(scene, panel);
   }

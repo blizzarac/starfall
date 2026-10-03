@@ -60,16 +60,19 @@ export const frameName = (facing: Facing, anim: Anim, i: number) => `${facing}-$
 export const animKey = (key: string, facing: Facing, anim: Anim) => `${key}:${facing}-${anim}`;
 
 /** Paints the sheet for `look` into texture `key` and registers its animations (once). */
-export function ensureKnight(scene: Phaser.Scene, key: string, look: KnightLook): string {
+export function ensureKnight(scene: Phaser.Scene, key: string, look: KnightLook, only?: { facing: Facing; anim: Anim }): string {
   if (scene.textures.exists(key)) return key;
+  // Painting is slow on phones: characters that only ever stand still get just that row.
+  const wanted = (facing: Facing, anim: Anim) => !only || (only.facing === facing && only.anim === anim);
   const canvas = document.createElement('canvas');
   canvas.width = KNIGHT_W * COLS;
-  canvas.height = KNIGHT_H * ANIMS.length * FACINGS.length;
+  canvas.height = KNIGHT_H * (only ? 1 : ANIMS.length * FACINGS.length);
   const ctx = canvas.getContext('2d')!;
   const frames: Array<{ name: string; x: number; y: number }> = [];
   FACINGS.forEach((facing, fi) => {
     ANIMS.forEach((a, ai) => {
-      const row = fi * ANIMS.length + ai;
+      const row = only ? 0 : fi * ANIMS.length + ai;
+      if (!wanted(facing, a.name)) return;
       for (let i = 0; i < a.frames; i++) {
         const pix = paintFrame(look, facing, a.name, i);
         pix.blit(ctx, i * KNIGHT_W, row * KNIGHT_H);
@@ -82,6 +85,7 @@ export function ensureKnight(scene: Phaser.Scene, key: string, look: KnightLook)
   for (const f of frames) tex.add(f.name, 0, f.x, f.y, KNIGHT_W, KNIGHT_H);
   for (const facing of FACINGS) {
     for (const a of ANIMS) {
+      if (!wanted(facing, a.name)) continue;
       const k = animKey(key, facing, a.name);
       if (scene.anims.exists(k)) scene.anims.remove(k);
       scene.anims.create({
