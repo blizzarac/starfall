@@ -123,3 +123,16 @@ export function starburst(g: Phaser.GameObjects.Graphics, radius: number, points
   g.lineStyle(3, 0x16131c).strokePoints(pts as Phaser.Math.Vector2[], true);
   return g;
 }
+
+/** Radius of the pre-drawn starburst texture ('burst'). */
+export const BURST_RADIUS = 48;
+
+/** Draws the comic starburst once at boot; effects scale the image instead of redrawing polygons. */
+export function makeBurstTexture(scene: Phaser.Scene): void {
+  const g = scene.make.graphics({}, false);
+  const size = BURST_RADIUS * 2 + 8;
+  g.translateCanvas(size / 2, size / 2);
+  starburst(g, BURST_RADIUS, 12, 0xffffff);
+  g.generateTexture('burst', size, size);
+  g.destroy();
+}

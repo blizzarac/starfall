@@ -22,6 +22,7 @@ import { WorldMapWindow } from '../ui/WorldMapWindow';
 import { nextGoal } from '../core/goals';
 import { audio } from '../audio/engine';
 import type { SaveDb } from '../save/db';
+import { quality, setQuality } from '../render/quality';
 import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
@@ -570,6 +571,7 @@ export class UIScene extends Phaser.Scene {
       ['Save now', () => void this.saves().save().then(() => this.addLog('Game saved.'))],
       [() => `Music: ${volumeLabel(audio.current.music)}`, () => updateAudioSettings(db, { music: nextVolume(audio.current.music), muted: false })],
       [() => `Sounds: ${volumeLabel(audio.current.sfx)}`, () => updateAudioSettings(db, { sfx: nextVolume(audio.current.sfx), muted: false })],
+      [() => `Effects: ${quality.low ? 'Low (30 fps)' : 'Full'}`, () => setQuality(db, this.game, !quality.low)],
       ['Export save file', () => this.exportSave()],
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
       ['Pet', () => (this.toggleMenu(), this.petWindow.open())],

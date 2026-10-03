@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Terrain } from '../core/grid';
 import type { World } from '../core/world';
 import { COLORS } from '../render/palette';
+import { quality } from '../render/quality';
 
 /** Width (px) of the map diamond inside the frame. */
 const SIZE = 110;
@@ -98,7 +99,7 @@ export class Minimap {
 
   update(delta: number): void {
     this.sinceDraw += delta;
-    if (this.sinceDraw < REFRESH_MS) return;
+    if (this.sinceDraw < (quality.low ? REFRESH_MS * 3 : REFRESH_MS)) return;
     this.sinceDraw = 0;
     const g = this.dots.clear();
     const w = this.world;

@@ -9,8 +9,9 @@ import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
 import { chibiOrigin, ensureChibi, hexColor } from '../render/chibi';
-import { feetOrigin, speedLines, starburst } from '../render/ink';
+import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
+import { quality } from '../render/quality';
 import { depthFor, TILE_H, TILE_W, tileToWorld, worldToTile } from '../render/iso';
 
 interface MonsterView {
@@ -18,6 +19,8 @@ interface MonsterView {
   body: Phaser.GameObjects.Image;
   hpBar: Phaser.GameObjects.Graphics;
   lastX: number;
+  /** HP the bar was last drawn for; it's only redrawn when this changes. */
+  lastHp: number;
 }
 
 const DROP_TINT: Record<string, number> = { etc: 0xc9d4e6, consumable: 0xff7a7a, card: 0xffd84a, equipment: 0x9be38f };
@@ -96,6 +99,10 @@ export class WorldScene extends Phaser.Scene {
   private debugGfx!: Phaser.GameObjects.Graphics;
   private castBar!: Phaser.GameObjects.Graphics;
   private statusLabel!: Phaser.GameObjects.Text;
+  private textPool: Phaser.GameObjects.Text[] = [];
+  /** Trees, rocks, houses and their shadows, hidden while off screen. */
+  private decor: Phaser.GameObjects.Image[] = [];
+  private cullTimer = 0;
   private holdTimer = 0;
   /** True while a press that started on the map (not on a HUD button) is held. */
   private pressOnMap = false;
@@ -113,13 +120,17 @@ export class WorldScene extends Phaser.Scene {
     this.monsterViews.clear();
     this.dropViews.clear();
     this.trees = [];
+    this.textPool = [];
+    this.decor = [];
     this.npcViews.clear();
     this.registry.set('clock', this.clock);
 
     const map = this.world.map;
     this.cameras.main.setBackgroundColor(map.kind === 'dungeon' ? '#16131c' : map.grass?.[0] === SAND_GROUND ? '#c9a35a' : '#3e7a45');
     this.drawGround();
+    const before = this.children.list.length;
     this.placeObstacles();
+    this.decor = this.children.list.slice(before) as Phaser.GameObjects.Image[];
     this.placePortals();
     this.placeNpcs();
 
@@ -152,6 +163,7 @@ export class WorldScene extends Phaser.Scene {
     this.alpha = this.clock.advance(delta);
     (this.registry.get('saves') as SaveManager).update(delta);
     this.syncPlayer();
+    this.cullDecor(delta);
     this.fadeOccluders();
     this.syncMonsters();
     this.syncDrops();
@@ -168,6 +180,8 @@ export class WorldScene extends Phaser.Scene {
     const ox = height * (TILE_W / 2);
     const oy = TILE_H / 2;
     const key = `ground-${this.world.map.id}`;
+    // Each ground image is several megabytes; keep only the current map's.
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('ground-') && k !== key) this.textures.remove(k);
     if (this.textures.exists(key)) {
       this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
       return;
@@ -374,6 +388,16 @@ export class WorldScene extends Phaser.Scene {
     this.playerBody.setAngle(p.dead ? 90 : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
   }
 
+  /** Hides scenery that's off screen, so the renderer skips it. Checked a few times a second. */
+  private cullDecor(delta: number): void {
+    this.cullTimer -= delta;
+    if (this.cullTimer > 0) return;
+    this.cullTimer = 200;
+    const v = this.cameras.main.worldView;
+    const m = 160;
+    for (const img of this.decor) img.setVisible(img.x > v.x - m && img.x < v.right + m && img.y > v.y - m && img.y < v.bottom + m + 120);
+  }
+
   /** Trees just in front of the player turn see-through so the player never vanishes behind one. */
   private fadeOccluders(): void {
     const p = this.world.player.next ?? this.world.player.tile;
@@ -409,6 +433,8 @@ export class WorldScene extends Phaser.Scene {
       const s = m.def.look.scale;
       view.body.setScale(s * (1 + squash), s * (1 - squash));
 
+      if (m.hp === view.lastHp) continue;
+      view.lastHp = m.hp;
       view.hpBar.clear();
       if (m.hp < m.def.hp) {
         const frac = Math.max(0, m.hp / m.def.hp);
@@ -438,7 +464,7 @@ export class WorldScene extends Phaser.Scene {
     const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.9), body, hpBar]);
     root.setAlpha(0);
     this.tweens.add({ targets: root, alpha: 1, duration: 400 });
-    const view = { root, body, hpBar, lastX: 0 };
+    const view = { root, body, hpBar, lastX: 0, lastHp: m.def.hp };
     this.monsterViews.set(m.id, view);
     return view;
   }
@@ -647,14 +673,14 @@ export class WorldScene extends Phaser.Scene {
       ev.on('jobChanged', () => {
         this.playerBody.setTexture(this.playerTexture());
         this.soundEffect('player', 'JOB CHANGE!!', '#ffe27a', true);
-        speedLines(this, this.player.x, this.player.y - 30, { inner: 50, outer: 220, count: 40 });
-        this.cameras.main.flash(300, 255, 240, 180);
+        this.lines(this.player.x, this.player.y - 30, { inner: 50, outer: 220, count: 40 });
+        this.camFx('flash', 300, 255, 240, 180);
       }),
       ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets, e.at)),
       ev.on('petTamed', () => {
         // The pet view appears on the next frame; celebrate from the player.
         this.soundEffect('player', 'TAMED!!', '#ff8fb8', true);
-        speedLines(this, this.player.x, this.player.y - 30, { inner: 40, outer: 180, count: 30, color: 0xff5a8a });
+        this.lines(this.player.x, this.player.y - 30, { inner: 40, outer: 180, count: 30, color: 0xff5a8a });
         this.time.delayedCall(50, () => this.hearts(5));
       }),
       ev.on('tameFailed', () => this.floatText('player', 'It got away…', '#ffb8d8', 15, 1000)),
@@ -664,20 +690,20 @@ export class WorldScene extends Phaser.Scene {
         const at = tileToWorld(e.tile.x, e.tile.y);
         const burst = this.add.ellipse(at.x, at.y, TILE_W * (e.radius * 2 + 1), TILE_H * (e.radius * 2 + 1), 0xffb15a, 0.5).setDepth(3);
         this.tweens.add({ targets: burst, alpha: 0, scale: 1.15, duration: 350, onComplete: () => burst.destroy() });
-        this.cameras.main.shake(220, 0.01);
+        this.camFx('shake', 220, 0.01);
         this.soundEffect(e.monsterId, pick(SFX.slam), '#ff9a4a', true);
-        speedLines(this, at.x, at.y, { inner: 60, outer: 200, count: 34 });
+        this.lines(at.x, at.y, { inner: 60, outer: 200, count: 34 });
       }),
       ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('refined', (e) => {
         this.floatText('player', e.success ? `+${e.level}!` : 'Shattered…', e.success ? '#ffe27a' : '#ff6b6b', 18, 1200);
-        if (e.success && e.level >= 5) this.cameras.main.flash(250, 255, 240, 180);
-        if (!e.success) this.cameras.main.shake(200, 0.008);
+        if (e.success && e.level >= 5) this.camFx('flash', 250, 255, 240, 180);
+        if (!e.success) this.camFx('shake', 200, 0.008);
       }),
       ev.on('levelUp', (e) => {
         this.soundEffect('player', e.kind === 'base' ? 'LEVEL UP!!' : 'JOB UP!!', '#ffe27a', true);
-        speedLines(this, this.player.x, this.player.y - 30, { inner: 45, outer: 200, count: 36 });
-        this.cameras.main.flash(200, 255, 240, 180);
+        this.lines(this.player.x, this.player.y - 30, { inner: 45, outer: 200, count: 36 });
+        this.camFx('flash', 200, 255, 240, 180);
       }),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
@@ -719,15 +745,15 @@ export class WorldScene extends Phaser.Scene {
     const target = targets[0];
     if (skillId === 'bash') {
       if (target !== undefined) this.soundEffect(target, pick(SFX.hit), '#ffb15a', true);
-      this.cameras.main.shake(90, 0.004);
+      this.camFx('shake', 90, 0.004);
     } else if (skillId === 'magnum_break') {
       const ring = this.add.ellipse(at.x, at.y, 40, 20).setStrokeStyle(6, 0xff7a3a, 0.9).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
       const glow = this.add.ellipse(at.x, at.y, 40, 20, 0xffb15a, 0.35).setDepth(3999).setBlendMode(Phaser.BlendModes.ADD);
       // Radius 2 tiles: 5 tiles across in iso space.
       this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * 5) / 40, scaleY: (TILE_H * 5) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
-      this.cameras.main.shake(150, 0.006);
+      this.camFx('shake', 150, 0.006);
       this.soundEffect('player', pick(SFX.magnum_break), '#ff7a3a', true);
-      speedLines(this, at.x, at.y - 20, { inner: 50, outer: 190 });
+      this.lines(at.x, at.y - 20, { inner: 50, outer: 190 });
     } else if (skillId in BOLT_COLORS) {
       this.boltEffect(targets, BOLT_COLORS[skillId]!);
       const sfx = SFX[skillId as keyof typeof SFX];
@@ -747,33 +773,33 @@ export class WorldScene extends Phaser.Scene {
       this.soundEffect('player', 'HEAL!', '#7dff9a');
     } else if (skillId === 'pierce') {
       if (target !== undefined) this.soundEffect(target, 'PIERCE!', '#9fd8ff', true);
-      this.cameras.main.shake(90, 0.004);
+      this.camFx('shake', 90, 0.004);
     } else if (skillId === 'bowling_bash') {
       this.ring(center, 0xffd84a, 3);
       this.soundEffect(target ?? 'player', 'KRASH!!', '#ffd84a', true);
-      speedLines(this, center.x, center.y - 20, { inner: 40, outer: 160 });
-      this.cameras.main.shake(160, 0.007);
+      this.lines(center.x, center.y - 20, { inner: 40, outer: 160 });
+      this.camFx('shake', 160, 0.007);
     } else if (skillId === 'sight_rasher') {
       this.ring(at, 0xff7a3a, 5);
       this.soundEffect('player', 'FWOOM!', '#ff7a3a', true);
-      this.cameras.main.shake(120, 0.005);
+      this.camFx('shake', 120, 0.005);
     } else if (skillId === 'thunderstorm') {
       for (const id of targets) this.lightning(id);
       this.soundEffect(target ?? 'player', 'KRAKOOM!', '#fff27a', true);
-      this.cameras.main.flash(120, 255, 250, 200);
+      this.camFx('flash', 120, 255, 250, 200);
     } else if (skillId === 'meteor_storm') {
       this.meteors(center);
       this.time.delayedCall(260, () => {
         this.ring(center, 0xff7a3a, 5);
         this.soundEffect(target ?? 'player', 'DOOOM!!', '#ff7a3a', true);
-        this.cameras.main.shake(260, 0.012);
+        this.camFx('shake', 260, 0.012);
       });
     } else if (skillId === 'blitz_beat') {
       if (target !== undefined) this.falcon(target);
     } else if (skillId === 'claymore_trap') {
       this.ring(center, 0xff9a4a, 3);
       this.soundEffect(target ?? 'player', 'BOOM!', '#ff9a4a', true);
-      this.cameras.main.shake(140, 0.006);
+      this.camFx('shake', 140, 0.006);
     } else if (skillId === 'magnus_exorcismus') {
       this.ring(center, 0xfff6c8, 5);
       for (const id of targets) this.holyBeam(id);
@@ -784,6 +810,18 @@ export class WorldScene extends Phaser.Scene {
       this.playerBody.setTint(0xffe9a8);
       this.time.delayedCall(400, () => this.playerBody.clearTint());
     }
+  }
+
+  /** Screen shake and flash, skipped in Low effects. */
+  private camFx(kind: 'shake' | 'flash', ms: number, ...args: number[]): void {
+    if (quality.low) return;
+    if (kind === 'shake') this.cameras.main.shake(ms, args[0]);
+    else this.cameras.main.flash(ms, args[0], args[1], args[2]);
+  }
+
+  /** Manga speed lines, skipped in Low effects. */
+  private lines(x: number, y: number, opts: Parameters<typeof speedLines>[3] = {}): void {
+    if (!quality.low) speedLines(this, x, y, opts);
   }
 
   /** A flat ring bursting outward on the ground; `tiles` across. */
@@ -812,7 +850,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Flaming rocks streaking down onto an area. */
   private meteors(center: { x: number; y: number }): void {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < (quality.low ? 2 : 4); i++) {
       const x = center.x + Phaser.Math.Between(-50, 50);
       const y = center.y + Phaser.Math.Between(-16, 16);
       const rock = this.add.circle(x - 120, y - 260, 11, 0xff7a3a).setStrokeStyle(3, 0x16131c).setDepth(4000);
@@ -865,7 +903,7 @@ export class WorldScene extends Phaser.Scene {
     for (const id of targets) {
       const view = this.monsterViews.get(id);
       if (!view) continue;
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < (quality.low ? 2 : 4); i++) {
         const x = view.root.x + Phaser.Math.Between(-18, 18);
         const y = view.root.y - 10 + Phaser.Math.Between(-6, 6);
         const arrow = this.add.container(x - 30, y - 140, [
@@ -884,7 +922,7 @@ export class WorldScene extends Phaser.Scene {
     if (!view) return;
     const beam = this.add.rectangle(view.root.x, view.root.y - 100, 34, 200, 0xfff6c8, 0.85).setStrokeStyle(3, 0x16131c).setDepth(4000).setScale(0.2, 1);
     this.tweens.add({ targets: beam, scaleX: 1, duration: 120, yoyo: true, hold: 120, onComplete: () => beam.destroy() });
-    speedLines(this, view.root.x, view.root.y - 30, { inner: 30, outer: 120, count: 20 });
+    this.lines(view.root.x, view.root.y - 30, { inner: 30, outer: 120, count: 20 });
     this.soundEffect(targetId, pick(SFX.holy_light), '#fff6c8', true);
   }
 
@@ -892,7 +930,7 @@ export class WorldScene extends Phaser.Scene {
   private lightPillar(color: number): void {
     const x = this.player.x;
     const y = this.player.y;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < (quality.low ? 3 : 8); i++) {
       const spark = this.add.star(x + Phaser.Math.Between(-20, 20), y - Phaser.Math.Between(0, 20), 4, 2, 6, color).setStrokeStyle(1.5, 0x16131c).setDepth(4000);
       this.tweens.add({ targets: spark, y: spark.y - 60, alpha: 0, angle: 180, delay: i * 40, duration: 600, onComplete: () => spark.destroy() });
     }
@@ -904,12 +942,23 @@ export class WorldScene extends Phaser.Scene {
     return view ? { x: view.root.x, y: view.root.y - 40 } : null;
   }
 
+  /** Pooled text objects: creating a Text allocates a canvas and a texture, so combat text is reused. */
+  private takeText(text: string, style: Phaser.Types.GameObjects.Text.TextStyle): Phaser.GameObjects.Text {
+    const t = this.textPool.pop() ?? this.add.text(0, 0, '');
+    return t.setStyle(style).setText(text).setOrigin(0.5).setActive(true).setVisible(true).setAlpha(1).setScale(1).setAngle(0);
+  }
+
+  private releaseText(t: Phaser.GameObjects.Text): void {
+    this.tweens.killTweensOf(t);
+    t.setVisible(false).setActive(false);
+    this.textPool.push(t);
+  }
+
   private floatText(id: EntityId, text: string, color: string, size: number, duration = 800): void {
     const at = this.anchorOf(id);
     if (!at) return;
-    const label = this.add
-      .text(at.x + Phaser.Math.Between(-6, 6), at.y, text, { ...WORLD_TEXT, fontSize: `${size}px`, color })
-      .setOrigin(0.5)
+    const label = this.takeText(text, { ...WORLD_TEXT, fontSize: `${size}px`, color })
+      .setPosition(at.x + Phaser.Math.Between(-6, 6), at.y)
       .setDepth(6000);
     this.tweens.add({
       targets: label,
@@ -917,7 +966,7 @@ export class WorldScene extends Phaser.Scene {
       alpha: { from: 1, to: 0 },
       ease: 'Cubic.easeOut',
       duration,
-      onComplete: () => label.destroy(),
+      onComplete: () => this.releaseText(label),
     });
   }
 
@@ -925,20 +974,13 @@ export class WorldScene extends Phaser.Scene {
   private damageNumber(id: EntityId, text: string, color: string, size: number): void {
     const at = this.anchorOf(id);
     if (!at) return;
-    const label = this.add
-      .text(at.x + Phaser.Math.Between(-10, 10), at.y, text, {
-        fontFamily: IMPACT_FONT,
-        fontSize: `${size}px`,
-        color,
-        stroke: '#16131c',
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5)
+    const label = this.takeText(text, { fontFamily: IMPACT_FONT, fontSize: `${size}px`, color, stroke: '#16131c', strokeThickness: 6 })
+      .setPosition(at.x + Phaser.Math.Between(-10, 10), at.y)
       .setAngle(Phaser.Math.Between(-12, 12))
       .setScale(1.6)
       .setDepth(6000);
     this.tweens.add({ targets: label, scale: 1, duration: 120, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: label, y: at.y - 42, alpha: { from: 1, to: 0 }, delay: 250, duration: 650, ease: 'Cubic.easeIn', onComplete: () => label.destroy() });
+    this.tweens.add({ targets: label, y: at.y - 42, alpha: { from: 1, to: 0 }, delay: 250, duration: 650, ease: 'Cubic.easeIn', onComplete: () => this.releaseText(label) });
   }
 
   /** Onomatopoeia ("BAM!") in a starburst next to whoever got hit. */
@@ -947,14 +989,23 @@ export class WorldScene extends Phaser.Scene {
     if (!at) return;
     const x = at.x + Phaser.Math.Between(-24, 24);
     const y = at.y - 18;
-    const label = this.add
-      .text(0, 0, text, { fontFamily: IMPACT_FONT, fontSize: '26px', color, stroke: '#16131c', strokeThickness: 7 })
-      .setOrigin(0.5);
+    const label = this.takeText(text, { fontFamily: IMPACT_FONT, fontSize: '26px', color, stroke: '#16131c', strokeThickness: 7 }).setPosition(0, 0);
     const parts: Phaser.GameObjects.GameObject[] = [label];
-    if (burst) parts.unshift(starburst(this.add.graphics(), Math.max(34, label.width * 0.75), 12, 0xffffff));
+    // The starburst is a pre-drawn texture, scaled to fit the word.
+    if (burst && !quality.low) parts.unshift(this.add.image(0, 0, 'burst').setScale(Math.max(34, label.width * 0.75) / BURST_RADIUS));
     const fx = this.add.container(x, y, parts).setDepth(6100).setAngle(Phaser.Math.Between(-15, 15)).setScale(0.3);
     this.tweens.add({ targets: fx, scale: 1, duration: 140, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: fx, alpha: 0, delay: 600, duration: 300, onComplete: () => fx.destroy() });
+    this.tweens.add({
+      targets: fx,
+      alpha: 0,
+      delay: 600,
+      duration: 300,
+      onComplete: () => {
+        fx.remove(label);
+        this.releaseText(label);
+        fx.destroy();
+      },
+    });
   }
 
   private playAttack(targetId: EntityId): void {

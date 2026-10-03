@@ -3,8 +3,9 @@ import { loadContent } from '../data/content';
 import { SaveDb } from '../save/db';
 import { audio } from '../audio/engine';
 import { loadAudioSettings } from '../audio/settings';
+import { loadQuality } from '../render/quality';
 import { ensureChibi } from '../render/chibi';
-import { inkify } from '../render/ink';
+import { inkify, makeBurstTexture } from '../render/ink';
 import { COLORS } from '../render/palette';
 
 /**
@@ -23,6 +24,7 @@ export class BootScene extends Phaser.Scene {
     this.registry.set('debug', false);
     audio.install();
     void loadAudioSettings(db);
+    void loadQuality(db, this.game);
 
     this.makeTextures();
     ensureChibi(this, 'job-novice', COLORS.playerBody, COLORS.playerHair);
@@ -284,5 +286,6 @@ export class BootScene extends Phaser.Scene {
     }
     for (const key of ['house', 'house-window', 'cavewall', 'ruin', 'ruin-glyph', 'board']) inkify(this, key, { outline: 2 });
     inkify(this, 'drop', { outline: 2 });
+    makeBurstTexture(this);
   }
 }
