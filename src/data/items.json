@@ -1,0 +1,7 @@
+[
+  { "id": "jelly_drop", "name": "Jelly Drop", "type": "etc", "price": 6, "weight": 1 },
+  { "id": "sweet_apple", "name": "Sweet Apple", "type": "consumable", "price": 15, "weight": 2, "heal": { "hp": 16, "sp": 0 } },
+  { "id": "red_tonic", "name": "Red Tonic", "type": "consumable", "price": 50, "weight": 7, "heal": { "hp": 45, "sp": 0 } },
+  { "id": "sticky_resin", "name": "Sticky Resin", "type": "etc", "price": 40, "weight": 1 },
+  { "id": "jellop_card", "name": "Jellop Card", "type": "card", "price": 20, "weight": 1 }
+]

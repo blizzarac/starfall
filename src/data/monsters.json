@@ -1,0 +1,28 @@
+[
+  {
+    "id": "jellop",
+    "name": "Jellop",
+    "level": 2,
+    "hp": 48,
+    "atk": [5, 9],
+    "def": 0,
+    "hit": 10,
+    "flee": 4,
+    "element": "water",
+    "size": "medium",
+    "attackDelayMs": 1700,
+    "attackRange": 1,
+    "moveMs": 400,
+    "ai": { "aggressive": false, "aggroRange": 0, "chaseRange": 12, "wanderRadius": 4 },
+    "baseXp": 9,
+    "jobXp": 6,
+    "drops": [
+      { "item": "jelly_drop", "chance": 0.7 },
+      { "item": "sweet_apple", "chance": 0.12 },
+      { "item": "red_tonic", "chance": 0.03 },
+      { "item": "sticky_resin", "chance": 0.01 },
+      { "item": "jellop_card", "chance": 0.0005 }
+    ],
+    "look": { "color": "#ff8fb8", "scale": 1 }
+  }
+]

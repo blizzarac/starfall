@@ -1,0 +1,31 @@
+export const COLORS = {
+  grass: [0x8fd36b, 0x86cc63],
+  flower: [0x8fd36b, 0x86cc63],
+  path: [0xe6cf98, 0xdcc48c],
+  water: [0x6cc4e8, 0x62bae0],
+  tileEdge: 0x000000,
+  treeTrunk: 0x8a5a3b,
+  treeLeaves: [0x4caf50, 0x5cbf5c, 0x3e9e45],
+  rock: 0x9ea7b3,
+  rockShade: 0x7d8693,
+  shadow: 0x000000,
+  playerSkin: 0xffe0c7,
+  playerHair: 0x6b4a8c,
+  playerBody: 0x4f7bd9,
+  hpBar: 0x46c35a,
+  hpBarLow: 0xe0533d,
+  spBar: 0x4f8ff0,
+  xpBar: 0xf2c94c,
+  jobXpBar: 0xb47ce8,
+  barBack: 0x26303d,
+  ui: 0x1e2633,
+  uiBorder: 0x8ea3c2,
+} as const;
+
+export const TEXT = {
+  fontFamily: '"Trebuchet MS", Verdana, sans-serif',
+  fontSize: '13px',
+  color: '#f4f7fb',
+  stroke: '#141a24',
+  strokeThickness: 3,
+};
