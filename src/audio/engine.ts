@@ -84,17 +84,15 @@ export class AudioEngine {
 
   /** Starts listening for the first touch, and pauses audio while the page is hidden. */
   install(): void {
-    // iOS only counts some events as a user gesture, so listen to all of them.
+    // iOS only counts some events as a user gesture, so listen to all of them. The listeners
+    // stay: if iOS stops the sound later (a call, another app's audio), the next tap restarts it.
     const events = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const;
-    const unlock = () => {
-      this.unlock();
-      if (this.ctx?.state === 'running') for (const e of events) window.removeEventListener(e, unlock);
-    };
+    const unlock = () => this.unlock();
     for (const e of events) window.addEventListener(e, unlock);
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx) return;
-      if (document.visibilityState === 'hidden') void this.ctx.suspend();
-      else void this.ctx.resume();
+      if (document.visibilityState === 'hidden') this.ctx.suspend().catch(() => {});
+      else this.resume();
     });
   }
 
@@ -111,9 +109,18 @@ export class AudioEngine {
     this.sfxBus.gain.setTargetAtTime(settings.sfx, t, 0.05);
   }
 
+  /**
+   * Asks the browser to (re)start sound. iOS refuses while another app holds the
+   * audio ("Failed to start the audio device"); the game just stays quiet and
+   * tries again on the next tap.
+   */
+  private resume(): void {
+    if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+  }
+
   private unlock(): void {
     if (this.ctx) {
-      void this.ctx.resume();
+      this.resume();
       return;
     }
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -134,7 +141,7 @@ export class AudioEngine {
     const data = this.noise.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     this.apply(this.settings);
-    void ctx.resume();
+    this.resume();
     this.timer = setInterval(() => this.schedule(), TICK_MS);
     if (this.theme) this.startTrack(this.theme);
   }
