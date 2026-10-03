@@ -52,20 +52,27 @@ describe('Auto mode', () => {
     expect(order[0]).toBe('skill:fire_bolt');
   });
 
-  it('skips spells the target shrugs off', () => {
-    const w = new World(content, meadow, { seed: 4 });
-    gainXp(w.player, 0, 100_000);
-    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
-    w.applyAction({ type: 'changeJob', job: 'mage' });
-    w.player.skillPoints = 5;
-    for (let i = 0; i < 5; i++) w.learnSkill('fire_bolt');
-    const used: string[] = [];
-    w.events.on('skillUsed', (e) => used.push(e.skillId));
-    w.player.hp = 1e6;
-    w.setAuto(true);
-    // Jellops are water: fire bolts would barely scratch them, so Auto swings instead.
-    run(w, 15_000);
-    expect(used).toEqual([]);
+  it('fires on Jellops, skips spells they barely feel, and prefers what they are weakest to', () => {
+    const mage = (skills: string[]) => {
+      const w = new World(content, meadow, { seed: 4 });
+      gainXp(w.player, 0, 100_000);
+      for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+      w.applyAction({ type: 'changeJob', job: 'mage' });
+      w.player.skillPoints = 30;
+      for (const id of skills) for (let i = 0; i < 3; i++) w.learnSkill(id);
+      w.player.hp = 1e6;
+      const used: string[] = [];
+      w.events.on('skillUsed', (e) => used.push(e.skillId));
+      w.setAuto(true);
+      run(w, 15_000, () => used.length >= 2);
+      return used;
+    };
+    // Jellops are water: fire only loses 10%, so it's still worth casting…
+    expect(mage(['fire_bolt'])).toContain('fire_bolt');
+    // …cold does a quarter, so Auto swings instead…
+    expect(mage(['cold_bolt'])).toEqual([]);
+    // …and lightning hits water hardest, so it comes first.
+    expect(mage(['fire_bolt', 'lightning_bolt'])[0]).toBe('lightning_bolt');
   });
 
   it('an acolyte heals itself when hurt', () => {

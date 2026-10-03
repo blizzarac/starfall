@@ -102,6 +102,8 @@ const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
 /** Auto mode looks this far (tiles) for monsters, and this far for loot. */
 const AUTO_RANGE = 10;
+/** Auto leaves out spells that do less than this share of their damage to the target. */
+const AUTO_MIN_ELEMENT = 0.5;
 const AUTO_LOOT_RANGE = 5;
 /** A hit at least this share of max HP interrupts a cast. */
 export const CAST_BREAK_SHARE = 0.1;
@@ -412,9 +414,10 @@ export class World {
   }
 
   /**
-   * Uses the first skill that makes sense right now: a heal when hurt, a buff
-   * that has run out, then attack skills the target doesn't shrug off. Keeps a
-   * little SP back for healing. Returns true when it used one.
+   * Uses a skill if one makes sense right now: a heal when hurt, a buff that
+   * has run out, otherwise the attack skill the target is weakest to (bar order
+   * breaks ties). Spells the target barely feels (under half damage) are left
+   * out. Keeps a little SP back for healing. Returns true when it used one.
    */
   private autoSkill(target: Monster): boolean {
     const p = this.player;
@@ -424,6 +427,7 @@ export class World {
     const healLv = S.skillLevel(p, 'heal');
     // SP kept back so a healer can always heal.
     const reserve = healLv > 0 ? S.SKILLS.heal.spCost(healLv) : Math.round(d.maxSp * 0.1);
+    let attack: { id: S.SkillId; mod: number } | null = null;
     for (const id of this.autoSkills()) {
       const skill = S.SKILLS[id];
       const lv = S.skillLevel(p, id);
@@ -432,20 +436,21 @@ export class World {
       if (skill.needsWeapon && weapon.type !== skill.needsWeapon) continue;
       if (skill.needsTwoHanded && !twoHanded) continue;
       if (skill.kind === 'self') {
-        if (id === 'heal') {
-          if (p.hp >= d.maxHp * 0.6) continue;
-        } else if (!skill.buffMs || p.buffs.has(id)) continue;
-      } else {
-        if (p.sp - cost < reserve) continue;
-        if (skill.magic?.only && !skill.magic.only.includes(target.def.element)) continue;
-        if (skill.magic && F.elementModifier(skill.magic.element, target.def.element) < 1) continue;
-        // Area skills around you need something in reach.
-        if (skill.kind === 'area' && skill.area?.around === 'self' && ![...this.monsters.values()].some((m) => tileDistance(m.tile, p.tile) <= skill.area!.radius)) continue;
+        if (id === 'heal' ? p.hp >= d.maxHp * 0.6 : !skill.buffMs || p.buffs.has(id)) continue;
+        this.useSkill(id);
+        return true;
       }
-      this.useSkill(id);
-      return true;
+      if (p.sp - cost < reserve) continue;
+      if (skill.magic?.only && !skill.magic.only.includes(target.def.element)) continue;
+      const mod = skill.magic ? F.elementModifier(skill.magic.element, target.def.element) : 1;
+      if (mod < AUTO_MIN_ELEMENT) continue;
+      // Area skills around you need something in reach.
+      if (skill.kind === 'area' && skill.area?.around === 'self' && ![...this.monsters.values()].some((m) => tileDistance(m.tile, p.tile) <= skill.area!.radius)) continue;
+      if (!attack || mod > attack.mod) attack = { id, mod };
     }
-    return false;
+    if (!attack) return false;
+    this.useSkill(attack.id);
+    return true;
   }
 
   // ---- Pets ------------------------------------------------------------------
