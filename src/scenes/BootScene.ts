@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { loadContent } from '../data/content';
 import { SaveDb } from '../save/db';
+import { audio } from '../audio/engine';
+import { loadAudioSettings } from '../audio/settings';
 import { ensureChibi } from '../render/chibi';
 import { inkify } from '../render/ink';
 import { COLORS } from '../render/palette';
@@ -16,8 +18,11 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.registry.set('content', loadContent());
-    this.registry.set('db', new SaveDb());
+    const db = new SaveDb();
+    this.registry.set('db', db);
     this.registry.set('debug', false);
+    audio.install();
+    void loadAudioSettings(db);
 
     this.makeTextures();
     ensureChibi(this, 'job-novice', COLORS.playerBody, COLORS.playerHair);

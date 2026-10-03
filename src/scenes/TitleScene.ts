@@ -7,6 +7,8 @@ import { chibiOrigin, ensureChibi } from '../render/chibi';
 import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton } from '../ui/widgets';
 import { startSession } from './session';
+import { audio } from '../audio/engine';
+import { updateAudioSettings } from '../audio/settings';
 
 const CARD_H = 112;
 const CARD_GAP = 12;
@@ -19,6 +21,7 @@ export class TitleScene extends Phaser.Scene {
   private heading!: Phaser.GameObjects.Text;
   private backdrop!: Phaser.GameObjects.Graphics;
   private sub!: Phaser.GameObjects.Text;
+  private soundToggle!: Phaser.GameObjects.Text;
   private slots = new Map<number, SlotMeta>();
   private busy = false;
 
@@ -44,9 +47,24 @@ export class TitleScene extends Phaser.Scene {
     this.status = this.add
       .text(0, 0, '', { ...TEXT, fontSize: '13px', align: 'center', wordWrap: { width: 340 } })
       .setOrigin(0.5, 0);
+    // Music starts with the first tap (browsers block sound until then).
+    audio.setTheme('title');
+    this.soundToggle = this.add
+      .text(0, 0, '', { fontFamily: IMPACT_FONT, fontSize: '16px', color: '#16131c', backgroundColor: '#ffffff', padding: { x: 10, y: 5 } })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', () => {
+        updateAudioSettings(this.db, { muted: !audio.current.muted });
+        this.showSoundToggle();
+      });
+    this.showSoundToggle();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
     void this.refresh();
+  }
+
+  private showSoundToggle(): void {
+    this.soundToggle.setText(audio.current.muted ? 'SOUND OFF' : 'SOUND ON');
   }
 
   private async refresh(): Promise<void> {
@@ -63,6 +81,7 @@ export class TitleScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const top = Math.max(24, this.scale.height / 2 - (3 * (CARD_H + CARD_GAP) + 140) / 2);
     this.heading.setPosition(width / 2, top - 6);
+    this.soundToggle.setPosition(width - 10, 10);
     this.sub.setPosition(width / 2, top + 66);
     this.drawBackdrop(width, height, top + 30);
     this.cards.forEach((card, i) => card.setPosition(width / 2, top + 110 + i * (CARD_H + CARD_GAP)));

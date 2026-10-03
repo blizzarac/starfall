@@ -66,6 +66,14 @@ export class SaveDb extends Dexie {
     return null;
   }
 
+  async getSetting(key: string): Promise<unknown> {
+    return (await this.settings.get(key))?.value;
+  }
+
+  async setSetting(key: string, value: unknown): Promise<void> {
+    await this.settings.put({ key, value });
+  }
+
   /** The shared storage; empty if there is none yet or it can't be read. */
   async loadStorage(): Promise<StorageDoc> {
     const row = await this.settings.get(STORAGE_KEY);

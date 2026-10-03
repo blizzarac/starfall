@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '../audio/engine';
 import { COLORS, IMPACT_FONT, TEXT } from '../render/palette';
 
 /** Fill while a button is held down. */
@@ -37,7 +38,9 @@ export function makeButton(
   bg.on('pointerup', () => {
     press(false);
     bg.setFillStyle(color);
-    if (enabled) onTap();
+    if (!enabled) return;
+    audio.play('tap');
+    onTap();
   });
   const button: Button = {
     root,

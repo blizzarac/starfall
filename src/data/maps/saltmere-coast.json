@@ -2,6 +2,7 @@
   "id": "saltmere-coast",
   "name": "Saltmere Coast",
   "kind": "field",
+  "music": "harbor",
   "grass": [
     "#a3d66f",
     "#9ccf68"

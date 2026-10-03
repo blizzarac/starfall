@@ -2,6 +2,7 @@
   "id": "saltmere",
   "name": "Saltmere",
   "kind": "town",
+  "music": "harbor",
   "width": 34,
   "height": 28,
   "rows": [

@@ -2,6 +2,7 @@
   "id": "meadow-3",
   "name": "Mossy Hollow",
   "kind": "field",
+  "music": "forest",
   "grass": [
     "#6fae58",
     "#68a552"

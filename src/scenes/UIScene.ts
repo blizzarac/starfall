@@ -15,6 +15,9 @@ import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
 import { QuestWindow } from '../ui/QuestWindow';
 import { StorageWindow } from '../ui/StorageWindow';
+import { audio } from '../audio/engine';
+import type { SaveDb } from '../save/db';
+import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
 import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
@@ -519,8 +522,11 @@ export class UIScene extends Phaser.Scene {
     // Full-screen dim layer eats taps so nothing reaches the world while the menu is open.
     this.menuDim = this.add.rectangle(0, 0, 10, 10, 0x000000, 0.45).setOrigin(0).setInteractive().on('pointerdown', () => this.toggleMenu());
     const w = 220;
-    const entries: Array<[string, () => void]> = [
+    const db = this.registry.get('db') as SaveDb;
+    const entries: Array<[string | (() => string), () => void]> = [
       ['Save now', () => void this.saves().save().then(() => this.addLog('Game saved.'))],
+      [() => `Music: ${volumeLabel(audio.current.music)}`, () => updateAudioSettings(db, { music: nextVolume(audio.current.music), muted: false })],
+      [() => `Sounds: ${volumeLabel(audio.current.sfx)}`, () => updateAudioSettings(db, { sfx: nextVolume(audio.current.sfx), muted: false })],
       ['Export save file', () => this.exportSave()],
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
       ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
@@ -536,14 +542,16 @@ export class UIScene extends Phaser.Scene {
     ];
     entries.forEach(([label, fn], i) => {
       const y = -h / 2 + 62 + i * 46;
+      const text = this.add.text(0, y, typeof label === 'string' ? label : label(), { ...TEXT, fontSize: '13px', fontStyle: 'bold' }).setOrigin(0.5);
+      const refreshLabel = () => typeof label !== 'string' && text.setText(label());
       const bg = this.add
         .rectangle(0, y, w - 28, 38, 0xffffff)
         .setStrokeStyle(2.5, COLORS.ink)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => bg.setFillStyle(0xffe27a))
         .on('pointerout', () => bg.setFillStyle(0xffffff))
-        .on('pointerup', () => (bg.setFillStyle(0xffffff), fn()));
-      panelChildren.push(this.add.rectangle(3, y + 3, w - 28, 38, COLORS.ink), bg, this.add.text(0, y, label, { ...TEXT, fontSize: '13px', fontStyle: 'bold' }).setOrigin(0.5));
+        .on('pointerup', () => (bg.setFillStyle(0xffffff), audio.play('tap'), fn(), refreshLabel()));
+      panelChildren.push(this.add.rectangle(3, y + 3, w - 28, 38, COLORS.ink), bg, text);
     });
     this.menuPanel = this.add.container(0, 0, panelChildren);
     this.menu = this.add.container(0, 0, [this.menuDim, this.menuPanel]).setVisible(false).setDepth(100);

@@ -2,6 +2,7 @@ import '@fontsource/bangers/latin-400.css';
 import '@fontsource/m-plus-rounded-1c/latin-500.css';
 import '@fontsource/m-plus-rounded-1c/latin-800.css';
 import Phaser from 'phaser';
+import { audio } from './audio/engine';
 import { setupPwa, showUpdateBanner } from './pwa';
 import type { SaveManager } from './save/manager';
 import { BootScene } from './scenes/BootScene';
@@ -27,7 +28,7 @@ const game = new Phaser.Game({
 });
 
 // Lets browser tests and the console reach the running game in development.
-if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+if (import.meta.env.DEV) Object.assign(window, { game, audio });
 
 // When a new version is ready, offer it; the current session is saved before reloading.
 setupPwa((apply) => {

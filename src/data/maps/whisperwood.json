@@ -2,6 +2,7 @@
   "id": "whisperwood",
   "name": "Whisperwood",
   "kind": "field",
+  "music": "forest",
   "grass": [
     "#5f9a4f",
     "#59924a"

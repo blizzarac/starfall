@@ -5,6 +5,8 @@ import type { SaveDb } from '../save/db';
 import { SaveManager } from '../save/manager';
 import type { SaveDoc } from '../save/schema';
 import { applySaveDoc, applyStorageDoc } from '../save/serialize';
+import { bindWorldAudio } from '../audio/director';
+import { audio } from '../audio/engine';
 
 /** Builds the world for a slot (from a save, or fresh) and switches to gameplay. */
 export async function startSession(scene: Phaser.Scene, slot: number, doc: SaveDoc | null, newName?: string): Promise<void> {
@@ -22,6 +24,7 @@ export async function startSession(scene: Phaser.Scene, slot: number, doc: SaveD
 
   scene.registry.set('world', world);
   scene.registry.set('saves', saves);
+  scene.registry.set('unbindAudio', bindWorldAudio(world));
   scene.scene.start('World');
   scene.scene.launch('UI');
 }
@@ -33,8 +36,11 @@ export async function endSession(scene: Phaser.Scene): Promise<void> {
     await saves.save();
     saves.detach();
   }
+  (scene.registry.get('unbindAudio') as (() => void) | undefined)?.();
+  scene.registry.remove('unbindAudio');
   scene.registry.remove('saves');
   scene.registry.remove('world');
+  audio.setTheme('title');
   scene.scene.stop('UI');
   scene.scene.stop('World');
   scene.scene.start('Title');

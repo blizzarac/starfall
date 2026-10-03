@@ -62,6 +62,8 @@ Scenes send intents to `World` (`moveTo`, `attack`, `pickUp`, `useItem`, ...) an
 
 **Saltmere and the Courier Guild.** East of Whisperwood, Saltmere Coast (Brinejellies, Shellsnaps, Gullwings, Lv 18–24) leads to the harbor town of Saltmere, with Nell's Harbor Market (Blue Tonics for SP, Sailor Boots, Seafarer's Coat), a waystone and Captain Rook's docks. The Courier Guild (Pippa in Brightmoor, Pip in Saltmere) runs storage for 30 gold: one stash of up to 100 different things shared by all three save slots, saved together with each save. Couriers also teleport you to towns and fields you've already visited, and can set your return point.
 
+**Sound.** Every sound effect and music track is synthesized in the browser with the Web Audio API (`src/audio/`), so nothing extra is downloaded. Each area has its own looping tune (town, harbor, field, forest, cave), generated from a seed, scale and chord progression. *Menu → Music / Sounds* cycles the volume (Off, 30%, 60%, 100%), and the title screen has a mute toggle; settings are kept on the device. Sound starts after the first tap, as browsers require.
+
 **Status effects.** Puffcaps can poison (2% HP per second, never below 1, no natural recovery), Cave Bats blind (HIT and FLEE −25%), Stonelings and the golem's slam stun (no actions). VIT resists poison and stun, INT resists blindness. Green Herbs cure poison, a Panacea cures everything, and resting at the waystone clears it all.
 
 The world so far: **Brightmoor** (town) → **Southern Meadow** (Jellops, passive) → **Thornfield** (Thornbeetles attack on sight) → **Mossy Hollow** (Mosslings, and aggressive Bristleboars) → **Whisperwood** (Puffcaps, Thicket Wolves) → **Glimmer Caves** (Cave Bats, Stonelings) → **Crystal Hall**, home of the first area boss.
