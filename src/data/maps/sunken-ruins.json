@@ -1,0 +1,116 @@
+{
+  "id": "sunken-ruins",
+  "name": "Sunken Ruins",
+  "kind": "dungeon",
+  "music": "cave",
+  "width": 36,
+  "height": 36,
+  "rows": [
+    "WWWWWWWWWWWWWWWW:::WWWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWW:::::::WWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWW:::_::_WWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWW:::_:::WWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWW:_::_::WWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWW:::::::WWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWW::_WWWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWW:::WWWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWW:::WWWWWWWWWWWWWWWWW",
+    "WWWW::::::::::::::::__::::::::::WWWW",
+    "WWWW:::::::__:::::::::::::::::_:WWWW",
+    "WWWW:::_W::::_W::::::W:::_:W::::WWWW",
+    "WWWW:::::::_::_:::::::::___:::::WWWW",
+    "WWWW:::::::::_::::_:_::::::_::::WWWW",
+    "WWWW:::_W:::::W:::_::W:::__W_:::WWWW",
+    "WWWW:_::::::_:::::::::::_:::::::WWWW",
+    "WWWW:::::::::::_:::::_::::_:::::WWWW",
+    "WWWWWW:::WWWWWWWWWWWWWWWWWW:::WWWWWW",
+    "WWWWWW:::WWWWWWWWWWWWWWWWWW:::WWWWWW",
+    "WWWWWW:::WWWWWWWWWWWWWWWWWW:::WWWWWW",
+    "WWWWWW:::WWWWWWWWWWWWWWWWWW:_:WWWWWW",
+    "WWWWWW::_WWWWWWWWWWWWWWWWWW:_:WWWWWW",
+    "WWW::_:_::::WWWWWWWWWWWW::::_::::WWW",
+    "WWW::::_:_::WWWWWWWWWWWW::_::::::WWW",
+    "WWW:::::__::WWWWWWWWWWWW::__::::_WWW",
+    "WWW::::::_::_::::::::::::::::::::WWW",
+    "WWW:_::::::::::::::::_::::::_::_:WWW",
+    "WWW:_::::::::::::::::::_::::::::_WWW",
+    "WWW:::::::::W_:::::::::W:::::::::WWW",
+    "WWW_::::::::W::::::::::W_:::::_::WWW",
+    "WWW:::::::::W:::::_::::W:_::::::_WWW",
+    "WWW:::::_:_:W::::_::_::W:::_:::::WWW",
+    "WWWWWWWWWWWWW_::::::_::WWWWWWWWWWWWW",
+    "WWWWWWWWWWWWW::::::::_:WWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+  ],
+  "playerStart": {
+    "x": 17,
+    "y": 2
+  },
+  "savePoint": {
+    "x": 17,
+    "y": 2
+  },
+  "spawns": [
+    {
+      "monster": "rattlebones",
+      "count": 9,
+      "respawnMs": 12000,
+      "area": {
+        "x": 4,
+        "y": 9,
+        "w": 28,
+        "h": 8
+      }
+    },
+    {
+      "monster": "wrapped_one",
+      "count": 5,
+      "respawnMs": 14000,
+      "area": {
+        "x": 3,
+        "y": 22,
+        "w": 9,
+        "h": 10
+      }
+    },
+    {
+      "monster": "wrapped_one",
+      "count": 5,
+      "respawnMs": 14000,
+      "area": {
+        "x": 24,
+        "y": 22,
+        "w": 9,
+        "h": 10
+      }
+    },
+    {
+      "monster": "dust_pharaoh",
+      "count": 1,
+      "respawnMs": 1800000,
+      "area": {
+        "x": 16,
+        "y": 30,
+        "w": 4,
+        "h": 3
+      }
+    }
+  ],
+  "npcs": [],
+  "portals": [
+    {
+      "area": {
+        "x": 16,
+        "y": 0,
+        "w": 3,
+        "h": 1
+      },
+      "to": {
+        "map": "sunscorch-dunes",
+        "x": 32,
+        "y": 36
+      }
+    }
+  ]
+}

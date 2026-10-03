@@ -1,0 +1,170 @@
+{
+  "id": "sunspire",
+  "name": "Sunspire",
+  "kind": "town",
+  "music": "desert",
+  "grass": [
+    "#f7e3a8",
+    "#f7e3a8"
+  ],
+  "width": 34,
+  "height": 30,
+  "rows": [
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~+++~~~~~~~~~~~~~~~~",
+    "WW~~~~~~~~~~~~~+++~~~~~~~~~~~~~~WW",
+    "WW_____________+++______________WW",
+    "WW_#####_####__+++___####_#####_WW",
+    "WW_#####_####__:::___####_#####_WW",
+    "WW_#####_####__:::___####_#####_WW",
+    "WW_#####_______:::________#####_WW",
+    "WW____P________:::______________WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW____:::::::P::::::P:::::::____WW",
+    "WW__P_::::::::~~~~~~::::::::____WW",
+    "WW____::::::::~~~~~~::::::::____WW",
+    "WW____::::::::~~~~~~::::::::____WW",
+    "WW____::::::::~~~~~~::::::::____WW",
+    "WW____:::::::P::::::P:::::::____WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW____::::::::::::::::::::::____WW",
+    "WW_____________:::______________WW",
+    "WW_#####_______:::________#####_WW",
+    "WW_#####_####__:::___####_#####_WW",
+    "WW_#####_####__:::___####_#####_WW",
+    "WW_#####_####__:::___####_#####_WW",
+    "WW_____________:::______________WW",
+    "WWWWWWWWWWWWWWW:::WWWWWWWWWWWWWWWW",
+    "WWWWWWWWWWWWWWW:::WWWWWWWWWWWWWWWW"
+  ],
+  "playerStart": {
+    "x": 16,
+    "y": 6
+  },
+  "savePoint": {
+    "x": 11,
+    "y": 11
+  },
+  "spawns": [],
+  "npcs": [
+    {
+      "id": "sunspire_sailor",
+      "name": "Dax",
+      "x": 18,
+      "y": 6,
+      "dialogue": "sunspire_sailor",
+      "look": {
+        "body": "#2e3a5c",
+        "hair": "#e8a23a"
+      }
+    },
+    {
+      "id": "courier_sunspire",
+      "name": "Pim",
+      "x": 9,
+      "y": 10,
+      "dialogue": "courier",
+      "look": {
+        "body": "#ff8a3d",
+        "hair": "#f4f0e6"
+      }
+    },
+    {
+      "id": "sunspire_waystone",
+      "name": "Seren",
+      "x": 11,
+      "y": 10,
+      "dialogue": "waystone",
+      "look": {
+        "body": "#d9a23a",
+        "hair": "#2a1e2e"
+      }
+    },
+    {
+      "id": "bazaar_merchant",
+      "name": "Zahra",
+      "x": 24,
+      "y": 10,
+      "dialogue": "bazaar",
+      "look": {
+        "body": "#c2453a",
+        "hair": "#2a1e2e"
+      }
+    },
+    {
+      "id": "knight_commander",
+      "name": "Dame Cassia",
+      "x": 8,
+      "y": 15,
+      "dialogue": "knight_order",
+      "look": {
+        "body": "#3f6fd6",
+        "hair": "#e8c46a"
+      }
+    },
+    {
+      "id": "wizard_archmage",
+      "name": "Archmage Oren",
+      "x": 25,
+      "y": 15,
+      "dialogue": "wizard_tower",
+      "look": {
+        "body": "#3b2a78",
+        "hair": "#e0e0e0"
+      }
+    },
+    {
+      "id": "hunter_ranger",
+      "name": "Ranger Kestrel",
+      "x": 8,
+      "y": 19,
+      "dialogue": "hunter_lodge",
+      "look": {
+        "body": "#2f6b4a",
+        "hair": "#8a4a2a"
+      }
+    },
+    {
+      "id": "priest_father",
+      "name": "Father Amon",
+      "x": 25,
+      "y": 19,
+      "dialogue": "priest_temple",
+      "look": {
+        "body": "#5a3f8f",
+        "hair": "#d9d9d9"
+      }
+    },
+    {
+      "id": "sunspire_board",
+      "name": "Hunting Board",
+      "x": 19,
+      "y": 20,
+      "dialogue": "hunting_board",
+      "look": {
+        "body": "#9a6b42",
+        "hair": "#9a6b42"
+      },
+      "sprite": "board"
+    }
+  ],
+  "portals": [
+    {
+      "area": {
+        "x": 15,
+        "y": 29,
+        "w": 3,
+        "h": 1
+      },
+      "to": {
+        "map": "sunscorch-dunes",
+        "x": 20,
+        "y": 3
+      }
+    }
+  ]
+}

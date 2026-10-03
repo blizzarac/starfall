@@ -211,5 +211,68 @@
         }
       ]
     }
+  },
+  {
+    "id": "sting_operation",
+    "name": "Sting Operation",
+    "description": "Dune Scorpions are ambushing caravans south of Sunspire.",
+    "minLevel": 28,
+    "target": {
+      "monster": "dune_scorpion",
+      "count": 20
+    },
+    "reward": {
+      "gold": 4000,
+      "baseXp": 9000,
+      "jobXp": 6300,
+      "items": [
+        {
+          "id": "green_herb",
+          "count": 5
+        }
+      ]
+    }
+  },
+  {
+    "id": "bone_dry",
+    "name": "Bone Dry",
+    "description": "Rattlebones wander the Sunken Ruins. Put them back to rest.",
+    "minLevel": 36,
+    "target": {
+      "monster": "rattlebones",
+      "count": 20
+    },
+    "reward": {
+      "gold": 6000,
+      "baseXp": 18000,
+      "jobXp": 12600,
+      "items": [
+        {
+          "id": "blue_tonic",
+          "count": 3
+        }
+      ]
+    }
+  },
+  {
+    "id": "unwrapped",
+    "name": "Unwrapped",
+    "description": "The Wrapped Ones guard the Pharaoh's halls. Thin their ranks.",
+    "minLevel": 40,
+    "target": {
+      "monster": "wrapped_one",
+      "count": 15
+    },
+    "reward": {
+      "gold": 8000,
+      "baseXp": 20000,
+      "jobXp": 14000,
+      "items": [
+        {
+          "id": "brightstone",
+          "count": 2
+        }
+      ]
+    }
   }
 ]

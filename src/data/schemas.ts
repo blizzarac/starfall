@@ -120,7 +120,7 @@ export const MonsterSchema = z.object({
   look: z.object({
     color: z.string().regex(/^#[0-9a-f]{6}$/i),
     scale: z.number().positive(),
-    shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird']).default('blob'),
+    shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird', 'scorpion', 'worm', 'skeleton', 'mummy', 'pharaoh']).default('blob'),
   }),
   /** A status effect this monster's normal attacks may cause. */
   inflict: InflictSchema.optional(),
@@ -155,6 +155,8 @@ export const TERRAIN_CHARS = {
   X: 'cavewall',
   _: 'sand',
   '+': 'plank',
+  P: 'palm',
+  W: 'ruin',
 } as const;
 
 const PlaceSchema = z.object({ map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });

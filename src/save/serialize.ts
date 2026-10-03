@@ -102,6 +102,7 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   if (here) Object.assign(p, createMover(here, p.moveMs));
   else world.changeMap(p.savePoint.map, p.savePoint);
 
+  world.refreshStats();
   const d = derivedStats(p);
   p.hp = Math.min(Math.max(1, c.hp), d.maxHp);
   p.sp = Math.min(c.sp, d.maxSp);

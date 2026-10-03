@@ -2,8 +2,8 @@ import * as F from './combat/formulas';
 import type { StatName } from './combat/formulas';
 import { createMover, type Player } from './entities';
 import type { Tile } from './grid';
-import { JOBS, jobOf, NOVICE_JOB_CHANGE, type JobId } from './jobs';
-import { learnBlocker, skillLevel, skillStatBonus, type SkillId } from './skills';
+import { JOBS, jobOf, NOVICE_JOB_CHANGE, SECOND_JOB_LEVEL, type JobId } from './jobs';
+import { impositioAtk, learnBlocker, QUICKEN_DELAY, skillLevel, skillStatBonus, type SkillId } from './skills';
 import { gearBonus, weaponOf } from './equipment';
 import { petBonus } from './pets';
 import { BLIND_FACTOR } from './status';
@@ -46,14 +46,15 @@ export function derivedStats(p: Player): DerivedStats {
   return {
     maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))) + gear.hp,
     maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
-    atk: F.statusAtk(s) + weapon.atk + mastery + gear.atk,
+    atk: F.statusAtk(s) + weapon.atk + mastery + gear.atk + (p.buffs.has('impositio_manus') ? impositioAtk(p.buffs.get('impositio_manus')!.level) : 0),
     matk: F.statusMatk(s.int) + weapon.matk + gear.matk,
     hit: Math.floor((F.hit(p.baseLevel, s.dex) + gear.hit + skillLevel(p, 'vultures_eye')) * blind),
     flee: Math.floor((F.flee(p.baseLevel, s.agi) + gear.flee) * blind),
     def: F.softDef(s.vit) + gear.def,
     crit: F.critChance(s.luk),
     aspd,
-    attackDelayMs: F.attackDelayMs(aspd),
+    // Two-Hand Quicken only works while a two-handed weapon is held.
+    attackDelayMs: Math.round(F.attackDelayMs(aspd) * (p.buffs.has('two_hand_quicken') && p.equipment.weapon?.item.equip?.twoHanded ? QUICKEN_DELAY : 1)),
   };
 }
 
@@ -181,6 +182,8 @@ export function jobChangeBlocker(p: Player, to: JobId): string | null {
     if (skillLevel(p, 'basic_training') < NOVICE_JOB_CHANGE.basicTraining) {
       return `Learn Basic Training to level ${NOVICE_JOB_CHANGE.basicTraining} first.`;
     }
+  } else if (from.tier === 1 && p.jobLevel < SECOND_JOB_LEVEL) {
+    return `Reach job level ${SECOND_JOB_LEVEL} as a ${from.name} first.`;
   }
   return null;
 }

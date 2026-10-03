@@ -58,5 +58,25 @@
       "shiny_pearl",
       "silver_sardine"
     ]
+  },
+  {
+    "id": "desert_bazaar",
+    "name": "Sunspire Bazaar",
+    "items": [
+      "red_tonic",
+      "blue_tonic",
+      "green_herb",
+      "panacea",
+      "fly_wing",
+      "butterfly_wing",
+      "brightstone",
+      "pet_treat",
+      "desert_turban",
+      "claymore",
+      "arc_wand",
+      "hunter_bow",
+      "holy_scepter",
+      "sunsteel_armor"
+    ]
   }
 ]

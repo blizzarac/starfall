@@ -19,6 +19,17 @@ const SKILL_SFX: Record<string, Sfx> = {
   blessing: 'buff',
   increase_agi: 'buff',
   holy_light: 'holy',
+  pierce: 'bash',
+  bowling_bash: 'magnum',
+  two_hand_quicken: 'buff',
+  sight_rasher: 'fire',
+  thunderstorm: 'lightning',
+  meteor_storm: 'magnum',
+  blitz_beat: 'arrow',
+  claymore_trap: 'magnum',
+  kyrie_eleison: 'buff',
+  magnus_exorcismus: 'holy',
+  impositio_manus: 'buff',
 };
 
 /** The tune for a map: its own if set, otherwise by kind. */

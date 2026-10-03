@@ -33,7 +33,7 @@ export interface WorldEvents extends Record<string, unknown> {
   playerRespawned: Record<string, never>;
   /** The player reached an NPC; the UI opens its dialogue. */
   talk: { npc: NpcDef };
-  skillUsed: { skillId: S.SkillId; targets: number[] };
+  skillUsed: { skillId: S.SkillId; targets: number[]; /** Center of an area skill. */ at?: Tile };
   castInterrupted: Record<string, never>;
   refined: { name: string; level: number; success: boolean };
   /** An area boss appeared on, or was defeated on, the current map. */
@@ -267,7 +267,7 @@ export class World {
     p.pet = { species: def.id, name: def.name, intimacy: Pets.START_INTIMACY, hunger: Pets.START_HUNGER };
     this.petMover = createMover(target.tile, F.PLAYER_MOVE_MS);
     this.petHungerMs = 0;
-    this.afterBuffChange();
+    this.refreshStats();
     this.events.emit('petTamed', { name: def.name });
   }
 
@@ -278,7 +278,7 @@ export class World {
     if (!this.hasItem(Pets.PET_FOOD, 1)) return `You need a ${this.content.items.get(Pets.PET_FOOD)?.name ?? 'treat'}.`;
     this.removeItem(Pets.PET_FOOD, 1);
     const delta = Pets.feed(pet);
-    this.afterBuffChange();
+    this.refreshStats();
     this.events.emit('petFed', { delta });
     return null;
   }
@@ -296,7 +296,7 @@ export class World {
     if (!this.player.pet) return;
     this.player.pet = null;
     this.petMover = null;
-    this.afterBuffChange();
+    this.refreshStats();
     this.events.emit('petChanged', {});
   }
 
@@ -332,7 +332,7 @@ export class World {
         this.events.emit('petRanAway', { name });
         return;
       }
-      if (Pets.bonusFactor(pet.intimacy) !== wasActive) this.afterBuffChange();
+      if (Pets.bonusFactor(pet.intimacy) !== wasActive) this.refreshStats();
     }
 
     // Looters fetch nearby drops; everyone else (and looters with nothing to do) follows.
@@ -477,7 +477,10 @@ export class World {
   /** Spends a skill point. Returns why not, or null on success. */
   learnSkill(id: S.SkillId): string | null {
     const err = learnSkill(this.player, id);
-    if (!err) this.events.emit('skillsChanged', {});
+    if (!err) {
+      this.refreshStats();
+      this.events.emit('skillsChanged', {});
+    }
     return err;
   }
 
@@ -492,6 +495,7 @@ export class World {
     const notice = (text: string) => this.events.emit('notice', { text });
     if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) return notice("You're carrying too much to fight.");
     if (skill.needsWeapon && weaponOf(p).type !== skill.needsWeapon) return notice(`${skill.name} needs a ${skill.needsWeapon} equipped.`);
+    if (skill.needsTwoHanded && !p.equipment.weapon?.item.equip?.twoHanded) return notice(`${skill.name} needs a two-handed weapon.`);
     if ((p.cooldowns.get(id) ?? 0) > 0) return notice(`${skill.name} isn't ready yet.`);
     if (p.sp < skill.spCost(lv)) return notice('Not enough SP.');
     p.sitting = false;
@@ -532,15 +536,59 @@ export class World {
     p.sp -= skill.spCost(lv);
     if (skill.cooldownMs > 0) p.cooldowns.set(id, skill.cooldownMs);
     const hit: number[] = [];
-    if (skill.magic && target) {
+    const around = (center: Tile, radius: number) => [...this.monsters.values()].filter((m) => tileDistance(center, m.tile) <= radius);
+    if (skill.magic && (target || skill.area?.around === 'self')) {
+      const magic = skill.magic;
+      const center = skill.area?.around === 'self' || !target ? p.tile : target.tile;
+      const victims = skill.area ? around(center, skill.area.radius) : [target!];
+      // The chosen target first, so effects aim at it.
+      victims.sort((a, b) => Number(b === target) - Number(a === target));
+      hit.push(...victims.map((m) => m.id));
+      this.events.emit('skillUsed', { skillId: id, targets: hit, at: skill.area ? { ...center } : undefined });
+      const d = derivedStats(p);
+      for (const m of victims) {
+        if (magic.only && !magic.only.includes(m.def.element)) continue;
+        const elem = F.elementModifier(magic.element, m.def.element);
+        for (let i = 0; i < magic.hits(lv) && this.monsters.has(m.id); i++) {
+          m.hostile = true;
+          this.hurtMonster(m, F.magicDamage(d.matk, magic.perHit(lv) * this.cardDamageFactor(m), elem, m.def.def, this.rng), false);
+        }
+      }
+    } else if (id === 'pierce' && target) {
       hit.push(target.id);
       this.events.emit('skillUsed', { skillId: id, targets: hit });
-      const d = derivedStats(p);
-      const elem = F.elementModifier(skill.magic.element, target.def.element);
-      for (let i = 0; i < skill.magic.hits(lv) && this.monsters.has(target.id); i++) {
-        target.hostile = true;
-        this.hurtMonster(target, F.magicDamage(d.matk, skill.magic.perHit(lv) * this.cardDamageFactor(target), elem, target.def.def, this.rng), false);
+      for (let i = 0; i < S.pierceHits(target.def.size) && this.monsters.has(target.id); i++) {
+        this.playerHit(target, { modifier: S.pierceModifier(lv), hitBonus: 0.05 * lv, element: 'neutral' });
       }
+    } else if (id === 'bowling_bash' && target) {
+      const victims = around(target.tile, S.BOWLING_RADIUS);
+      hit.push(...victims.map((m) => m.id));
+      this.events.emit('skillUsed', { skillId: id, targets: hit, at: { ...target.tile } });
+      for (const m of victims) if (this.monsters.has(m.id)) this.playerHit(m, { modifier: S.bowlingModifier(lv), hitBonus: 0.1, element: 'neutral' });
+    } else if (id === 'blitz_beat' && target) {
+      hit.push(target.id);
+      this.events.emit('skillUsed', { skillId: id, targets: hit });
+      const s = effectiveStats(p);
+      const per = S.blitzDamage(s.dex, s.int, S.skillLevel(p, 'steel_crow'));
+      for (let i = 0; i < lv && this.monsters.has(target.id); i++) {
+        this.hurtMonster(target, Math.max(1, Math.floor(per * (0.9 + this.rng() * 0.2) * this.cardDamageFactor(target))), false);
+      }
+    } else if (id === 'claymore_trap' && target) {
+      const victims = around(target.tile, S.CLAYMORE_RADIUS);
+      hit.push(...victims.map((m) => m.id));
+      this.events.emit('skillUsed', { skillId: id, targets: hit, at: { ...target.tile } });
+      const d = derivedStats(p);
+      for (const m of victims) {
+        if (!this.monsters.has(m.id)) continue;
+        const amount = F.damage(
+          { atk: d.atk, skillModifier: S.claymoreModifier(lv) * this.cardDamageFactor(m), elementModifier: F.elementModifier('fire', m.def.element), def: m.def.def },
+          this.rng,
+        );
+        this.hurtMonster(m, amount, false);
+      }
+    } else if (id === 'kyrie_eleison') {
+      p.buffs.set(id, { level: lv, remainingMs: skill.buffMs!(lv), value: S.kyrieShield(derivedStats(p).maxHp, lv) });
+      this.events.emit('skillUsed', { skillId: id, targets: [] });
     } else if (id === 'bash' && target) {
       hit.push(target.id);
       this.events.emit('skillUsed', { skillId: id, targets: hit });
@@ -573,15 +621,17 @@ export class World {
       this.events.emit('heal', { hp, sp: 0 });
     } else if (skill.buffMs) {
       p.buffs.set(id, { level: lv, remainingMs: skill.buffMs(lv) });
-      this.afterBuffChange();
+      this.refreshStats();
       this.events.emit('skillUsed', { skillId: id, targets: [] });
     }
   }
 
-  /** Buffs change stats and speed; keep HP and SP within the new maximums. */
-  private afterBuffChange(): void {
+  /** Buffs, passives and pets change stats and speed; keep HP and SP within the new maximums. */
+  refreshStats(): void {
     const p = this.player;
-    p.moveMs = p.buffs.has('increase_agi') ? Math.round(F.PLAYER_MOVE_MS * S.INCREASE_AGI_MOVE) : F.PLAYER_MOVE_MS;
+    const agi = p.buffs.has('increase_agi') ? S.INCREASE_AGI_MOVE : 1;
+    const ride = S.skillLevel(p, 'riding') > 0 ? S.RIDING_MOVE : 1;
+    p.moveMs = Math.round(F.PLAYER_MOVE_MS * agi * ride);
     const d = derivedStats(p);
     p.hp = Math.min(p.hp, d.maxHp);
     p.sp = Math.min(p.sp, d.maxSp);
@@ -1137,7 +1187,7 @@ export class World {
       buff.remainingMs -= dt;
       if (buff.remainingMs <= 0) {
         p.buffs.delete(id);
-        this.afterBuffChange();
+        this.refreshStats();
         this.events.emit('notice', { text: `${S.isSkillId(id) ? S.SKILLS[id].name : id} wore off.` });
       }
     }
@@ -1363,10 +1413,22 @@ export class World {
     const divine = m.def.element === 'undead' || m.def.element === 'shadow' ? S.divineProtectionReduction(S.skillLevel(p, 'divine_protection')) : 0;
     // Monsters hit with their own element, so cards with matching resistance help.
     const resist = Math.min(0.8, cardEffects(p).resist[m.def.element] ?? 0) + (endure ? S.endureReduction(endure.level) : 0) + divine;
-    const amount = resist > 0 ? Math.max(1, Math.floor(raw * (1 - Math.min(0.9, resist)))) : raw;
+    let amount = resist > 0 ? Math.max(1, Math.floor(raw * (1 - Math.min(0.9, resist)))) : raw;
+    // Kyrie Eleison soaks damage until its barrier breaks.
+    const kyrie = p.buffs.get('kyrie_eleison');
+    if (kyrie?.value) {
+      const absorbed = Math.min(kyrie.value, amount);
+      kyrie.value -= absorbed;
+      amount -= absorbed;
+      if (kyrie.value <= 0) {
+        p.buffs.delete('kyrie_eleison');
+        this.events.emit('notice', { text: 'Kyrie Eleison broke!' });
+      }
+    }
     p.hp -= amount;
     p.sitting = false;
     this.events.emit('damage', { sourceId: m.id, targetId: 'player', amount, crit: false });
+    if (amount === 0) return;
     if (p.casting) {
       p.casting = null;
       p.intent = { kind: 'none' };
@@ -1386,7 +1448,7 @@ export class World {
     p.sitting = false;
     p.casting = null;
     p.buffs.clear();
-    this.afterBuffChange();
+    this.refreshStats();
     p.statuses.clear();
     this.session.deaths += 1;
     const xpLost = applyDeathPenalty(p);

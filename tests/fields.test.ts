@@ -7,7 +7,18 @@ import { buildGrid, loadContent, START_MAP } from '../src/data/content';
 const content = loadContent();
 
 describe('world layout', () => {
-  it('every map is reachable on foot from town, and every portal from where you arrive', () => {
+  it('every map is reachable from town (on foot or by ship), and every portal and NPC from where you arrive', () => {
+    // Ships: NPC warps that aren't the Courier Guild's (which only goes where you've been).
+    const ships = new Map<string, Array<{ map: string; x: number; y: number }>>();
+    for (const map of content.maps.values()) {
+      for (const npc of map.npcs) {
+        if (npc.dialogue === 'courier') continue;
+        for (const node of Object.values(content.dialogues.get(npc.dialogue)!.nodes)) {
+          if ('branch' in node) continue;
+          for (const c of node.choices) for (const a of c.do) if (a.type === 'warp') ships.set(map.id, [...(ships.get(map.id) ?? []), a]);
+        }
+      }
+    }
     const seen = new Set<string>();
     const queue: Array<{ map: string; x: number; y: number }> = [{ map: START_MAP, ...content.maps.get(START_MAP)!.playerStart }];
     while (queue.length > 0) {
@@ -20,6 +31,11 @@ describe('world layout', () => {
         const path = findPath(grid, at, { x: portal.area.x, y: portal.area.y }, { maxNodes: 20_000 });
         expect(path, `${map.id}: portal to ${portal.to.map} unreachable`).not.toBeNull();
         queue.push(portal.to);
+      }
+      for (const to of ships.get(map.id) ?? []) queue.push(to);
+      for (const npc of map.npcs) {
+        const near = [-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => ({ x: npc.x + dx, y: npc.y + dy }))).filter((t) => grid.isWalkable(t.x, t.y));
+        expect(near.some((t) => findPath(grid, at, t, { maxNodes: 20_000 })), `${map.id}: ${npc.name} unreachable`).toBe(true);
       }
     }
     expect([...seen].sort()).toEqual([...content.maps.keys()].sort());

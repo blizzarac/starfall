@@ -3,9 +3,9 @@ export interface Tile {
   y: number;
 }
 
-export type Terrain = 'grass' | 'path' | 'flower' | 'cobble' | 'tree' | 'rock' | 'water' | 'wall' | 'cavewall' | 'sand' | 'plank';
+export type Terrain = 'grass' | 'path' | 'flower' | 'cobble' | 'tree' | 'rock' | 'water' | 'wall' | 'cavewall' | 'sand' | 'plank' | 'palm' | 'ruin';
 
-const BLOCKING: ReadonlySet<Terrain> = new Set(['tree', 'rock', 'water', 'wall', 'cavewall']);
+const BLOCKING: ReadonlySet<Terrain> = new Set(['tree', 'rock', 'water', 'wall', 'cavewall', 'palm', 'ruin']);
 
 /** Walkability grid for one map; the core's only view of the map. */
 export class Grid {

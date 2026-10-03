@@ -23,7 +23,20 @@ export type SkillId =
   | 'divine_protection'
   | 'blessing'
   | 'increase_agi'
-  | 'holy_light';
+  | 'holy_light'
+  | 'pierce'
+  | 'bowling_bash'
+  | 'two_hand_quicken'
+  | 'riding'
+  | 'sight_rasher'
+  | 'thunderstorm'
+  | 'meteor_storm'
+  | 'blitz_beat'
+  | 'steel_crow'
+  | 'claymore_trap'
+  | 'kyrie_eleison'
+  | 'magnus_exorcismus'
+  | 'impositio_manus';
 
 export interface SkillDef {
   id: SkillId;
@@ -43,8 +56,12 @@ export interface SkillDef {
   range?: number;
   /** Base cast time in ms before DEX reduction; 0 or absent means instant. */
   castMs?: (level: number) => number;
-  /** Magic attacks: always hit, use MATK, one damage number per hit. */
-  magic?: { element: Element; hits: (level: number) => number; perHit: (level: number) => number };
+  /** Magic attacks: always hit, use MATK, one damage number per hit. `only` limits which elements it can hurt. */
+  magic?: { element: Element; hits: (level: number) => number; perHit: (level: number) => number; only?: readonly Element[] };
+  /** Area skills: hit every monster within `radius` tiles of the caster or of the target. */
+  area?: { radius: number; around: 'self' | 'target' };
+  /** Only usable while holding a two-handed weapon. */
+  needsTwoHanded?: boolean;
   /** Self buffs: how long the buff lasts, in ms. */
   buffMs?: (level: number) => number;
   /** Reaches as far as the equipped weapon (bows shoot from afar). */
@@ -311,6 +328,190 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     castMs: () => 1500,
     magic: { element: 'holy', hits: () => 1, perHit: holyLightModifier },
   },
+
+  // ---- Knight ----
+  pierce: {
+    id: 'pierce',
+    name: 'Pierce',
+    job: 'knight',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [],
+    spCost: () => 7,
+    cooldownMs: 0,
+    describe: (lv) => `${100 + 10 * lv}% damage, hitting small monsters once, medium twice and large three times. +${5 * lv}% hit.`,
+    short: 'Pierce',
+  },
+  bowling_bash: {
+    id: 'bowling_bash',
+    name: 'Bowling Bash',
+    job: 'knight',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [{ id: 'bash', level: 5 }],
+    spCost: (lv) => 12 + lv,
+    cooldownMs: 1000,
+    describe: (lv) => `Smashes the target into everything next to it for ${100 + 40 * lv}% damage.`,
+    short: 'Bowling',
+  },
+  two_hand_quicken: {
+    id: 'two_hand_quicken',
+    name: 'Two-Hand Quicken',
+    job: 'knight',
+    maxLevel: 10,
+    kind: 'self',
+    requires: [],
+    spCost: (lv) => 10 + 4 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `Attack 30% faster with a two-handed sword for ${30 * lv} s.`,
+    short: 'Quicken',
+    buffMs: (lv) => 30_000 * lv,
+    needsTwoHanded: true,
+  },
+  riding: {
+    id: 'riding',
+    name: 'Riding',
+    job: 'knight',
+    maxLevel: 1,
+    kind: 'passive',
+    requires: [],
+    spCost: () => 0,
+    cooldownMs: 0,
+    describe: () => 'Ride a trusty mount: move 20% faster.',
+    short: 'Ride',
+  },
+
+  // ---- Wizard ----
+  sight_rasher: {
+    id: 'sight_rasher',
+    name: 'Sight Rasher',
+    job: 'wizard',
+    maxLevel: 10,
+    kind: 'area',
+    requires: [{ id: 'fire_bolt', level: 3 }],
+    spCost: (lv) => 33 + 2 * lv,
+    cooldownMs: 1500,
+    describe: (lv) => `A ring of fire around you: ${100 + 20 * lv}% MATK to everything within 2 tiles. Instant.`,
+    short: 'Rasher',
+    magic: { element: 'fire', hits: () => 1, perHit: (lv) => 1 + 0.2 * lv },
+    area: { radius: 2, around: 'self' },
+  },
+  thunderstorm: {
+    id: 'thunderstorm',
+    name: 'Thunderstorm',
+    job: 'wizard',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [{ id: 'lightning_bolt', level: 3 }],
+    spCost: (lv) => 24 + 5 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `${lv} lightning strike${lv > 1 ? 's' : ''} on everything within 2 tiles of the target, each for 80% MATK. Cast ${((1500 + 200 * lv) / 1000).toFixed(1)} s before DEX.`,
+    short: 'Storm',
+    range: SPELL_RANGE,
+    castMs: (lv) => 1500 + 200 * lv,
+    magic: { element: 'wind', hits: (lv) => lv, perHit: () => 0.8 },
+    area: { radius: 2, around: 'target' },
+  },
+  meteor_storm: {
+    id: 'meteor_storm',
+    name: 'Meteor Storm',
+    job: 'wizard',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [{ id: 'sight_rasher', level: 2 }, { id: 'thunderstorm', level: 1 }],
+    spCost: (lv) => 20 + 6 * lv,
+    cooldownMs: 2000,
+    describe: (lv) => `${Math.ceil(lv / 2) + 1} meteors on everything within 2 tiles of the target, each for 125% MATK. Cast 6 s before DEX.`,
+    short: 'Meteor',
+    range: SPELL_RANGE,
+    castMs: () => 6000,
+    magic: { element: 'fire', hits: (lv) => Math.ceil(lv / 2) + 1, perHit: () => 1.25 },
+    area: { radius: 2, around: 'target' },
+  },
+
+  // ---- Hunter ----
+  blitz_beat: {
+    id: 'blitz_beat',
+    name: 'Blitz Beat',
+    job: 'hunter',
+    maxLevel: 5,
+    kind: 'enemy',
+    requires: [],
+    spCost: (lv) => 7 + 3 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `Your falcon dives ${lv} time${lv > 1 ? 's' : ''}, each for 40 + DEX + INT/2 damage. Never misses, ignores DEF.`,
+    short: 'Blitz',
+    weaponRange: true,
+  },
+  steel_crow: {
+    id: 'steel_crow',
+    name: 'Steel Crow',
+    job: 'hunter',
+    maxLevel: 10,
+    kind: 'passive',
+    requires: [{ id: 'blitz_beat', level: 1 }],
+    spCost: () => 0,
+    cooldownMs: 0,
+    describe: (lv) => `Blitz Beat hits ${6 * lv} harder.`,
+    short: 'Crow',
+  },
+  claymore_trap: {
+    id: 'claymore_trap',
+    name: 'Claymore Trap',
+    job: 'hunter',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [{ id: 'arrow_shower', level: 1 }],
+    spCost: () => 15,
+    cooldownMs: 1500,
+    describe: (lv) => `Lobs a fire trap that bursts on the target and everything next to it for ${Math.round(claymoreModifier(lv) * 100)}% damage. Never misses.`,
+    short: 'Claymore',
+    weaponRange: true,
+  },
+
+  // ---- Priest ----
+  kyrie_eleison: {
+    id: 'kyrie_eleison',
+    name: 'Kyrie Eleison',
+    job: 'priest',
+    maxLevel: 10,
+    kind: 'self',
+    requires: [{ id: 'blessing', level: 2 }],
+    spCost: (lv) => 20 + 2 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `A barrier that absorbs damage up to ${10 + 2 * lv}% of your max HP. Lasts 2 minutes or until broken.`,
+    short: 'Kyrie',
+    buffMs: () => 120_000,
+  },
+  magnus_exorcismus: {
+    id: 'magnus_exorcismus',
+    name: 'Magnus Exorcismus',
+    job: 'priest',
+    maxLevel: 10,
+    kind: 'enemy',
+    requires: [{ id: 'holy_light', level: 1 }, { id: 'heal', level: 5 }],
+    spCost: (lv) => 40 + 3 * lv,
+    cooldownMs: 3000,
+    describe: (lv) => `${lv} holy blast${lv > 1 ? 's' : ''} on every undead and shadow monster within 2 tiles of the target, each for 100% MATK. Cast 5 s before DEX.`,
+    short: 'Magnus',
+    range: SPELL_RANGE,
+    castMs: () => 5000,
+    magic: { element: 'holy', hits: (lv) => lv, perHit: () => 1, only: ['undead', 'shadow'] },
+    area: { radius: 2, around: 'target' },
+  },
+  impositio_manus: {
+    id: 'impositio_manus',
+    name: 'Impositio Manus',
+    job: 'priest',
+    maxLevel: 5,
+    kind: 'self',
+    requires: [],
+    spCost: (lv) => 10 + 3 * lv,
+    cooldownMs: 0,
+    describe: (lv) => `ATK +${5 * lv} for 60 s.`,
+    short: 'Impos',
+    buffMs: () => 60_000,
+  },
 };
 
 export const SKILL_IDS = new Set<string>(Object.keys(SKILLS));
@@ -323,10 +524,12 @@ export function skillLevel(p: Pick<Player, 'skills'>, id: string): number {
   return p.skills.get(id) ?? 0;
 }
 
-/** Skills shown to a player: their job's and every earlier job's. */
+/** Skills shown to a player: their job's first, then every earlier job's. */
 export function skillsFor(jobId: JobId): SkillDef[] {
   const line = jobLineage(jobId);
-  return Object.values(SKILLS).filter((s) => line.includes(s.job));
+  return Object.values(SKILLS)
+    .filter((s) => line.includes(s.job))
+    .sort((a, b) => line.indexOf(b.job) - line.indexOf(a.job));
 }
 
 /** Why a skill point can't go into this skill, or null if it can. */
@@ -418,4 +621,44 @@ export function skillStatBonus(p: Pick<Player, 'skills' | 'buffs'>): Stats {
   const agi = p.buffs.get('increase_agi');
   if (agi) out.agi += 2 + agi.level;
   return out;
+}
+
+// ---- Second jobs ----------------------------------------------------------
+
+/** Pierce hits once per size step: small 1, medium 2, large 3. */
+export function pierceHits(size: 'small' | 'medium' | 'large'): number {
+  return size === 'small' ? 1 : size === 'medium' ? 2 : 3;
+}
+
+export function pierceModifier(lv: number): number {
+  return 1 + 0.1 * lv;
+}
+
+export function bowlingModifier(lv: number): number {
+  return 1 + 0.4 * lv;
+}
+
+export const BOWLING_RADIUS = 1;
+/** Two-Hand Quicken multiplies the attack delay by this. */
+export const QUICKEN_DELAY = 0.7;
+/** Riding multiplies step time by this. */
+export const RIDING_MOVE = 0.8;
+
+export function blitzDamage(dex: number, int: number, steelCrow: number): number {
+  return 40 + dex + Math.floor(int / 2) + 6 * steelCrow;
+}
+
+export function claymoreModifier(lv: number): number {
+  return 1.5 + 0.3 * lv;
+}
+
+export const CLAYMORE_RADIUS = 1;
+
+/** HP a fresh Kyrie Eleison barrier absorbs. */
+export function kyrieShield(maxHp: number, lv: number): number {
+  return Math.floor((maxHp * (10 + 2 * lv)) / 100);
+}
+
+export function impositioAtk(lv: number): number {
+  return 5 * lv;
 }

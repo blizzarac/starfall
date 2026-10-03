@@ -1,6 +1,6 @@
 import type { Player } from './entities';
 
-export type JobId = 'novice' | 'swordsman' | 'mage' | 'archer' | 'acolyte';
+export type JobId = 'novice' | 'swordsman' | 'mage' | 'archer' | 'acolyte' | 'knight' | 'wizard' | 'hunter' | 'priest';
 
 /** What a job's chibi holds. */
 export type JobExtra = 'sword' | 'staff' | 'bow' | 'mace';
@@ -40,7 +40,7 @@ export const JOBS: Record<JobId, JobDef> = {
     hpFactor: 1.6,
     spFactor: 1.1,
     jobXpFactor: 2.5,
-    next: [],
+    next: ['knight'],
     look: { body: 0x8a96ad, extra: 'sword' },
   },
   mage: {
@@ -51,7 +51,7 @@ export const JOBS: Record<JobId, JobDef> = {
     hpFactor: 0.9,
     spFactor: 2.2,
     jobXpFactor: 2.5,
-    next: [],
+    next: ['wizard'],
     look: { body: 0x6a4fa0, extra: 'staff' },
   },
   archer: {
@@ -62,7 +62,7 @@ export const JOBS: Record<JobId, JobDef> = {
     hpFactor: 1.15,
     spFactor: 1.4,
     jobXpFactor: 2.5,
-    next: [],
+    next: ['hunter'],
     look: { body: 0x4f9a5a, extra: 'bow' },
   },
   acolyte: {
@@ -73,8 +73,52 @@ export const JOBS: Record<JobId, JobDef> = {
     hpFactor: 1.25,
     spFactor: 1.8,
     jobXpFactor: 2.5,
-    next: [],
+    next: ['priest'],
     look: { body: 0xf0e6cc, extra: 'mace' },
+  },
+  knight: {
+    id: 'knight',
+    name: 'Knight',
+    tier: 2,
+    maxJobLevel: 50,
+    hpFactor: 2.2,
+    spFactor: 1.3,
+    jobXpFactor: 4,
+    next: [],
+    look: { body: 0x3f6fd6, extra: 'sword' },
+  },
+  wizard: {
+    id: 'wizard',
+    name: 'Wizard',
+    tier: 2,
+    maxJobLevel: 50,
+    hpFactor: 1.1,
+    spFactor: 2.8,
+    jobXpFactor: 4,
+    next: [],
+    look: { body: 0x3b2a78, extra: 'staff' },
+  },
+  hunter: {
+    id: 'hunter',
+    name: 'Hunter',
+    tier: 2,
+    maxJobLevel: 50,
+    hpFactor: 1.5,
+    spFactor: 1.7,
+    jobXpFactor: 4,
+    next: [],
+    look: { body: 0x2f6b4a, extra: 'bow' },
+  },
+  priest: {
+    id: 'priest',
+    name: 'Priest',
+    tier: 2,
+    maxJobLevel: 50,
+    hpFactor: 1.6,
+    spFactor: 2.4,
+    jobXpFactor: 4,
+    next: [],
+    look: { body: 0x5a3f8f, extra: 'mace' },
   },
 };
 
@@ -105,3 +149,6 @@ export function jobLineage(jobId: JobId): JobId[] {
 
 /** Requirements to leave the Novice job, as in the design doc. */
 export const NOVICE_JOB_CHANGE = { jobLevel: 10, basicTraining: 9 };
+
+/** First jobs move on to their second job at this job level. */
+export const SECOND_JOB_LEVEL = 40;

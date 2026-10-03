@@ -176,6 +176,86 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xffb03a).fillRect(24, 29, 2, 4).fillRect(30, 29, 2, 4);
     g.generateTexture('bird', 56, 44).clear();
 
+    // Palm: a leaning ringed trunk with drooping fronds and coconuts. Feet at (30, 92).
+    g.fillStyle(0xa8703f).fillPoints([V(26, 92), V(30, 50), V(38, 30), V(42, 31), V(36, 52), V(34, 92)], true);
+    g.lineStyle(1.4, COLORS.ink, 0.6);
+    for (const y of [84, 74, 64, 54, 44]) g.lineBetween(27 + (92 - y) * 0.18, y, 35 + (92 - y) * 0.15, y - 2);
+    g.fillStyle(0x3fae4f);
+    for (const [ax, ay] of [[4, 34], [14, 18], [40, 10], [62, 22], [64, 40], [22, 46]] as const) g.fillPoints([V(40, 28), V(ax, ay), V((40 + ax) / 2, (28 + ay) / 2 + 6)], true);
+    g.fillStyle(0x56c45a);
+    for (const [ax, ay] of [[10, 26], [52, 14], [60, 32]] as const) g.fillPoints([V(40, 28), V(ax, ay), V((40 + ax) / 2 + 3, (28 + ay) / 2 + 4)], true);
+    g.fillStyle(0x7a4a2a).fillCircle(37, 33, 3.2).fillCircle(43, 34, 3.2);
+    g.generateTexture('palm', 68, 96).clear();
+
+    // Sandstone ruin block, plain and with a carved sun glyph.
+    for (const glyph of [false, true]) {
+      g.fillStyle(0xe8c486).fillPoints([V(0, 56), V(32, 72), V(32, 34), V(0, 18)], true);
+      g.fillStyle(0xcfa564).fillPoints([V(32, 72), V(64, 56), V(64, 18), V(32, 34)], true);
+      g.fillStyle(0xf4dba4).fillPoints([V(0, 18), V(32, 2), V(64, 18), V(32, 34)], true);
+      g.lineStyle(1.2, COLORS.ink, 0.5).lineBetween(0, 37, 32, 53).lineBetween(32, 53, 64, 37).lineBetween(16, 26, 16, 46).lineBetween(48, 45, 48, 26);
+      if (glyph) {
+        g.lineStyle(2, 0x8a5a2a, 0.9).strokeCircle(16, 46, 5);
+        for (let a = 0; a < 8; a++) g.lineBetween(16 + Math.cos(a * 0.785) * 7, 46 + Math.sin(a * 0.785) * 7, 16 + Math.cos(a * 0.785) * 10, 46 + Math.sin(a * 0.785) * 10);
+      }
+      g.generateTexture(glyph ? 'ruin-glyph' : 'ruin', 64, 72).clear();
+    }
+
+    // Scorpion: segmented body, pincers, a tail curling over with a stinger. Feet at (30, 36).
+    g.fillStyle(0x2a1e2e).fillRect(14, 30, 3, 6).fillRect(20, 31, 3, 6).fillRect(36, 31, 3, 6).fillRect(42, 30, 3, 6);
+    g.fillStyle(0xffffff).fillEllipse(28, 27, 32, 14);
+    g.fillStyle(0xdddddd).fillCircle(46, 26, 6).fillCircle(54, 22, 5);
+    g.fillStyle(0xffffff).fillCircle(10, 24, 4).fillCircle(6, 18, 4.5).fillCircle(9, 11, 4.5).fillCircle(16, 6, 4);
+    g.fillStyle(0x2a1e2e).fillTriangle(18, 4, 24, 6, 19, 10);
+    g.fillStyle(0xffffff).fillEllipse(58, 19, 9, 6);
+    g.fillStyle(0x2a1e2e).fillCircle(34, 23, 1.6).fillCircle(39, 23, 1.6);
+    g.generateTexture('scorpion', 64, 40).clear();
+
+    // Sandworm rising out of the ground, mouth open. Feet at (28, 54).
+    g.fillStyle(0xdddddd).fillEllipse(28, 52, 44, 10);
+    g.fillStyle(0xffffff).fillRoundedRect(14, 18, 28, 36, 12);
+    g.lineStyle(2, 0x2a1e2e, 0.5).lineBetween(15, 30, 41, 30).lineBetween(15, 40, 41, 40);
+    g.fillStyle(0xffffff).fillCircle(28, 16, 14);
+    g.fillStyle(0x7a2a3a).fillEllipse(28, 12, 16, 10);
+    g.fillStyle(0xfff6e0).fillTriangle(21, 9, 24, 9, 22.5, 14).fillTriangle(32, 9, 35, 9, 33.5, 14).fillTriangle(26.5, 7, 29.5, 7, 28, 12);
+    g.generateTexture('worm', 56, 58).clear();
+
+    // Skeleton: skull, ribs and bony limbs, holding a rusty blade. Feet at (24, 54). Drawn in real colors.
+    g.fillStyle(0xe8e2d0).fillRect(17, 42, 4, 12).fillRect(27, 42, 4, 12);
+    g.fillStyle(0xe8e2d0).fillRect(22, 22, 4, 20);
+    g.lineStyle(3, 0xe8e2d0);
+    for (const y of [26, 31, 36]) g.lineBetween(15, y, 33, y);
+    g.lineBetween(14, 24, 8, 38).lineBetween(34, 24, 40, 36);
+    g.fillStyle(0x9aa3b0).fillRect(39, 20, 3, 18);
+    g.fillStyle(0xf4efe0).fillCircle(24, 12, 10);
+    g.fillStyle(0x2a1e2e).fillCircle(20, 12, 3).fillCircle(28, 12, 3).fillTriangle(23, 16, 25, 16, 24, 18);
+    g.fillStyle(0xff5a3a).fillCircle(20, 12, 1).fillCircle(28, 12, 1);
+    g.generateTexture('skeleton', 48, 58).clear();
+
+    // Mummy: a wrapped figure with arms out and glowing eyes. Feet at (24, 54).
+    g.fillStyle(0xffffff).fillRoundedRect(14, 18, 20, 36, 6);
+    g.fillStyle(0xffffff).fillRect(4, 24, 12, 6).fillRect(32, 24, 12, 6);
+    g.fillStyle(0xffffff).fillCircle(24, 13, 10);
+    g.lineStyle(1.4, 0x2a1e2e, 0.45);
+    for (let y = 8; y < 54; y += 5) g.lineBetween(14, y + 2, 34, y - 1);
+    g.fillStyle(0x2a1e2e).fillRect(17, 10, 14, 5);
+    g.fillStyle(0xffe27a).fillCircle(21, 12.5, 1.6).fillCircle(27, 12.5, 1.6);
+    g.generateTexture('mummy', 48, 58).clear();
+
+    // Pharaoh: a tall mummy king with a striped golden headdress. Feet at (32, 62). Drawn in real colors.
+    g.fillStyle(0xe9dfc4).fillRoundedRect(18, 26, 28, 36, 8);
+    g.fillStyle(0xe9dfc4).fillRect(4, 32, 16, 7).fillRect(44, 32, 16, 7);
+    g.lineStyle(1.4, 0x2a1e2e, 0.4);
+    for (let y = 30; y < 62; y += 5) g.lineBetween(18, y + 2, 46, y - 1);
+    g.fillStyle(0x3a6fd8).fillRect(22, 40, 20, 5);
+    g.fillStyle(0xffc83a).fillPoints([V(14, 30), V(20, 6), V(44, 6), V(50, 30), V(42, 26), V(22, 26)], true);
+    g.fillStyle(0x3a6fd8);
+    for (const x of [22, 30, 38]) g.fillRect(x, 8, 3, 18);
+    g.fillStyle(0xd9b98a).fillCircle(32, 20, 9);
+    g.fillStyle(0x2a1e2e).fillRect(25, 17, 14, 5);
+    g.fillStyle(0xff3a3a).fillCircle(29, 19.5, 1.8).fillCircle(35, 19.5, 1.8);
+    g.fillStyle(0xffc83a).fillTriangle(29, 6, 35, 6, 32, 0);
+    g.generateTexture('pharaoh', 64, 66).clear();
+
     // Notice board on two posts, with pinned papers. Feet at (24, 54).
     g.fillStyle(0x6b4a2e).fillRect(8, 22, 4, 32).fillRect(36, 22, 4, 32);
     g.fillStyle(0x9a6b42).fillRoundedRect(2, 6, 44, 28, 3);
@@ -199,10 +279,10 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
 
     // Color-manga pass: ink outlines on everything, screentone on round shapes.
-    for (const key of ['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird', 'tree', 'rock']) {
+    for (const key of ['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird', 'scorpion', 'worm', 'skeleton', 'mummy', 'pharaoh', 'tree', 'palm', 'rock']) {
       inkify(this, key, { outline: 2.5, tone: true });
     }
-    for (const key of ['house', 'house-window', 'cavewall', 'board']) inkify(this, key, { outline: 2 });
+    for (const key of ['house', 'house-window', 'cavewall', 'ruin', 'ruin-glyph', 'board']) inkify(this, key, { outline: 2 });
     inkify(this, 'drop', { outline: 2 });
   }
 }

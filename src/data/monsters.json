@@ -662,5 +662,336 @@
       "scale": 1,
       "shape": "bird"
     }
+  },
+  {
+    "id": "dune_scorpion",
+    "name": "Dune Scorpion",
+    "level": 32,
+    "hp": 1500,
+    "atk": [
+      60,
+      78
+    ],
+    "def": 35,
+    "hit": 80,
+    "flee": 45,
+    "element": "fire",
+    "size": "small",
+    "attackDelayMs": 1300,
+    "attackRange": 1,
+    "moveMs": 230,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 12,
+      "wanderRadius": 5
+    },
+    "baseXp": 420,
+    "jobXp": 300,
+    "inflict": {
+      "status": "poison",
+      "chance": 0.1,
+      "durationMs": 6000
+    },
+    "drops": [
+      {
+        "item": "scorpion_tail",
+        "chance": 0.5
+      },
+      {
+        "item": "sand_ruby",
+        "chance": 0.06
+      },
+      {
+        "item": "red_tonic",
+        "chance": 0.08
+      },
+      {
+        "item": "dune_scorpion_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#e07a3a",
+      "scale": 1,
+      "shape": "scorpion"
+    }
+  },
+  {
+    "id": "sand_wolf",
+    "name": "Sand Wolf",
+    "level": 34,
+    "hp": 1700,
+    "atk": [
+      66,
+      84
+    ],
+    "def": 28,
+    "hit": 86,
+    "flee": 60,
+    "element": "earth",
+    "size": "medium",
+    "attackDelayMs": 1100,
+    "attackRange": 1,
+    "moveMs": 200,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 6
+    },
+    "baseXp": 480,
+    "jobXp": 340,
+    "drops": [
+      {
+        "item": "sand_pelt",
+        "chance": 0.5
+      },
+      {
+        "item": "blue_tonic",
+        "chance": 0.04
+      },
+      {
+        "item": "desert_turban",
+        "chance": 0.008
+      },
+      {
+        "item": "sand_wolf_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#d9b26a",
+      "scale": 1.05,
+      "shape": "wolf"
+    }
+  },
+  {
+    "id": "sandworm",
+    "name": "Sandworm",
+    "level": 37,
+    "hp": 2600,
+    "atk": [
+      80,
+      100
+    ],
+    "def": 25,
+    "hit": 78,
+    "flee": 20,
+    "element": "earth",
+    "size": "large",
+    "attackDelayMs": 1800,
+    "attackRange": 1,
+    "moveMs": 480,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 3
+    },
+    "baseXp": 650,
+    "jobXp": 460,
+    "inflict": {
+      "status": "stun",
+      "chance": 0.08,
+      "durationMs": 2000
+    },
+    "drops": [
+      {
+        "item": "worm_hide",
+        "chance": 0.5
+      },
+      {
+        "item": "sand_ruby",
+        "chance": 0.08
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.06
+      },
+      {
+        "item": "sandworm_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#c99a6a",
+      "scale": 1.1,
+      "shape": "worm"
+    }
+  },
+  {
+    "id": "rattlebones",
+    "name": "Rattlebones",
+    "level": 40,
+    "hp": 2400,
+    "atk": [
+      90,
+      110
+    ],
+    "def": 30,
+    "hit": 95,
+    "flee": 52,
+    "element": "undead",
+    "size": "medium",
+    "attackDelayMs": 1300,
+    "attackRange": 1,
+    "moveMs": 260,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 4
+    },
+    "baseXp": 900,
+    "jobXp": 640,
+    "drops": [
+      {
+        "item": "old_bone",
+        "chance": 0.5
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.06
+      },
+      {
+        "item": "panacea",
+        "chance": 0.03
+      },
+      {
+        "item": "rattlebones_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#f4efe0",
+      "scale": 1,
+      "shape": "skeleton"
+    }
+  },
+  {
+    "id": "wrapped_one",
+    "name": "Wrapped One",
+    "level": 44,
+    "hp": 3600,
+    "atk": [
+      100,
+      125
+    ],
+    "def": 40,
+    "hit": 100,
+    "flee": 30,
+    "element": "undead",
+    "size": "medium",
+    "attackDelayMs": 1500,
+    "attackRange": 1,
+    "moveMs": 380,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 10,
+      "wanderRadius": 3
+    },
+    "baseXp": 1250,
+    "jobXp": 880,
+    "inflict": {
+      "status": "blind",
+      "chance": 0.12,
+      "durationMs": 8000
+    },
+    "drops": [
+      {
+        "item": "linen_strip",
+        "chance": 0.5
+      },
+      {
+        "item": "sand_ruby",
+        "chance": 0.05
+      },
+      {
+        "item": "sunsteel_armor",
+        "chance": 0.004
+      },
+      {
+        "item": "wrapped_one_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#efe4c2",
+      "scale": 1.05,
+      "shape": "mummy"
+    }
+  },
+  {
+    "id": "dust_pharaoh",
+    "name": "Dust Pharaoh",
+    "level": 55,
+    "hp": 60000,
+    "atk": [
+      180,
+      240
+    ],
+    "def": 60,
+    "hit": 130,
+    "flee": 50,
+    "element": "undead",
+    "size": "large",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 320,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 7,
+      "chaseRange": 16,
+      "wanderRadius": 2
+    },
+    "baseXp": 30000,
+    "jobXp": 21000,
+    "inflict": {
+      "status": "blind",
+      "chance": 0.15,
+      "durationMs": 6000
+    },
+    "boss": true,
+    "special": {
+      "kind": "slam",
+      "everyMs": 7000,
+      "windupMs": 1400,
+      "radius": 2,
+      "modifier": 2.2,
+      "inflict": {
+        "status": "stun",
+        "chance": 0.5,
+        "durationMs": 2500
+      }
+    },
+    "drops": [
+      {
+        "item": "gold_scarab",
+        "chance": 1
+      },
+      {
+        "item": "sand_ruby",
+        "chance": 0.8
+      },
+      {
+        "item": "brightstone",
+        "chance": 0.8
+      },
+      {
+        "item": "sun_crown",
+        "chance": 0.25
+      },
+      {
+        "item": "dust_pharaoh_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#ffffff",
+      "scale": 2,
+      "shape": "pharaoh"
+    }
   }
 ]

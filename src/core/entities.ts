@@ -36,7 +36,7 @@ export interface Player extends Mover {
   /** Learned skill levels by skill id. */
   skills: Map<string, number>;
   /** Active timed buffs by skill id. */
-  buffs: Map<string, { level: number; remainingMs: number }>;
+  buffs: Map<string, { level: number; remainingMs: number; /** Remaining strength, for barriers. */ value?: number }>;
   /** Milliseconds until each skill can be used again. */
   cooldowns: Map<string, number>;
   /** Status effects and the time each has left. */

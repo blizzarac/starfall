@@ -32,7 +32,7 @@ const LOG_LINES = 7;
 const BUTTON_R = 26;
 const BUTTON_GAP = 8;
 const SKILL_R = 22;
-const SKILL_KEYS = ['F3', 'F4', 'F5', 'F6'];
+const SKILL_KEYS = ['F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10'];
 /** Below this width the log moves above the button row. */
 const NARROW = 700;
 
@@ -174,11 +174,19 @@ export class UIScene extends Phaser.Scene {
       const fromRight = this.buttons.length - 1 - i;
       b.root.setPosition(width - 12 - BUTTON_R - fromRight * (BUTTON_R * 2 + BUTTON_GAP), height - 12 - BUTTON_R);
     });
+    // Skill buttons fill right-aligned rows above the main buttons, wrapping upward on narrow screens.
+    const perRow = Math.max(1, Math.floor((width - 24 + BUTTON_GAP) / (SKILL_R * 2 + BUTTON_GAP)));
+    const rows = Math.ceil(this.skillButtons.length / perRow);
     this.skillButtons.forEach((b, i) => {
-      const fromRight = this.skillButtons.length - 1 - i;
-      b.root.setPosition(width - 12 - SKILL_R - fromRight * (SKILL_R * 2 + BUTTON_GAP), height - 24 - BUTTON_R * 2 - SKILL_R);
+      const row = Math.floor(i / perRow);
+      const inRow = Math.min(perRow, this.skillButtons.length - row * perRow);
+      const fromRight = inRow - 1 - (i % perRow);
+      b.root.setPosition(
+        width - 12 - SKILL_R - fromRight * (SKILL_R * 2 + BUTTON_GAP),
+        height - 24 - BUTTON_R * 2 - SKILL_R - (rows - 1 - row) * (SKILL_R * 2 + 10),
+      );
     });
-    const skillRow = this.skillButtons.length > 0 ? SKILL_R * 2 + 12 : 0;
+    const skillRow = rows * (SKILL_R * 2 + 10) + (rows > 0 ? 2 : 0);
     this.logText.setPosition(12, narrow ? height - 24 - BUTTON_R * 2 - skillRow : height - 10).setWordWrapWidth(narrow ? width - 24 : Math.min(520, width - 400));
     this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? 158 : 52);
     this.deathText.setPosition(width / 2, height / 2 - 60);

@@ -665,6 +665,574 @@
     }
   },
   {
+    "id": "harbor_merchant",
+    "nodes": {
+      "start": {
+        "text": "Fresh off the boats! Blue Tonics for the spell-slingers, boots for the deckhands. Have a look.",
+        "choices": [
+          {
+            "label": "Show me your wares",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "port_market"
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "pet_keeper",
+    "nodes": {
+      "start": {
+        "text": "Hello, {name}! Lonely out there? A little friend makes every road shorter.",
+        "choices": [
+          {
+            "label": "Show me lures and treats",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "pet_shop"
+              }
+            ]
+          },
+          {
+            "label": "How do I tame a pet?",
+            "next": "how"
+          },
+          {
+            "label": "How do I care for it?",
+            "next": "care"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "how": {
+        "text": "Buy the lure for the monster you want, walk within 6 tiles of one and use the lure from your bag. Wear it down a bit first: a tired monster is much easier to win over.",
+        "choices": [
+          {
+            "label": "And then?",
+            "next": "care"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "care": {
+        "text": "Tap your pet to open its window. Feed it a Pet Treat when it's hungry and it grows fond of you. Once it trusts you it helps: stronger stats, and Jellops and Gullwings pick up loot for you. Starve it and it will leave.",
+        "choices": [
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "knight_order",
+    "nodes": {
+      "start": {
+        "text": "The Order of the Sun Shield. We guard the caravans and the weak, {name}.",
+        "choices": [
+          {
+            "label": "I want to become a Knight",
+            "next": "check",
+            "if": {
+              "job": "swordsman"
+            }
+          },
+          {
+            "label": "What does a Knight do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 40,
+              "hasItem": {
+                "id": "scorpion_tail",
+                "count": 10
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 40
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "You have promise, but not yet. Come back at job level 40 as a Swordsman.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial: bring me 10 Scorpion Tails from the Sunscorch Dunes. Stand your ground when they swarm.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Ten tails. You held the line. Kneel, and rise a Knight?",
+        "choices": [
+          {
+            "label": "I kneel",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "scorpion_tail",
+                "count": 10
+              },
+              {
+                "type": "changeJob",
+                "job": "knight"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Rise, Sir {name}! Learn Pierce and Bowling Bash in Skills. A Claymore and Two-Hand Quicken make you a storm of steel, and Riding gets you there faster. Zahra sells Claymores."
+      },
+      "about": {
+        "text": "Knights are the front line. Pierce hits big monsters several times, Bowling Bash knocks a whole pack around, Two-Hand Quicken speeds up two-handed swords, and Riding makes you faster on your feet.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "swordsman"
+            }
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "wizard_tower",
+    "nodes": {
+      "start": {
+        "text": "The Tower of Embers. Few climb it, {name}; fewer come down unchanged.",
+        "choices": [
+          {
+            "label": "I want to become a Wizard",
+            "next": "check",
+            "if": {
+              "job": "mage"
+            }
+          },
+          {
+            "label": "What does a Wizard do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 40,
+              "hasItem": {
+                "id": "sand_ruby",
+                "count": 3
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 40
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "You have promise, but not yet. Come back at job level 40 as a Mage.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial: three Sand Rubies. Scorpions and Sandworms swallow them; take them back.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Three rubies, burning with sunlight. Hand them over and take the Wizard's mark?",
+        "choices": [
+          {
+            "label": "I take it",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "sand_ruby",
+                "count": 3
+              },
+              {
+                "type": "changeJob",
+                "job": "wizard"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome, Wizard {name}. Sight Rasher clears what surrounds you, Thunderstorm and Meteor Storm rain on whole packs. Long casts: keep your distance. Zahra sells the Arc Wand."
+      },
+      "about": {
+        "text": "Wizards trade speed for power. Their area spells hit everything near the target, but the casts are long and a single hit breaks them. DEX shortens them.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "mage"
+            }
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "hunter_lodge",
+    "nodes": {
+      "start": {
+        "text": "Ranger's Lodge. The desert hides everything, {name}. A good hunter finds it anyway.",
+        "choices": [
+          {
+            "label": "I want to become a Hunter",
+            "next": "check",
+            "if": {
+              "job": "archer"
+            }
+          },
+          {
+            "label": "What does a Hunter do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 40,
+              "hasItem": {
+                "id": "sand_pelt",
+                "count": 10
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 40
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "You have promise, but not yet. Come back at job level 40 as a Archer.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial: 10 Sand Pelts from the Sand Wolves of the dunes. They blend into the sand, so look closely.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Ten pelts, clean cuts. Ready to take the falcon?",
+        "choices": [
+          {
+            "label": "I'm ready",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "sand_pelt",
+                "count": 10
+              },
+              {
+                "type": "changeJob",
+                "job": "hunter"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome, Hunter {name}! Your falcon strikes with Blitz Beat (DEX and INT make it hit harder), and Claymore Trap blasts a pack. Zahra sells Hunter Bows."
+      },
+      "about": {
+        "text": "Hunters fight beside a falcon. Blitz Beat never misses, Steel Crow sharpens its talons, and Claymore Trap blows up anything next to your target.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "archer"
+            }
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "priest_temple",
+    "nodes": {
+      "start": {
+        "text": "Temple of the Sun. Even here, {name}, the dead do not always rest.",
+        "choices": [
+          {
+            "label": "I want to become a Priest",
+            "next": "check",
+            "if": {
+              "job": "acolyte"
+            }
+          },
+          {
+            "label": "What does a Priest do?",
+            "next": "about"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "check": {
+        "branch": [
+          {
+            "if": {
+              "jobLevelMin": 40,
+              "hasItem": {
+                "id": "old_bone",
+                "count": 10
+              }
+            },
+            "next": "ready"
+          },
+          {
+            "if": {
+              "jobLevelMin": 40
+            },
+            "next": "fee"
+          }
+        ],
+        "else": "not_ready"
+      },
+      "not_ready": {
+        "text": "You have promise, but not yet. Come back at job level 40 as a Acolyte.",
+        "choices": [
+          {
+            "label": "I'll be back"
+          }
+        ]
+      },
+      "fee": {
+        "text": "Your trial: bring 10 Old Bones from the Sunken Ruins so we can lay them to rest. Holy Light will serve you there.",
+        "choices": [
+          {
+            "label": "On my way"
+          }
+        ]
+      },
+      "ready": {
+        "text": "Ten bones, finally at peace. Take the Priest's vows?",
+        "choices": [
+          {
+            "label": "I take them",
+            "do": [
+              {
+                "type": "takeItem",
+                "id": "old_bone",
+                "count": 10
+              },
+              {
+                "type": "changeJob",
+                "job": "priest"
+              }
+            ],
+            "next": "welcome"
+          },
+          {
+            "label": "Not yet"
+          }
+        ]
+      },
+      "welcome": {
+        "text": "Welcome, Priest {name}. Kyrie Eleison shields you, Impositio Manus strengthens your arm, and Magnus Exorcismus purges the undead. Zahra sells the Holy Scepter."
+      },
+      "about": {
+        "text": "Priests shield and purge. Kyrie Eleison absorbs blows, Impositio Manus adds attack, and Magnus Exorcismus smites every undead and shadow monster in an area.",
+        "choices": [
+          {
+            "label": "Tell me how to join",
+            "next": "check",
+            "if": {
+              "job": "acolyte"
+            }
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "bazaar",
+    "nodes": {
+      "start": {
+        "text": "Sunspire Bazaar! Steel for Knights, wands for Wizards, bows, scepters and everything for the road.",
+        "choices": [
+          {
+            "label": "Show me",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "desert_bazaar"
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "sunspire_sailor",
+    "nodes": {
+      "start": {
+        "text": "Dax, first mate of the Gull. We sail back to Saltmere whenever you like.",
+        "choices": [
+          {
+            "label": "Sail to Saltmere (500 gold)",
+            "do": [
+              {
+                "type": "warp",
+                "map": "saltmere",
+                "x": 22,
+                "y": 12,
+                "cost": 500
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "dockmaster",
+    "nodes": {
+      "start": {
+        "text": "Captain Rook. My ship sails south to the desert city of Sunspire. The crossing's rough and the sands are rougher: it's no place for anyone under level 30.",
+        "choices": [
+          {
+            "label": "Sail to Sunspire (500 gold)",
+            "do": [
+              {
+                "type": "warp",
+                "map": "sunspire",
+                "x": 16,
+                "y": 6,
+                "cost": 500
+              }
+            ]
+          },
+          {
+            "label": "What's in the desert?",
+            "next": "desert"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "desert": {
+        "text": "Scorpions the size of carts, wolves you can't see against the sand, and the Sunken Ruins, where the Dust Pharaoh still holds court. The guilds of Sunspire train Knights, Wizards, Hunters and Priests.",
+        "choices": [
+          {
+            "label": "Take me there",
+            "next": "start"
+          },
+          {
+            "label": "Maybe later"
+          }
+        ]
+      }
+    }
+  },
+  {
     "id": "courier",
     "nodes": {
       "start": {
@@ -769,6 +1337,54 @@
             ]
           },
           {
+            "label": "Sunspire (600 gold)",
+            "if": {
+              "visited": "sunspire",
+              "notMap": "sunspire"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "sunspire",
+                "x": 16,
+                "y": 6,
+                "cost": 600
+              }
+            ]
+          },
+          {
+            "label": "Sunscorch Dunes (700 gold)",
+            "if": {
+              "visited": "sunscorch-dunes",
+              "notMap": "sunscorch-dunes"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "sunscorch-dunes",
+                "x": 20,
+                "y": 3,
+                "cost": 700
+              }
+            ]
+          },
+          {
+            "label": "Sunken Ruins (900 gold)",
+            "if": {
+              "visited": "sunken-ruins",
+              "notMap": "sunken-ruins"
+            },
+            "do": [
+              {
+                "type": "warp",
+                "map": "sunken-ruins",
+                "x": 17,
+                "y": 2,
+                "cost": 900
+              }
+            ]
+          },
+          {
             "label": "Never mind"
           }
         ]
@@ -782,103 +1398,6 @@
           {
             "label": "Got it",
             "next": "start"
-          }
-        ]
-      }
-    }
-  },
-  {
-    "id": "harbor_merchant",
-    "nodes": {
-      "start": {
-        "text": "Fresh off the boats! Blue Tonics for the spell-slingers, boots for the deckhands. Have a look.",
-        "choices": [
-          {
-            "label": "Show me your wares",
-            "do": [
-              {
-                "type": "openShop",
-                "shop": "port_market"
-              }
-            ]
-          },
-          {
-            "label": "Goodbye"
-          }
-        ]
-      }
-    }
-  },
-  {
-    "id": "dockmaster",
-    "nodes": {
-      "start": {
-        "text": "Captain Rook. My ship sails south to the desert city of Sunspire, but the crossing is rough and the sands are rougher.",
-        "choices": [
-          {
-            "label": "What's in the desert?",
-            "next": "desert"
-          },
-          {
-            "label": "Goodbye"
-          }
-        ]
-      },
-      "desert": {
-        "text": "Sun-baked ruins, scorpions the size of carts, and things that should've stayed buried. Come back when you're stronger.",
-        "choices": [
-          {
-            "label": "I will"
-          }
-        ]
-      }
-    }
-  },
-  {
-    "id": "pet_keeper",
-    "nodes": {
-      "start": {
-        "text": "Hello, {name}! Lonely out there? A little friend makes every road shorter.",
-        "choices": [
-          {
-            "label": "Show me lures and treats",
-            "do": [
-              {
-                "type": "openShop",
-                "shop": "pet_shop"
-              }
-            ]
-          },
-          {
-            "label": "How do I tame a pet?",
-            "next": "how"
-          },
-          {
-            "label": "How do I care for it?",
-            "next": "care"
-          },
-          {
-            "label": "Goodbye"
-          }
-        ]
-      },
-      "how": {
-        "text": "Buy the lure for the monster you want, walk within 6 tiles of one and use the lure from your bag. Wear it down a bit first: a tired monster is much easier to win over.",
-        "choices": [
-          {
-            "label": "And then?",
-            "next": "care"
-          },
-          {
-            "label": "Thanks"
-          }
-        ]
-      },
-      "care": {
-        "text": "Tap your pet to open its window. Feed it a Pet Treat when it's hungry and it grows fond of you. Once it trusts you it helps: stronger stats, and Jellops and Gullwings pick up loot for you. Starve it and it will leave.",
-        "choices": [
-          {
-            "label": "Thanks"
           }
         ]
       }

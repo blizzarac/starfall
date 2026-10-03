@@ -39,6 +39,11 @@ const MONSTER_FEET: Record<MonsterDef['look']['shape'], number> = {
   golem: 52,
   crab: 36,
   bird: 42,
+  scorpion: 36,
+  worm: 54,
+  skeleton: 54,
+  mummy: 54,
+  pharaoh: 62,
 };
 /** Comic sound effects for big hits, by what landed. */
 const SFX = {
@@ -57,10 +62,15 @@ const SFX = {
 /** What the player shouts when casting a buff. */
 const BUFF_SHOUTS: Record<string, string> = {
   endure: 'ENDURE!',
+  two_hand_quicken: 'QUICKEN!',
+  kyrie_eleison: 'KYRIE!',
+  impositio_manus: 'IMPOSITIO!',
   improve_concentration: 'FOCUS!',
   blessing: 'BLESSING!',
   increase_agi: 'AGI UP!',
 };
+/** A map whose grass color is this is a desert: trees and rocks stand on sand. */
+const SAND_GROUND = '#f7e3a8';
 /** Pointer distance (px) within which a click counts as hitting a monster or drop. */
 const PICK_RADIUS = 24;
 /** While the button is held, re-issue the move this often so the player follows the pointer. */
@@ -104,7 +114,8 @@ export class WorldScene extends Phaser.Scene {
     this.npcViews.clear();
     this.registry.set('clock', this.clock);
 
-    this.cameras.main.setBackgroundColor(this.world.map.kind === 'dungeon' ? '#16131c' : '#3e7a45');
+    const map = this.world.map;
+    this.cameras.main.setBackgroundColor(map.kind === 'dungeon' ? '#16131c' : map.grass?.[0] === SAND_GROUND ? '#c9a35a' : '#3e7a45');
     this.drawGround();
     this.placeObstacles();
     this.placePortals();
@@ -166,8 +177,9 @@ export class WorldScene extends Phaser.Scene {
     const classOf = (x: number, y: number): string => {
       const t = grid.terrainAt(x, y);
       if (t === undefined) return 'void';
-      if (t === 'tree' || t === 'rock' || t === 'flower') return 'grass';
-      return t === 'wall' ? 'cobble' : t;
+      if (t === 'tree' || t === 'rock' || t === 'flower') return grass?.[0] === SAND_GROUND ? 'sand' : 'grass';
+      if (t === 'palm') return 'sand';
+      return t === 'wall' || t === 'ruin' ? 'cobble' : t;
     };
     const V = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
     for (let y = 0; y < height; y++) {
@@ -254,7 +266,7 @@ export class WorldScene extends Phaser.Scene {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const t = this.world.grid.terrainAt(x, y);
-        if (t !== 'tree' && t !== 'rock' && t !== 'wall' && t !== 'cavewall') continue;
+        if (t !== 'tree' && t !== 'rock' && t !== 'wall' && t !== 'cavewall' && t !== 'palm' && t !== 'ruin') continue;
         const p = tileToWorld(x, y);
         let img: Phaser.GameObjects.Image;
         if (t === 'tree') {
@@ -265,8 +277,13 @@ export class WorldScene extends Phaser.Scene {
           const key = hash(x, y) % 3 === 0 ? 'house-window' : 'house';
           img = this.add.image(p.x, p.y, key).setOrigin(0.5, feetOrigin(this, key, 56));
           this.trees.push({ img, tile: { x, y } });
-        } else if (t === 'cavewall') {
-          img = this.add.image(p.x, p.y, 'cavewall').setOrigin(0.5, feetOrigin(this, 'cavewall', 56));
+        } else if (t === 'cavewall' || t === 'ruin') {
+          const key = t === 'ruin' ? (hash(x, y) % 4 === 0 ? 'ruin-glyph' : 'ruin') : 'cavewall';
+          img = this.add.image(p.x, p.y, key).setOrigin(0.5, feetOrigin(this, key, 56));
+          this.trees.push({ img, tile: { x, y } });
+        } else if (t === 'palm') {
+          this.add.image(p.x, p.y + 4, 'shadow').setScale(1.1).setDepth(1);
+          img = this.add.image(p.x, p.y + 4, 'palm').setOrigin(0.5, feetOrigin(this, 'palm', 92)).setFlipX(hash(x, y) % 2 === 0);
           this.trees.push({ img, tile: { x, y } });
         } else {
           this.add.image(p.x, p.y + 2, 'shadow').setDepth(1);
@@ -601,7 +618,7 @@ export class WorldScene extends Phaser.Scene {
         const crit = e.crit;
         const toPlayer = e.targetId === 'player';
         const color = toPlayer ? '#ff5a4a' : crit ? '#ffd84a' : '#ffffff';
-        this.damageNumber(e.targetId, String(e.amount), color, crit ? 30 : 22);
+        this.damageNumber(e.targetId, e.amount === 0 && toPlayer ? 'BLOCK' : String(e.amount), e.amount === 0 && toPlayer ? '#fff6c8' : color, crit ? 30 : 22);
         if (crit) this.soundEffect(e.targetId, pick(SFX.hit), '#ffd84a', true);
         else if (toPlayer && e.sourceId !== 'player' && e.amount >= this.world.player.hp * 0.5) this.soundEffect('player', pick(SFX.hurt), '#ff5a4a');
         if (e.sourceId === 'player') this.playAttack(e.targetId);
@@ -620,7 +637,7 @@ export class WorldScene extends Phaser.Scene {
         speedLines(this, this.player.x, this.player.y - 30, { inner: 50, outer: 220, count: 40 });
         this.cameras.main.flash(300, 255, 240, 180);
       }),
-      ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets)),
+      ev.on('skillUsed', (e) => this.skillEffect(e.skillId, e.targets, e.at)),
       ev.on('petTamed', () => {
         // The pet view appears on the next frame; celebrate from the player.
         this.soundEffect('player', 'TAMED!!', '#ff8fb8', true);
@@ -683,8 +700,9 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  private skillEffect(skillId: string, targets: number[]): void {
+  private skillEffect(skillId: string, targets: number[], tile?: Tile): void {
     const at = { x: this.player.x, y: this.player.y };
+    const center = tile ? tileToWorld(tile.x, tile.y) : at;
     const target = targets[0];
     if (skillId === 'bash') {
       if (target !== undefined) this.soundEffect(target, pick(SFX.hit), '#ffb15a', true);
@@ -714,12 +732,104 @@ export class WorldScene extends Phaser.Scene {
     } else if (skillId === 'heal') {
       this.lightPillar(0x7dff9a);
       this.soundEffect('player', 'HEAL!', '#7dff9a');
+    } else if (skillId === 'pierce') {
+      if (target !== undefined) this.soundEffect(target, 'PIERCE!', '#9fd8ff', true);
+      this.cameras.main.shake(90, 0.004);
+    } else if (skillId === 'bowling_bash') {
+      this.ring(center, 0xffd84a, 3);
+      this.soundEffect(target ?? 'player', 'KRASH!!', '#ffd84a', true);
+      speedLines(this, center.x, center.y - 20, { inner: 40, outer: 160 });
+      this.cameras.main.shake(160, 0.007);
+    } else if (skillId === 'sight_rasher') {
+      this.ring(at, 0xff7a3a, 5);
+      this.soundEffect('player', 'FWOOM!', '#ff7a3a', true);
+      this.cameras.main.shake(120, 0.005);
+    } else if (skillId === 'thunderstorm') {
+      for (const id of targets) this.lightning(id);
+      this.soundEffect(target ?? 'player', 'KRAKOOM!', '#fff27a', true);
+      this.cameras.main.flash(120, 255, 250, 200);
+    } else if (skillId === 'meteor_storm') {
+      this.meteors(center);
+      this.time.delayedCall(260, () => {
+        this.ring(center, 0xff7a3a, 5);
+        this.soundEffect(target ?? 'player', 'DOOOM!!', '#ff7a3a', true);
+        this.cameras.main.shake(260, 0.012);
+      });
+    } else if (skillId === 'blitz_beat') {
+      if (target !== undefined) this.falcon(target);
+    } else if (skillId === 'claymore_trap') {
+      this.ring(center, 0xff9a4a, 3);
+      this.soundEffect(target ?? 'player', 'BOOM!', '#ff9a4a', true);
+      this.cameras.main.shake(140, 0.006);
+    } else if (skillId === 'magnus_exorcismus') {
+      this.ring(center, 0xfff6c8, 5);
+      for (const id of targets) this.holyBeam(id);
+      this.soundEffect('player', 'MAGNUS!', '#fff6c8', true);
     } else if (skillId in BUFF_SHOUTS) {
       this.soundEffect('player', BUFF_SHOUTS[skillId]!, '#ffe27a');
       this.lightPillar(0xffe27a);
       this.playerBody.setTint(0xffe9a8);
       this.time.delayedCall(400, () => this.playerBody.clearTint());
     }
+  }
+
+  /** A flat ring bursting outward on the ground; `tiles` across. */
+  private ring(at: { x: number; y: number }, color: number, tiles: number): void {
+    const ring = this.add.ellipse(at.x, at.y, 40, 20).setStrokeStyle(6, color, 0.9).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
+    const glow = this.add.ellipse(at.x, at.y, 40, 20, color, 0.35).setDepth(3999).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * tiles) / 40, scaleY: (TILE_H * tiles) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
+  }
+
+  /** A jagged bolt from the sky onto a monster. */
+  private lightning(targetId: number): void {
+    const view = this.monsterViews.get(targetId);
+    if (!view) return;
+    const g = this.add.graphics().setDepth(4000);
+    const x = view.root.x;
+    let y = view.root.y - 220;
+    const pts = [{ x, y }];
+    while (y < view.root.y - 16) {
+      y += 24;
+      pts.push({ x: x + Phaser.Math.Between(-12, 12), y });
+    }
+    g.lineStyle(7, 0x16131c).strokePoints(pts as Phaser.Math.Vector2[]);
+    g.lineStyle(4, 0xfff27a).strokePoints(pts as Phaser.Math.Vector2[]);
+    this.tweens.add({ targets: g, alpha: 0, delay: 120, duration: 200, onComplete: () => g.destroy() });
+  }
+
+  /** Flaming rocks streaking down onto an area. */
+  private meteors(center: { x: number; y: number }): void {
+    for (let i = 0; i < 4; i++) {
+      const x = center.x + Phaser.Math.Between(-50, 50);
+      const y = center.y + Phaser.Math.Between(-16, 16);
+      const rock = this.add.circle(x - 120, y - 260, 11, 0xff7a3a).setStrokeStyle(3, 0x16131c).setDepth(4000);
+      const tail = this.add.ellipse(x - 120, y - 260, 46, 12, 0xffd84a, 0.8).setDepth(3999).setRotation(Math.atan2(260, 120));
+      this.tweens.add({
+        targets: [rock, tail],
+        x: (t: Phaser.GameObjects.GameObject) => (t === rock ? x : x - 14),
+        y: (t: Phaser.GameObjects.GameObject) => (t === rock ? y : y - 30),
+        delay: i * 70,
+        duration: 260,
+        onComplete: () => (rock.destroy(), tail.destroy()),
+      });
+    }
+  }
+
+  /** The Hunter's falcon swooping from the player onto a monster and back. */
+  private falcon(targetId: number): void {
+    const view = this.monsterViews.get(targetId);
+    if (!view) return;
+    const bird = this.add.image(this.player.x, this.player.y - 70, 'bird').setScale(0.7).setTint(0xc9a36a).setDepth(4500);
+    bird.setFlipX(view.root.x < this.player.x);
+    this.tweens.chain({
+      targets: bird,
+      tweens: [
+        { x: view.root.x, y: view.root.y - 24, duration: 180, ease: 'Quad.easeIn' },
+        { x: this.player.x, y: this.player.y - 90, alpha: 0, duration: 300, ease: 'Quad.easeOut' },
+      ],
+      onComplete: () => bird.destroy(),
+    });
+    this.time.delayedCall(180, () => this.soundEffect(targetId, 'SCREE!', '#ffe27a', true));
   }
 
   /** An arrow flying from the player to a monster. */
