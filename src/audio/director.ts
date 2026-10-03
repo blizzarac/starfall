@@ -52,6 +52,7 @@ export function bindWorldAudio(world: World): () => void {
       }
     }),
     ev.on('miss', () => audio.play('miss')),
+    ev.on('petAttack', () => audio.play('hit')),
     ev.on('skillUsed', (e) => {
       const s = SKILL_SFX[e.skillId];
       if (s) audio.play(s);
@@ -69,6 +70,7 @@ export function bindWorldAudio(world: World): () => void {
     ev.on('crafted', () => audio.play('refineGood')),
     ev.on('questCompleted', () => audio.play('quest')),
     ev.on('petTamed', () => audio.play('tame')),
+    ev.on('petLevelUp', () => audio.play('levelUp')),
     ev.on('tameFailed', () => audio.play('error')),
     ev.on('petFed', (e) => audio.play(e.delta > 0 ? 'tame' : 'error')),
     ev.on('boss', (e) => e.kind === 'appeared' && audio.play('warn')),

@@ -699,6 +699,7 @@ export class UIScene extends Phaser.Scene {
       ev.on('petTamed', (e) => this.addLog(`You tamed a ${e.name}! Tap it to see how it's doing.`)),
       ev.on('tameFailed', (e) => this.addLog(`The ${e.name} wasn't fooled. Wear it down and try again.`)),
       ev.on('petRanAway', (e) => this.addLog(`${e.name} got too hungry and ran away…`)),
+      ev.on('petLevelUp', (e) => this.addLog(`${e.name} reached level ${e.level}!`)),
       ev.on('jobChanged', (e) => {
         const name = isJobId(e.jobId) ? JOBS[e.jobId].name : e.jobId;
         this.addLog(`You are now ${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}! Open Skills to learn new skills.`);

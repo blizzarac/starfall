@@ -48,7 +48,7 @@ describe('pet rules', () => {
   });
 
   it('feeding a hungry pet builds friendship; overfeeding hurts it', () => {
-    const pet: Pets.Pet = { species: 'jellop', name: 'Jelly', intimacy: 100, hunger: 30 };
+    const pet: Pets.Pet = { ...Pets.newPet('jellop', 'Jelly'), intimacy: 100, hunger: 30 };
     expect(Pets.feed(pet)).toBe(40);
     expect(pet.intimacy).toBe(140);
     pet.hunger = 95;
@@ -56,9 +56,11 @@ describe('pet rules', () => {
     expect(pet.hunger).toBe(100);
   });
 
-  it('bonuses start at Neutral and double when Loyal', () => {
-    const pet: Pets.Pet = { species: 'thicket_wolf', name: 'Rex', intimacy: 100, hunger: 50 };
+  it('bonuses start at half when Shy, full at Neutral, and double when Loyal', () => {
+    const pet: Pets.Pet = { ...Pets.newPet('thicket_wolf', 'Rex'), intimacy: 50, hunger: 50 };
     expect(Pets.petBonus(pet)).toEqual({});
+    pet.intimacy = 100;
+    expect(Pets.petBonus(pet)).toEqual({ atk: 5, agi: 1 });
     pet.intimacy = 300;
     expect(Pets.petBonus(pet)).toEqual({ atk: 10, agi: 1 });
     pet.intimacy = 950;
@@ -100,7 +102,7 @@ describe('taming and caring', () => {
     expect(notices.at(-1)).toMatch(/already have a pet/);
   });
 
-  it('feeding with treats makes it Neutral, which adds its bonus', () => {
+  it('feeding with treats makes it Neutral, which raises its bonus from half to full', () => {
     const w = tamed();
     const luk = effectiveStats(w.player).luk;
     const hp = derivedStats(w.player).maxHp;
@@ -111,7 +113,8 @@ describe('taming and caring', () => {
       expect(w.feedPet()).toBeNull();
     }
     expect(Pets.fondness(w.player.pet!.intimacy)).toBe('Neutral');
-    expect(effectiveStats(w.player).luk).toBe(luk + 2);
+    // A Shy jellop gave LUK +1 (half of 2); Neutral gives all of it.
+    expect(effectiveStats(w.player).luk).toBe(luk + 1);
     expect(derivedStats(w.player).maxHp).toBeGreaterThan(hp);
   });
 
@@ -146,5 +149,106 @@ describe('taming and caring', () => {
     expect(fresh.player.pet).toMatchObject({ species: 'jellop', name: 'Wobbles' });
     const { pet: _pet, ...v6 } = { ...doc, schemaVersion: 6 };
     expect(migrate(v6).pet).toBeNull();
+  });
+});
+
+describe('pet levels, bites and gear', () => {
+  it('levels up from XP, keeps the leftover, and stops at the cap', () => {
+    const pet = Pets.newPet('jellop', 'Jelly');
+    expect(Pets.gainPetXp(pet, Pets.petXpToNext(1) + 5)).toBe(1);
+    expect(pet).toMatchObject({ level: 2, xp: 5 });
+    pet.level = Pets.MAX_PET_LEVEL - 1;
+    expect(Pets.gainPetXp(pet, 1e9)).toBe(1);
+    expect(pet).toMatchObject({ level: Pets.MAX_PET_LEVEL, xp: 0 });
+  });
+
+  it('higher levels give bigger bonuses and bites', () => {
+    const pet = { ...Pets.newPet('thicket_wolf', 'Rex'), intimacy: 300 };
+    const low = Pets.petBonus(pet).atk!;
+    const bite = Pets.petAttackDamage(pet);
+    pet.level = 21;
+    expect(Pets.petBonus(pet).atk).toBe(low * 2);
+    expect(Pets.petAttackDamage(pet)).toBeGreaterThan(bite * 5);
+  });
+
+  it('defeating monsters together gives the pet XP and friendship', () => {
+    const w = tamed();
+    const pet = w.player.pet!;
+    pet.hunger = 80;
+    const levels: number[] = [];
+    w.events.on('petLevelUp', (e) => levels.push(e.level));
+    const before = pet.intimacy;
+    for (let i = 0; i < 5; i++) {
+      const m = [...w.monsters.values()].sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
+      m.hp = 1;
+      w.attack(m.id);
+      run(w, 15_000, () => !w.monsters.has(m.id));
+    }
+    expect(pet.level).toBeGreaterThan(1);
+    expect(levels.at(-1)).toBe(pet.level);
+    expect(pet.intimacy).toBeGreaterThan(before + 5 * Pets.KILL_INTIMACY);
+  });
+
+  it('bites what the player is fighting', () => {
+    const w = tamed();
+    const bites: number[] = [];
+    w.events.on('petAttack', (e) => bites.push(e.amount));
+    const m = [...w.monsters.values()].sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
+    m.hp = 1e6;
+    w.player.hp = 1e6;
+    w.attack(m.id);
+    run(w, 12_000);
+    expect(bites.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('wears one collar or charm, swapping through the bag', () => {
+    const w = tamed();
+    const pet = w.player.pet!;
+    pet.intimacy = 300;
+    const bite = Pets.petAttackDamage(pet);
+    expect(w.equipPetGear('leather_collar')).toMatch(/don't have/);
+    w.addItem('leather_collar', 1);
+    w.addItem('spiked_collar', 1);
+    expect(w.equipPetGear('leather_collar')).toBeNull();
+    expect(Pets.petAttackDamage(pet)).toBeGreaterThan(bite);
+    const atk = derivedStats(w.player).atk;
+    expect(w.equipPetGear('spiked_collar')).toBeNull();
+    expect(w.itemCount('leather_collar')).toBe(1);
+    expect(derivedStats(w.player).atk).toBe(atk + 5);
+    w.unequipPetGear();
+    expect(pet.gear).toBeNull();
+    expect(w.itemCount('spiked_collar')).toBe(1);
+    // A released pet leaves its collar behind.
+    w.equipPetGear('spiked_collar');
+    w.releasePet();
+    expect(w.itemCount('spiked_collar')).toBe(1);
+  });
+
+  it('a feed bag slows hunger', () => {
+    const plain = tamed();
+    const bagged = tamed();
+    bagged.addItem('feed_bag', 1);
+    bagged.equipPetGear('feed_bag');
+    plain.player.pet!.hunger = bagged.player.pet!.hunger = 80;
+    plain.player.hp = bagged.player.hp = 1e6;
+    run(plain, 200_000);
+    run(bagged, 200_000);
+    expect(80 - bagged.player.pet!.hunger).toBeLessThan(80 - plain.player.pet!.hunger);
+  });
+
+  it('level, XP and gear are saved; older pets load as level 1', () => {
+    const w = tamed();
+    const pet = w.player.pet!;
+    pet.level = 12;
+    pet.xp = 34;
+    w.addItem('jingle_bell', 1);
+    w.equipPetGear('jingle_bell');
+    const doc = migrate(JSON.parse(JSON.stringify(toSaveDoc(w, 0))));
+    const fresh = new World(content, meadow, { seed: 9 });
+    applySaveDoc(fresh, doc);
+    expect(fresh.player.pet).toMatchObject({ level: 12, xp: 34, gear: { id: 'jingle_bell' } });
+    const old = { ...doc, pet: { species: 'jellop', name: 'Old', intimacy: 300, hunger: 50 } };
+    applySaveDoc(fresh, migrate(old));
+    expect(fresh.player.pet).toMatchObject({ level: 1, xp: 0, gear: null });
   });
 });

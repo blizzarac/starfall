@@ -44,7 +44,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     flags: Object.fromEntries(world.flags),
     position: p.dead ? { ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
     savePoint: { ...p.savePoint },
-    pet: p.pet ? { ...p.pet } : null,
+    pet: p.pet ? { ...p.pet, xp: Math.floor(p.pet.xp), gear: p.pet.gear?.id ?? null } : null,
     hotbar: [...p.hotbar],
     appearance: { ...p.appearance },
   };
@@ -97,7 +97,12 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     ? doc.hotbar.filter(usable)
     : [...p.skills.keys()].filter((id) => isSkillId(id) && SKILLS[id].kind !== 'passive').slice(0, HOTBAR_SIZE);
   // A pet whose species can no longer be tamed is let go.
-  p.pet = doc.pet && PET_SPECIES[doc.pet.species] && world.content.monsters.has(doc.pet.species) ? { ...doc.pet } : null;
+  const pet = doc.pet;
+  const petGear = pet?.gear ? world.content.items.get(pet.gear) : undefined;
+  p.pet =
+    pet && PET_SPECIES[pet.species] && world.content.monsters.has(pet.species)
+      ? { ...pet, level: pet.level ?? 1, xp: pet.xp ?? 0, gear: petGear?.petGear ? petGear : null }
+      : null;
 
   // Places on maps that no longer exist, or tiles that are now blocked, fall back to safe spots.
   const valid = (place: SaveDoc['position']) => {

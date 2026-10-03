@@ -1,4 +1,5 @@
-import type { GearBonus } from '../data/schemas';
+import type { GearBonus, ItemDef, PetGearDef } from '../data/schemas';
+import { describeBonus } from './equipment';
 
 /** A tamed monster that follows the player. Saved with the character. */
 export interface Pet {
@@ -9,6 +10,12 @@ export interface Pet {
   intimacy: number;
   /** Fullness, 0–100. Drops over time; feed with a Pet Treat. */
   hunger: number;
+  /** Grows from the monsters you defeat together, 1–MAX_PET_LEVEL. */
+  level: number;
+  /** XP toward the next level. */
+  xp: number;
+  /** The collar or charm it wears, if any (saved as its item id). */
+  gear: ItemDef | null;
 }
 
 export interface PetSpecies {
@@ -39,6 +46,66 @@ export const HUNGER_TICK_MS = 20_000;
 export const STARVING_LOSS = 20;
 /** How far (tiles) from the player a looting pet goes for drops. */
 export const PET_LOOT_RANGE = 5;
+export const MAX_PET_LEVEL = 50;
+/** Friendship for each monster defeated together (while the pet isn't starving). */
+export const KILL_INTIMACY = 2;
+/** Friendship on each pet level up. */
+export const LEVEL_INTIMACY = 15;
+/** Time between the pet's bites. */
+export const PET_ATTACK_MS = 2500;
+/** How far (tiles) the pet reaches to bite. */
+export const PET_ATTACK_RANGE = 3;
+
+/** XP a pet needs to go from `level` to the next: the same curve as yours. */
+export function petXpToNext(level: number): number {
+  return Math.round(10 * level * level + 10 * level);
+}
+
+/** What the pet's collar or charm does; empty without one. */
+export function petGear(pet: Pet | null): PetGearDef {
+  return pet?.gear?.petGear ?? {};
+}
+
+/**
+ * Gives XP to the pet; returns how many levels it gained. A full level caps
+ * the XP so nothing is wasted on the bar.
+ */
+export function gainPetXp(pet: Pet, xp: number): number {
+  let gained = 0;
+  pet.xp += Math.max(0, Math.round(xp));
+  while (pet.level < MAX_PET_LEVEL && pet.xp >= petXpToNext(pet.level)) {
+    pet.xp -= petXpToNext(pet.level);
+    pet.level += 1;
+    gained += 1;
+  }
+  if (pet.level >= MAX_PET_LEVEL) pet.xp = 0;
+  return gained;
+}
+
+/** What a collar or charm does, in plain words, e.g. "bites +30% · LUK +3". */
+export function describePetGear(g: PetGearDef): string {
+  const pct = (v: number) => `+${Math.round(v * 100)}%`;
+  const parts: string[] = [];
+  if (g.attack) parts.push(`bites ${pct(g.attack)}`);
+  if (g.friendship) parts.push(`friendship ${pct(g.friendship)}`);
+  if (g.xp) parts.push(`pet XP ${pct(g.xp)}`);
+  if (g.appetite) parts.push(`hunger −${Math.round(g.appetite * 100)}%`);
+  if (g.lootRange) parts.push(`loot reach +${g.lootRange}`);
+  parts.push(...describeBonus(g.bonus ?? {}));
+  return parts.join(' · ');
+}
+
+/** Bite damage before randomness: grows with level and friendship. */
+export function petAttackDamage(pet: Pet): number {
+  return Math.round((6 + 4 * pet.level) * FONDNESS_ATTACK[fondness(pet.intimacy)] * (1 + (petGear(pet).attack ?? 0)));
+}
+
+const FONDNESS_ATTACK: Record<Fondness, number> = { Awkward: 0.5, Shy: 0.75, Neutral: 1, Cordial: 1.25, Loyal: 1.5 };
+
+/** How much stronger the species bonus gets with level: ×1 at Lv 1, ×3.45 at Lv 50. */
+export function levelFactor(level: number): number {
+  return 1 + (level - 1) * 0.05;
+}
 
 export type Fondness = 'Awkward' | 'Shy' | 'Neutral' | 'Cordial' | 'Loyal';
 
@@ -83,19 +150,27 @@ export function feed(pet: Pet): number {
   return delta;
 }
 
-/** 0 below Neutral, 1 from Neutral, 2 when Loyal. */
+const FONDNESS_BONUS: Record<Fondness, number> = { Awkward: 0, Shy: 0.5, Neutral: 1, Cordial: 1.5, Loyal: 2 };
+
+/** How much of the species bonus friendship unlocks: none when Awkward, half when Shy, double when Loyal. */
 export function bonusFactor(intimacy: number): number {
-  const f = fondness(intimacy);
-  return f === 'Loyal' ? 2 : f === 'Neutral' || f === 'Cordial' ? 1 : 0;
+  return FONDNESS_BONUS[fondness(intimacy)];
 }
 
-/** Stats the current pet gives. */
+/** Stats the current pet gives you: its species bonus, grown by level and friendship, plus its gear's. */
 export function petBonus(pet: Pet | null): GearBonus {
   if (!pet) return {};
   const species = PET_SPECIES[pet.species];
-  const k = bonusFactor(pet.intimacy);
-  if (!species || k === 0) return {};
-  return Object.fromEntries(Object.entries(species.bonus).map(([key, v]) => [key, (v ?? 0) * k]));
+  const k = bonusFactor(pet.intimacy) * levelFactor(pet.level);
+  const total: Record<string, number> = {};
+  if (species && k > 0) for (const [key, v] of Object.entries(species.bonus)) total[key] = Math.round((v ?? 0) * k);
+  for (const [key, v] of Object.entries(petGear(pet).bonus ?? {})) total[key] = (total[key] ?? 0) + (v ?? 0);
+  return total;
+}
+
+/** A fresh pet, as tamed. */
+export function newPet(species: string, name: string): Pet {
+  return { species, name, intimacy: START_INTIMACY, hunger: START_HUNGER, level: 1, xp: 0, gear: null };
 }
 
 /** Chance a lure works: better the more the monster is worn down. */

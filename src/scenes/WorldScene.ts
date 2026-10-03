@@ -118,6 +118,8 @@ export class WorldScene extends Phaser.Scene {
     sheet: string;
     anim: string;
     lastX: number;
+    /** Scene time until which the bite animation plays. */
+    biteUntil: number;
   } | null = null;
   private hover!: Phaser.GameObjects.Image;
   /** Pulsing ring under whatever the player is fighting. */
@@ -577,7 +579,7 @@ export class WorldScene extends Phaser.Scene {
       const body = this.add.sprite(0, 0, sheet).setOrigin(0.5, MON_ORIGIN_Y).setScale(WORLD_PX * 0.62);
       const label = this.add.text(0, -34, pet.name, { ...WORLD_TEXT, fontSize: '10px', color: '#ffb8d8' }).setOrigin(0.5, 1);
       const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.6), body, label]);
-      this.petView = { root, body, label, key, sheet, anim: '', lastX: 0 };
+      this.petView = { root, body, label, key, sheet, anim: '', lastX: 0, biteUntil: 0 };
     }
     const view = this.petView;
     const pos = renderPosition(mover, this.alpha);
@@ -586,7 +588,7 @@ export class WorldScene extends Phaser.Scene {
     if (Math.abs(w.x - view.lastX) > 0.5) view.body.setFlipX(w.x < view.lastX);
     view.lastX = w.x;
     const anim = monsterAnimKey(view.sheet, mover.next ? 'move' : 'idle');
-    if (anim !== view.anim) {
+    if (anim !== view.anim && this.time.now >= view.biteUntil) {
       view.anim = anim;
       view.body.play(anim);
     }
@@ -785,6 +787,26 @@ export class WorldScene extends Phaser.Scene {
         this.time.delayedCall(50, () => this.hearts(5));
       }),
       ev.on('tameFailed', () => this.floatText('player', 'It got away…', '#ffb8d8', 15, 1000)),
+      ev.on('petAttack', (e) => {
+        this.damageNumber(e.targetId, String(e.amount), '#ffb8d8', 20);
+        this.hitSpark(e.targetId, false);
+        this.flashHit(e.targetId);
+        const pet = this.petView;
+        const target = this.monsterViews.get(e.targetId);
+        if (!pet || !target) return;
+        pet.body.setFlipX(target.root.x < pet.root.x);
+        pet.anim = monsterAnimKey(pet.sheet, 'attack');
+        pet.body.play(pet.anim);
+        pet.biteUntil = this.time.now + 400;
+      }),
+      ev.on('petLevelUp', (e) => {
+        if (!this.petView) return;
+        const at = { x: this.petView.root.x, y: this.petView.root.y - 40 };
+        const label = this.add.text(at.x, at.y, `Lv ${e.level}!`, { fontFamily: IMPACT_FONT, fontSize: '22px', color: '#c8b4ff', stroke: '#16131c', strokeThickness: 6 }).setOrigin(0.5).setDepth(6000);
+        this.tweens.add({ targets: label, y: at.y - 46, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => label.destroy() });
+        this.ring({ x: this.petView.root.x, y: this.petView.root.y }, 0xa98bff, 3);
+        this.hearts(2);
+      }),
       ev.on('petFed', (e) => (e.delta > 0 ? this.hearts(e.delta >= 40 ? 3 : 1) : this.floatText('player', 'Too full!', '#ffb8d8', 14))),
       ev.on('telegraph', (e) => this.telegraph(e.tile, e.radius, e.ms)),
       ev.on('slam', (e) => {

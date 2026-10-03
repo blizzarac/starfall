@@ -67,6 +67,10 @@ export const SaveDocSchema = z.object({
       name: z.string().min(1).max(24),
       intimacy: z.number().int().min(0).max(1000),
       hunger: z.number().int().min(0).max(100),
+      /** Pet level, XP and gear. Absent in older saves: a level 1 pet with no gear. */
+      level: z.number().int().min(1).optional(),
+      xp: z.number().int().min(0).optional(),
+      gear: z.string().nullable().optional(),
     })
     .nullable(),
 });

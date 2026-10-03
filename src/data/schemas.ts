@@ -55,11 +55,28 @@ export const CardSchema = z.object({
 });
 export type CardDef = z.infer<typeof CardSchema>;
 
+/** What a pet's collar or charm does. Fractions are added: attack 0.3 means bites +30%. */
+export const PetGearSchema = z.object({
+  /** Bite damage, e.g. 0.3 = +30%. */
+  attack: z.number().positive().optional(),
+  /** Friendship gained, e.g. 0.5 = +50%. */
+  friendship: z.number().positive().optional(),
+  /** Pet XP, e.g. 0.5 = +50%. */
+  xp: z.number().positive().optional(),
+  /** Hunger slows by this fraction, e.g. 0.5 = gets hungry half as fast. */
+  appetite: z.number().positive().max(0.9).optional(),
+  /** Extra tiles a looting pet reaches for drops. */
+  lootRange: z.number().int().positive().optional(),
+  /** Stats it gives you on top of the pet's own. */
+  bonus: BonusSchema.optional(),
+});
+export type PetGearDef = z.infer<typeof PetGearSchema>;
+
 export const ItemSchema = z
   .object({
     id: z.string().regex(/^[a-z0-9_]+$/),
     name: z.string().min(1),
-    type: z.enum(['consumable', 'etc', 'card', 'equipment']),
+    type: z.enum(['consumable', 'etc', 'card', 'equipment', 'petgear']),
     /** Base price in gold; NPCs buy at 50%. */
     price: z.number().int().nonnegative(),
     weight: z.number().int().nonnegative(),
@@ -72,11 +89,14 @@ export const ItemSchema = z
     cure: z.array(z.enum(['poison', 'stun', 'blind'])).optional(),
     equip: EquipSchema.optional(),
     card: CardSchema.optional(),
+    /** Collars and charms your pet wears. */
+    petGear: PetGearSchema.optional(),
     description: z.string().optional(),
   })
   .refine((i) => (i.type === 'equipment') === (i.equip !== undefined), 'equipment items (and only those) need an equip block')
   .refine((i) => (i.type === 'card') === (i.card !== undefined), 'cards (and only cards) need a card block')
-  .refine((i) => (i.effect === 'tame') === (i.tames !== undefined), 'lures (and only lures) name the monster they tame');
+  .refine((i) => (i.effect === 'tame') === (i.tames !== undefined), 'lures (and only lures) name the monster they tame')
+  .refine((i) => (i.type === 'petgear') === (i.petGear !== undefined), 'pet gear (and only pet gear) needs a petGear block');
 export type ItemDef = z.infer<typeof ItemSchema>;
 
 export const DropSchema = z.object({

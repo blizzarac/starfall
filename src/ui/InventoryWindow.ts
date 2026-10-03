@@ -9,7 +9,7 @@ import { itemName } from './ItemInfo';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 const ROW_H = 64;
-const TYPE_ORDER: Record<ItemDef['type'], number> = { consumable: 0, equipment: 1, card: 2, etc: 3 };
+const TYPE_ORDER: Record<ItemDef['type'], number> = { consumable: 0, equipment: 1, petgear: 2, card: 3, etc: 4 };
 type Tab = 'bag' | 'gear';
 /** Bag filters: everything, or one item type. */
 const FILTERS: Array<{ label: string; type: ItemDef['type'] | null }> = [
@@ -140,6 +140,12 @@ export class InventoryWindow {
         }, onBar ? 0xffd84a : 0xffffff).root,
       );
     }
+    else if (item.petGear && w.player.pet)
+      this.button('Pet', pw, y, () => {
+        const err = w.equipPetGear(item.id);
+        this.message = err ?? `${w.player.pet?.name} now wears the ${item.name}.`;
+        this.refresh();
+      });
     else if (item.card)
       this.button('Insert', pw, y, () => {
         this.inserting = item;

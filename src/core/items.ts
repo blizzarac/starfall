@@ -2,6 +2,7 @@ import type { Content } from '../data/content';
 import type { ItemDef } from '../data/schemas';
 import { sellPrice } from './combat/formulas';
 import { describeCard, describeGear } from './equipment';
+import { describePetGear } from './pets';
 
 const SLOT_LABEL: Record<string, string> = {
   weapon: 'Weapon',
@@ -28,6 +29,9 @@ export function itemInfo(item: ItemDef, content: Pick<Content, 'recipes' | 'item
   if (item.card) {
     const effect = describeCard(item.card).replace(/ · fits \w+$/, '');
     return `Card for ${SLOT_LABEL[item.card.fits]?.toLowerCase() ?? item.card.fits}: ${effect}. Insert it into gear with a free slot (Items → Bag).`;
+  }
+  if (item.petGear) {
+    return `Pet gear: ${describePetGear(item.petGear)}. Put it on your pet from its window or the bag.${flavor ? ` ${flavor}` : ''}`;
   }
   if (item.type === 'consumable') {
     const parts: string[] = [];
