@@ -54,7 +54,7 @@
   "spawns": [
     {
       "monster": "rattlebones",
-      "count": 9,
+      "count": 7,
       "respawnMs": 12000,
       "area": {
         "x": 4,
@@ -65,7 +65,7 @@
     },
     {
       "monster": "wrapped_one",
-      "count": 5,
+      "count": 4,
       "respawnMs": 14000,
       "area": {
         "x": 3,
@@ -76,7 +76,7 @@
     },
     {
       "monster": "wrapped_one",
-      "count": 5,
+      "count": 4,
       "respawnMs": 14000,
       "area": {
         "x": 24,

@@ -4,6 +4,7 @@
     "name": "Tool Dealer",
     "items": [
       "red_tonic",
+      "orange_tonic",
       "sweet_apple",
       "fly_wing",
       "butterfly_wing",
@@ -37,6 +38,8 @@
     "name": "Harbor Market",
     "items": [
       "red_tonic",
+      "orange_tonic",
+      "yellow_tonic",
       "blue_tonic",
       "green_herb",
       "panacea",
@@ -44,7 +47,11 @@
       "butterfly_wing",
       "brightstone",
       "sailor_boots",
-      "seafarer_coat"
+      "seafarer_coat",
+      "cutlass",
+      "coral_staff",
+      "longbow",
+      "iron_mace"
     ]
   },
   {
@@ -64,6 +71,9 @@
     "name": "Sunspire Bazaar",
     "items": [
       "red_tonic",
+      "orange_tonic",
+      "yellow_tonic",
+      "white_tonic",
       "blue_tonic",
       "green_herb",
       "panacea",
@@ -72,6 +82,10 @@
       "brightstone",
       "pet_treat",
       "desert_turban",
+      "scimitar",
+      "sunstone_staff",
+      "desert_bow",
+      "sun_mace",
       "claymore",
       "arc_wand",
       "hunter_bow",

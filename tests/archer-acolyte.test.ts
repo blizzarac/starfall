@@ -101,6 +101,9 @@ describe('Archer', () => {
 
   it('bow skills need a bow', () => {
     const w = become('archer');
+    // The guild's starter bow is equipped on joining; take it off.
+    expect(w.player.equipment.weapon?.item.id).toBe('willow_bow');
+    w.unequip('weapon');
     w.learnSkill('double_strafe');
     const notices: string[] = [];
     w.events.on('notice', (e) => notices.push(e.text));

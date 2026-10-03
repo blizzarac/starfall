@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "balance": "vitest run --config sim/vitest.config.ts"
   },
   "dependencies": {
     "@fontsource/bangers": "^5.3.0",

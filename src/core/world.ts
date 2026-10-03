@@ -7,7 +7,7 @@ import { createMover } from './entities';
 import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
-import { isJobId } from './jobs';
+import { isJobId, JOBS, type JobId } from './jobs';
 import { cardBlocker, cardEffects, EQUIP_SLOTS, MAX_REFINE, equipBlocker, isPlain, slotFor, STARTING_GEAR, weaponOf, type EquipSlot, type GearPiece } from './equipment';
 import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStats, gainXp, learnSkill, raiseStat } from './progression';
 import * as S from './skills';
@@ -76,6 +76,8 @@ const PLAYER_ATTACK_RANGE = 1;
 const SKILL_AUTO_TARGET_RANGE = 8;
 const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
+/** A hit at least this share of max HP interrupts a cast. */
+export const CAST_BREAK_SHARE = 0.1;
 
 /** Shared storage: one stash for every character, kept outside the save slots. */
 export interface Storage {
@@ -969,8 +971,17 @@ export class World {
         return {};
       case 'changeJob': {
         const err = isJobId(action.job) ? changeJob(p, action.job) : 'Unknown job.';
-        if (err) this.events.emit('notice', { text: err });
-        else this.events.emit('jobChanged', { jobId: action.job });
+        if (err) {
+          this.events.emit('notice', { text: err });
+          return {};
+        }
+        const gift = JOBS[action.job as JobId].starterWeapon;
+        if (gift && this.content.items.has(gift)) {
+          this.addItem(gift, 1);
+          this.equip(gift);
+          this.events.emit('notice', { text: `The guild gives you a ${this.content.items.get(gift)!.name}.` });
+        }
+        this.events.emit('jobChanged', { jobId: action.job });
         return {};
       }
     }
@@ -1206,7 +1217,7 @@ export class World {
     p.spRegenTimer += dt;
     if (p.spRegenTimer >= F.spRegenIntervalMs(p.sitting)) {
       p.spRegenTimer = 0;
-      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int) + S.skillLevel(p, 'sp_recovery'));
+      p.sp = Math.min(d.maxSp, p.sp + F.spRegenAmount(d.maxSp, effectiveStats(p).int) + 2 * S.skillLevel(p, 'sp_recovery'));
     }
   }
 
@@ -1429,7 +1440,8 @@ export class World {
     p.sitting = false;
     this.events.emit('damage', { sourceId: m.id, targetId: 'player', amount, crit: false });
     if (amount === 0) return;
-    if (p.casting) {
+    // Only a solid hit (a tenth of max HP or more) breaks concentration.
+    if (p.casting && amount >= derivedStats(p).maxHp * CAST_BREAK_SHARE) {
       p.casting = null;
       p.intent = { kind: 'none' };
       this.events.emit('castInterrupted', {});

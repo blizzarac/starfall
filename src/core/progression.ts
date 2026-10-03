@@ -46,7 +46,7 @@ export function derivedStats(p: Player): DerivedStats {
   return {
     maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))) + gear.hp,
     maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
-    atk: F.statusAtk(s) + weapon.atk + mastery + gear.atk + (p.buffs.has('impositio_manus') ? impositioAtk(p.buffs.get('impositio_manus')!.level) : 0),
+    atk: F.statusAtk(s, weapon.type === 'bow') + weapon.atk + mastery + gear.atk + (p.buffs.has('impositio_manus') ? impositioAtk(p.buffs.get('impositio_manus')!.level) : 0),
     matk: F.statusMatk(s.int) + weapon.matk + gear.matk,
     hit: Math.floor((F.hit(p.baseLevel, s.dex) + gear.hit + skillLevel(p, 'vultures_eye')) * blind),
     flee: Math.floor((F.flee(p.baseLevel, s.agi) + gear.flee) * blind),

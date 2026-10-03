@@ -91,7 +91,7 @@ function bolt(id: SkillId, name: string, element: Element, short: string): Skill
 }
 
 function boltCast(lv: number): number {
-  return 300 + 250 * lv;
+  return 200 + 150 * lv;
 }
 
 export const SKILLS: Record<SkillId, SkillDef> = {
@@ -177,7 +177,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     requires: [],
     spCost: () => 0,
     cooldownMs: 0,
-    describe: (lv) => `+${lv} SP per natural recovery tick.`,
+    describe: (lv) => `+${2 * lv} SP per natural recovery tick.`,
     short: 'SP Rec',
   },
   fire_bolt: bolt('fire_bolt', 'Fire Bolt', 'fire', 'Fire'),
@@ -320,12 +320,12 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     maxLevel: 5,
     kind: 'enemy',
     requires: [{ id: 'heal', level: 1 }],
-    spCost: (lv) => 13 + 2 * lv,
+    spCost: (lv) => 11 + lv,
     cooldownMs: 0,
-    describe: (lv) => `A holy ray for ${100 + 25 * lv}% MATK. Deadly to undead and shadow. Cast 1.5 s before DEX.`,
+    describe: (lv) => `A holy ray for ${Math.round(holyLightModifier(lv) * 100)}% MATK. Deadly to undead and shadow. Cast 1 s before DEX.`,
     short: 'Holy',
     range: SPELL_RANGE,
-    castMs: () => 1500,
+    castMs: () => 1000,
     magic: { element: 'holy', hits: () => 1, perHit: holyLightModifier },
   },
 
@@ -589,7 +589,7 @@ export function arrowShowerModifier(lv: number): number {
 export const ARROW_SHOWER_RADIUS = 1;
 
 export function holyLightModifier(lv: number): number {
-  return 1 + 0.25 * lv;
+  return 1.5 + 0.3 * lv;
 }
 
 export function healAmount(baseLevel: number, int: number, lv: number): number {

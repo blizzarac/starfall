@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Grid, type Terrain } from '../core/grid';
 import { STARTING_GEAR } from '../core/equipment';
-import { JOB_IDS } from '../core/jobs';
+import { JOB_IDS, JOBS } from '../core/jobs';
 import { SKILL_IDS } from '../core/skills';
 import { PET_FOOD, PET_SPECIES } from '../core/pets';
 import {
@@ -89,6 +89,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     if (!content.monsters.has(q.target.monster)) fail(`Quest '${q.id}' hunts unknown monster '${q.target.monster}'`);
     for (const it of q.reward.items) needItem(it.id, `Quest '${q.id}' reward`);
   }
+  for (const job of Object.values(JOBS)) if (job.starterWeapon) needItem(job.starterWeapon, `Job '${job.id}' starter weapon`);
   for (const id of STARTING_GEAR) {
     needItem(id, 'Starting gear');
     if (!content.items.get(id)!.equip) fail(`Starting gear '${id}' is not equipment`);

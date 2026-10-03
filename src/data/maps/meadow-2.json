@@ -72,7 +72,7 @@
     },
     {
       "monster": "thornbeetle",
-      "count": 7,
+      "count": 6,
       "respawnMs": 8000,
       "area": {
         "x": 22,
@@ -83,7 +83,7 @@
     },
     {
       "monster": "thornbeetle",
-      "count": 7,
+      "count": 6,
       "respawnMs": 8000,
       "area": {
         "x": 22,

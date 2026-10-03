@@ -75,7 +75,7 @@
     "moveMs": 300,
     "ai": {
       "aggressive": true,
-      "aggroRange": 5,
+      "aggroRange": 3,
       "chaseRange": 10,
       "wanderRadius": 4
     },
@@ -193,7 +193,7 @@
     "moveMs": 260,
     "ai": {
       "aggressive": true,
-      "aggroRange": 6,
+      "aggroRange": 4,
       "chaseRange": 12,
       "wanderRadius": 5
     },
@@ -571,8 +571,8 @@
     "level": 21,
     "hp": 820,
     "atk": [
-      36,
-      46
+      32,
+      40
     ],
     "def": 28,
     "hit": 58,
@@ -620,8 +620,8 @@
     "level": 24,
     "hp": 560,
     "atk": [
-      38,
-      48
+      32,
+      40
     ],
     "def": 8,
     "hit": 66,
@@ -633,7 +633,7 @@
     "moveMs": 170,
     "ai": {
       "aggressive": true,
-      "aggroRange": 6,
+      "aggroRange": 4,
       "chaseRange": 12,
       "wanderRadius": 6
     },
@@ -667,12 +667,12 @@
     "id": "dune_scorpion",
     "name": "Dune Scorpion",
     "level": 32,
-    "hp": 1500,
+    "hp": 1200,
     "atk": [
-      60,
-      78
+      50,
+      64
     ],
-    "def": 35,
+    "def": 28,
     "hit": 80,
     "flee": 45,
     "element": "fire",
@@ -682,7 +682,7 @@
     "moveMs": 230,
     "ai": {
       "aggressive": true,
-      "aggroRange": 5,
+      "aggroRange": 3,
       "chaseRange": 12,
       "wanderRadius": 5
     },
@@ -721,10 +721,10 @@
     "id": "sand_wolf",
     "name": "Sand Wolf",
     "level": 34,
-    "hp": 1700,
+    "hp": 1400,
     "atk": [
-      66,
-      84
+      54,
+      68
     ],
     "def": 28,
     "hit": 86,
@@ -736,7 +736,7 @@
     "moveMs": 200,
     "ai": {
       "aggressive": true,
-      "aggroRange": 6,
+      "aggroRange": 4,
       "chaseRange": 12,
       "wanderRadius": 6
     },
@@ -770,10 +770,10 @@
     "id": "sandworm",
     "name": "Sandworm",
     "level": 37,
-    "hp": 2600,
+    "hp": 2200,
     "atk": [
-      80,
-      100
+      66,
+      84
     ],
     "def": 25,
     "hit": 78,
@@ -824,10 +824,10 @@
     "id": "rattlebones",
     "name": "Rattlebones",
     "level": 40,
-    "hp": 2400,
+    "hp": 2200,
     "atk": [
-      90,
-      110
+      66,
+      82
     ],
     "def": 30,
     "hit": 95,
@@ -839,7 +839,7 @@
     "moveMs": 260,
     "ai": {
       "aggressive": true,
-      "aggroRange": 6,
+      "aggroRange": 4,
       "chaseRange": 12,
       "wanderRadius": 4
     },
@@ -873,10 +873,10 @@
     "id": "wrapped_one",
     "name": "Wrapped One",
     "level": 44,
-    "hp": 3600,
+    "hp": 3200,
     "atk": [
-      100,
-      125
+      76,
+      94
     ],
     "def": 40,
     "hit": 100,
@@ -888,7 +888,7 @@
     "moveMs": 380,
     "ai": {
       "aggressive": true,
-      "aggroRange": 5,
+      "aggroRange": 4,
       "chaseRange": 10,
       "wanderRadius": 3
     },
@@ -929,8 +929,8 @@
     "level": 55,
     "hp": 60000,
     "atk": [
-      180,
-      240
+      150,
+      200
     ],
     "def": 60,
     "hit": 130,

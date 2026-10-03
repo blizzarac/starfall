@@ -243,4 +243,28 @@ describe('Mage', () => {
     expect(interrupted).toBe(true);
     expect(w.player.casting).toBeNull();
   });
+
+  it('chip damage below a tenth of max HP does not break a cast', () => {
+    const w = mage();
+    for (let i = 0; i < 10; i++) w.learnSkill('fire_bolt');
+    w.changeMap('meadow-2', content.maps.get('meadow-2')!.playerStart);
+    w.player.sp = 500;
+    const beetle = [...w.monsters.values()].find((m) => m.def.id === 'thornbeetle')!;
+    w.changeMap('meadow-2', beetle.tile);
+    const b = [...w.monsters.values()].find((m) => m.def.id === 'thornbeetle' && Math.abs(m.tile.x - w.player.tile.x) <= 1 && Math.abs(m.tile.y - w.player.tile.y) <= 1)!;
+    for (const m of w.monsters.values()) if (m !== b) w.monsters.delete(m.id);
+    b.def = { ...b.def, atk: [1, 1], hit: 999 };
+    b.hostile = true;
+    w.player.intent = { kind: 'skill', skillId: 'fire_bolt', targetId: b.id };
+    let interrupted = false;
+    let hitMe = 0;
+    w.events.on('castInterrupted', () => (interrupted = true));
+    w.events.on('damage', (e) => e.targetId === 'player' && hitMe++);
+    let cast = false;
+    w.events.on('skillUsed', () => (cast = true));
+    run(w, 15_000, () => cast);
+    expect(hitMe).toBeGreaterThan(0);
+    expect(interrupted).toBe(false);
+    expect(cast).toBe(true);
+  });
 });

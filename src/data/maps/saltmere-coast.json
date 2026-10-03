@@ -84,7 +84,7 @@
     },
     {
       "monster": "gullwing",
-      "count": 8,
+      "count": 6,
       "respawnMs": 10000,
       "area": {
         "x": 4,

@@ -73,7 +73,7 @@
     },
     {
       "monster": "sand_wolf",
-      "count": 7,
+      "count": 5,
       "respawnMs": 12000,
       "area": {
         "x": 18,

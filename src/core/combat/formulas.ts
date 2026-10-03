@@ -60,8 +60,9 @@ export function deathXpPenalty(level: number): number {
 
 // ---- Derived stats -------------------------------------------------------
 
+/** Grows a little faster than linearly, so later monsters can hit harder without one-shotting. */
 export function maxHp(level: number, vit: number): number {
-  return Math.floor((40 + 8 * level) * (1 + vit / 100));
+  return Math.floor((40 + 8 * level + 0.1 * level * level) * (1 + vit / 100));
 }
 
 export function maxSp(level: number, int: number): number {
@@ -69,9 +70,12 @@ export function maxSp(level: number, int: number): number {
 }
 
 /** ATK from stats alone; weapon ATK is added on top. */
-export function statusAtk(s: Pick<Stats, 'str' | 'dex' | 'luk'>): number {
-  const bonus = Math.floor(s.str / 10);
-  return s.str + bonus * bonus + Math.floor(s.dex / 5) + Math.floor(s.luk / 5);
+export function statusAtk(s: Pick<Stats, 'str' | 'dex' | 'luk'>, ranged = false): number {
+  // Bows draw their power from DEX, everything else from STR.
+  const main = ranged ? s.dex : s.str;
+  const side = ranged ? s.str : s.dex;
+  const bonus = Math.floor(main / 10);
+  return main + bonus * bonus + Math.floor(side / 5) + Math.floor(s.luk / 5);
 }
 
 export function hit(level: number, dex: number): number {
@@ -84,7 +88,7 @@ export function flee(level: number, agi: number): number {
 
 /** Magic attack from INT, before weapon MATK. */
 export function statusMatk(int: number): number {
-  const bonus = Math.floor(int / 7);
+  const bonus = Math.floor(int / 5);
   return int + bonus * bonus;
 }
 
@@ -195,7 +199,7 @@ export function hpRegenIntervalMs(sitting: boolean): number {
 }
 
 export function hpRegenAmount(maxHpValue: number, vit: number): number {
-  return Math.max(1, Math.floor(maxHpValue / 200) + Math.floor(vit / 5));
+  return Math.max(1, Math.floor(maxHpValue / 100) + Math.floor(vit / 4));
 }
 
 export function spRegenIntervalMs(sitting: boolean): number {
@@ -203,13 +207,13 @@ export function spRegenIntervalMs(sitting: boolean): number {
 }
 
 export function spRegenAmount(maxSpValue: number, int: number): number {
-  return Math.max(1, Math.floor(maxSpValue / 100) + Math.floor(int / 6));
+  return Math.max(1, 1 + Math.floor(maxSpValue / 40) + Math.floor(int / 5));
 }
 
 // ---- Inventory and trade ---------------------------------------------------
 
 export function maxWeight(str: number): number {
-  return 500 + 25 * str;
+  return 800 + 30 * str;
 }
 
 /** At or above this share of max weight, natural HP/SP regeneration stops. */

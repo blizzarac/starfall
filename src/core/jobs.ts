@@ -18,6 +18,8 @@ export interface JobDef {
   /** Jobs this one can change into. */
   next: JobId[];
   look: { body: number; extra?: JobExtra };
+  /** Given (and equipped) on joining, so the job's skills work from the first minute. */
+  starterWeapon?: string;
 }
 
 export const JOBS: Record<JobId, JobDef> = {
@@ -42,6 +44,7 @@ export const JOBS: Record<JobId, JobDef> = {
     jobXpFactor: 2.5,
     next: ['knight'],
     look: { body: 0x8a96ad, extra: 'sword' },
+    starterWeapon: 'short_sword',
   },
   mage: {
     id: 'mage',
@@ -53,6 +56,7 @@ export const JOBS: Record<JobId, JobDef> = {
     jobXpFactor: 2.5,
     next: ['wizard'],
     look: { body: 0x6a4fa0, extra: 'staff' },
+    starterWeapon: 'oak_staff',
   },
   archer: {
     id: 'archer',
@@ -64,6 +68,7 @@ export const JOBS: Record<JobId, JobDef> = {
     jobXpFactor: 2.5,
     next: ['hunter'],
     look: { body: 0x4f9a5a, extra: 'bow' },
+    starterWeapon: 'willow_bow',
   },
   acolyte: {
     id: 'acolyte',
@@ -75,6 +80,7 @@ export const JOBS: Record<JobId, JobDef> = {
     jobXpFactor: 2.5,
     next: ['priest'],
     look: { body: 0xf0e6cc, extra: 'mace' },
+    starterWeapon: 'wooden_mace',
   },
   knight: {
     id: 'knight',
