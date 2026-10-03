@@ -998,11 +998,28 @@ export class World {
   }
 
   /** Buys `count` of an item from a shop. Returns an error message, or null on success. */
+  /** Whether the player has come across this item: picked it up once, or has it in the bag or storage. */
+  hasFound(itemId: string): boolean {
+    return this.flags.has(foundFlag(itemId)) || this.itemCount(itemId) > 0 || this.storage.items.has(itemId);
+  }
+
+  /** What a shop sells right now (a materials trader only stocks what you've found). */
+  shopItems(shopId: string): string[] {
+    const shop = this.content.shops.get(shopId);
+    if (!shop) return [];
+    return shop.onlyFound ? shop.items.filter((id) => this.hasFound(id)) : shop.items;
+  }
+
+  /** What one of this item costs at this shop. */
+  buyPrice(shopId: string, item: ItemDef): number {
+    return Math.ceil(item.price * (this.content.shops.get(shopId)?.markup ?? 1));
+  }
+
   buy(shopId: string, itemId: string, count = 1): string | null {
     const shop = this.content.shops.get(shopId);
     const item = this.content.items.get(itemId);
-    if (!shop || !item || !shop.items.includes(itemId) || count < 1) return "That's not for sale here.";
-    const cost = item.price * count;
+    if (!shop || !item || !this.shopItems(shopId).includes(itemId) || count < 1) return "That's not for sale here.";
+    const cost = this.buyPrice(shopId, item) * count;
     if (cost > this.player.gold) return "You can't afford that.";
     if (this.weight() + item.weight * count > this.maxWeight()) return "You can't carry that much.";
     this.player.gold -= cost;
@@ -1558,6 +1575,7 @@ export class World {
     }
     this.drops.delete(drop.id);
     this.addItem(item.id, 1);
+    this.flags.set(foundFlag(item.id), true);
     this.session.lootValue += F.sellPrice(item.price);
     this.events.emit('itemPicked', { item });
   }
@@ -1893,6 +1911,11 @@ export function visitedFlag(mapId: string): string {
 }
 
 /** Flag key holding a boss's respawn time (epoch ms). */
+/** Flag key set the first time the player picks up an item (unlocks it at the materials traders). */
+export function foundFlag(itemId: string): string {
+  return `found:${itemId}`;
+}
+
 export function bossFlag(monsterId: string): string {
   return `boss:${monsterId}`;
 }

@@ -42,6 +42,46 @@ describe('crafting', () => {
     }
   });
 
+  it('buying every material from a shop never makes crafting a gold loop', () => {
+    const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });
+    // The cheapest place to buy each item, if any shop sells it.
+    const buy = (id: string) => {
+      const prices = [...content.shops.values()].filter((s) => s.items.includes(id)).map((s) => w.buyPrice(s.id, content.items.get(id)!));
+      return prices.length ? Math.min(...prices) : sellPrice(content.items.get(id)!.price);
+    };
+    for (const r of content.recipes.values()) {
+      const cost = r.materials.reduce((sum, m) => sum + buy(m.item) * m.count, 0) + r.gold;
+      expect(cost, r.id).toBeGreaterThan(sellPrice(content.items.get(r.result)!.price) * r.count);
+    }
+  });
+
+  it('the materials trader only stocks what you have found', () => {
+    const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });
+    w.player.gold = 10_000;
+    expect(w.shopItems('materials')).toEqual([]);
+    expect(w.buy('materials', 'wolf_pelt')).toMatch(/not for sale/);
+    // Picking one up unlocks it for good, even after it's sold.
+    w.drops.set(1, { id: 1, itemId: 'wolf_pelt', tile: { ...w.player.tile }, expiresIn: 60_000 });
+    w.pickUp(1);
+    for (let i = 0; i < 20 && w.drops.size; i++) w.tick();
+    expect(w.itemCount('wolf_pelt')).toBe(1);
+    w.sell('wolf_pelt', 1);
+    expect(w.shopItems('materials')).toEqual(['wolf_pelt']);
+    const gold = w.player.gold;
+    expect(w.buy('materials', 'wolf_pelt', 2)).toBeNull();
+    expect(w.player.gold).toBe(gold - 2 * Math.ceil(content.items.get('wolf_pelt')!.price * 1.5));
+    // Materials already in the bag (from older saves) count as found.
+    w.addItem('gear_cog', 1);
+    expect(w.shopItems('materials')).toContain('gear_cog');
+  });
+
+  it('every town has a materials trader', () => {
+    for (const town of [...content.maps.values()].filter((m) => m.kind === 'town')) {
+      const npc = town.npcs.find((n) => n.dialogue === 'materials_trader');
+      expect(npc, town.id).toBeDefined();
+    }
+  });
+
   it('every town has a crafting table that opens the bench', () => {
     const towns = [...content.maps.values()].filter((m) => m.kind === 'town');
     expect(towns.length).toBeGreaterThanOrEqual(3);

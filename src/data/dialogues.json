@@ -1441,5 +1441,27 @@
         ]
       }
     }
+  },
+  {
+    "id": "materials_trader",
+    "nodes": {
+      "start": {
+        "text": "Short on something for the crafting table? Anything you've brought back from the wild, I keep in stock. Full price, mind.",
+        "choices": [
+          {
+            "label": "Show me your stock",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "materials"
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      }
+    }
   }
 ]

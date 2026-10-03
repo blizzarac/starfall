@@ -18,8 +18,8 @@
   {"id": "tesla_staff", "result": "tesla_staff", "count": 1, "materials": [{"item": "power_cell", "count": 8}, {"item": "gear_cog", "count": 6}, {"item": "glimmer_shard", "count": 4}], "gold": 2200},
   {"id": "piston_mace", "result": "piston_mace", "count": 1, "materials": [{"item": "gear_cog", "count": 10}, {"item": "scrap_metal", "count": 12}, {"item": "power_cell", "count": 3}], "gold": 2400},
   {"id": "clockwork_plate", "result": "clockwork_plate", "count": 1, "materials": [{"item": "scrap_metal", "count": 20}, {"item": "gear_cog", "count": 10}, {"item": "power_cell", "count": 6}], "gold": 3000},
-  {"id": "reactor_ring", "result": "reactor_ring", "count": 1, "materials": [{"item": "titan_core", "count": 1}, {"item": "power_cell", "count": 5}], "gold": 3600},
-  {"id": "spiked_collar", "result": "spiked_collar", "count": 1, "materials": [{"item": "boar_tusk", "count": 4}, {"item": "wolf_pelt", "count": 3}], "gold": 600},
+  {"id": "reactor_ring", "result": "reactor_ring", "count": 1, "materials": [{"item": "titan_core", "count": 1}, {"item": "power_cell", "count": 5}], "gold": 4550},
+  {"id": "spiked_collar", "result": "spiked_collar", "count": 1, "materials": [{"item": "boar_tusk", "count": 4}, {"item": "wolf_pelt", "count": 3}], "gold": 1000},
   {"id": "treasure_sniffer", "result": "treasure_sniffer", "count": 1, "materials": [{"item": "sea_glass", "count": 4}, {"item": "gull_feather", "count": 3}, {"item": "sand_ruby", "count": 1}], "gold": 800},
-  {"id": "clockwork_harness", "result": "clockwork_harness", "count": 1, "materials": [{"item": "scrap_metal", "count": 10}, {"item": "gear_cog", "count": 6}, {"item": "power_cell", "count": 4}], "gold": 3000}
+  {"id": "clockwork_harness", "result": "clockwork_harness", "count": 1, "materials": [{"item": "scrap_metal", "count": 10}, {"item": "gear_cog", "count": 6}, {"item": "power_cell", "count": 4}], "gold": 4400}
 ]

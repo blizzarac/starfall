@@ -59,7 +59,7 @@ export class ShopWindow {
     );
 
     const items: SellRow[] =
-      this.tab === 'buy' ? shop.items.map((id) => ({ kind: 'stack', item: w.content.items.get(id)! })) : this.sellable();
+      this.tab === 'buy' ? w.shopItems(shop.id).map((id) => ({ kind: 'stack', item: w.content.items.get(id)! })) : this.sellable();
     if (this.tab === 'sell' && items.length > 0) {
       const etc = items.flatMap((r) => (r.kind === 'stack' && r.item.type === 'etc' ? [r.item] : []));
       const total = etc.reduce((sum, i) => sum + sellPrice(i.price) * (w.player.inventory.get(i.id) ?? 0), 0);
@@ -71,7 +71,10 @@ export class ShopWindow {
         }).setEnabled(total > 0).root,
       );
     }
-    if (items.length === 0) p.add(this.scene.add.text(12, 110, 'Nothing to sell.', { ...TEXT, fontSize: '13px', color: TONE.muted }));
+    if (items.length === 0) {
+      const empty = this.tab === 'sell' ? 'Nothing to sell.' : "Nothing in stock yet. Bring back materials from monsters and I'll keep them in stock for you.";
+      p.add(this.scene.add.text(12, 110, empty, { ...TEXT, fontSize: '13px', color: TONE.muted, wordWrap: { width: p.w - 24 } }));
+    }
 
     this.page = pagedList(
       p,
@@ -122,7 +125,7 @@ export class ShopWindow {
   private row(item: ItemDef, y: number, pw: number): void {
     const w = this.world;
     const have = w.itemCount(item.id);
-    const price = this.tab === 'buy' ? item.price : sellPrice(item.price);
+    const price = this.tab === 'buy' ? w.buyPrice(this.shopId!, item) : sellPrice(item.price);
     this.panel.add(itemName(this.scene, w, 12, y + 4, item.name, item));
     this.panel.add(
       this.scene.add.text(12, y + 20, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: TONE.muted }),

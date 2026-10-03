@@ -96,5 +96,33 @@
       "holy_scepter",
       "sunsteel_armor"
     ]
+  },
+  {
+    "id": "materials",
+    "name": "Materials Trader",
+    "onlyFound": true,
+    "markup": 1.5,
+    "items": [
+      "jelly_drop",
+      "moss_clump",
+      "sea_glass",
+      "bat_wing",
+      "gull_feather",
+      "sticky_resin",
+      "puffcap_spore",
+      "beetle_shell",
+      "wolf_pelt",
+      "crab_shell",
+      "boar_tusk",
+      "brightstone",
+      "glimmer_shard",
+      "linen_strip",
+      "sand_ruby",
+      "worm_hide",
+      "scorpion_tail",
+      "gear_cog",
+      "power_cell",
+      "scrap_metal"
+    ]
   }
 ]

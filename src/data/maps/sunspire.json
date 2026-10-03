@@ -173,6 +173,17 @@
         "hair": "#9a6b42"
       },
       "sprite": "bench"
+    },
+    {
+      "id": "trader_rasha",
+      "name": "Rasha",
+      "x": 19,
+      "y": 11,
+      "dialogue": "materials_trader",
+      "look": {
+        "body": "#b0603a",
+        "hair": "#2a1a14"
+      }
     }
   ],
   "portals": [

@@ -326,6 +326,10 @@ export const ShopSchema = z.object({
   id: z.string(),
   name: z.string(),
   items: z.array(z.string()).min(1),
+  /** Only stocks the items you have found (picked up) yourself. */
+  onlyFound: z.boolean().default(false),
+  /** Price multiplier on everything here (a trader's cut). */
+  markup: z.number().min(1).default(1),
 });
 export type ShopDef = z.infer<typeof ShopSchema>;
 

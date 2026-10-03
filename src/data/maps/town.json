@@ -188,6 +188,17 @@
         "hair": "#9a6b42"
       },
       "sprite": "bench"
+    },
+    {
+      "id": "trader_ott",
+      "name": "Ott the Peddler",
+      "x": 6,
+      "y": 22,
+      "dialogue": "materials_trader",
+      "look": {
+        "body": "#7a5a9a",
+        "hair": "#d8b070"
+      }
     }
   ],
   "portals": [
