@@ -99,6 +99,7 @@ export function createPlayer(name: string, start: Tile): Player {
     gold: 0,
     savePoint: { map: '', ...start },
     pet: null,
+    hotbar: [],
   };
   const d = derivedStats(p);
   p.hp = d.maxHp;

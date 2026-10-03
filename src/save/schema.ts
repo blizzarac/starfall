@@ -52,6 +52,8 @@ export const SaveDocSchema = z.object({
   flags: z.record(z.string(), z.union([z.boolean(), z.number(), z.string()])),
   position: Place,
   savePoint: Place,
+  /** Quick bar (skill and item ids). Absent in older saves; rebuilt from learned skills. */
+  hotbar: z.array(z.string()).max(8).optional(),
   /** The tamed pet, if any. */
   pet: z
     .object({

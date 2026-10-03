@@ -91,6 +91,8 @@ export class WorldScene extends Phaser.Scene {
   /** The pet following the player, and which species/name it was drawn for. */
   private petView: { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; key: string; lastX: number } | null = null;
   private hover!: Phaser.GameObjects.Image;
+  /** Pulsing ring under whatever the player is fighting. */
+  private targetRing!: Phaser.GameObjects.Ellipse;
   private debugGfx!: Phaser.GameObjects.Graphics;
   private castBar!: Phaser.GameObjects.Graphics;
   private statusLabel!: Phaser.GameObjects.Text;
@@ -122,6 +124,7 @@ export class WorldScene extends Phaser.Scene {
     this.placeNpcs();
 
     this.hover = this.add.image(0, 0, 'tile-outline').setDepth(2).setAlpha(0.6);
+    this.targetRing = this.add.ellipse(0, 0, 58, 26).setStrokeStyle(3, 0xff4a4a, 0.95).setVisible(false);
     this.debugGfx = this.add.graphics().setDepth(5000);
 
     const playerKey = this.playerTexture();
@@ -384,6 +387,14 @@ export class WorldScene extends Phaser.Scene {
 
   private syncMonsters(): void {
     const seen = new Set<number>();
+    const intent = this.world.player.intent;
+    const targetId = intent.kind === 'attack' || intent.kind === 'skill' ? intent.targetId : null;
+    const targetView = targetId !== null ? this.monsterViews.get(targetId) : undefined;
+    this.targetRing.setVisible(!!targetView);
+    if (targetView) {
+      const pulse = 1 + Math.sin(this.time.now / 120) * 0.08;
+      this.targetRing.setPosition(targetView.root.x, targetView.root.y).setScale(pulse).setDepth(targetView.root.depth - 0.1);
+    }
     for (const m of this.world.monsters.values()) {
       seen.add(m.id);
       const view = this.monsterViews.get(m.id) ?? this.createMonsterView(m);
@@ -559,7 +570,9 @@ export class WorldScene extends Phaser.Scene {
     for (const m of this.world.monsters.values()) {
       const view = this.monsterViews.get(m.id);
       if (!view) continue;
-      const d = Phaser.Math.Distance.Between(wx, wy, view.root.x, view.root.y - 16);
+      // Big monsters are easier to hit: the target area grows with their size.
+      const scale = Math.max(1, m.def.look.scale);
+      const d = Phaser.Math.Distance.Between(wx, wy, view.root.x, view.root.y - 16 * scale) / scale;
       if (d < bestDist) {
         best = m;
         bestDist = d;
@@ -577,7 +590,7 @@ export class WorldScene extends Phaser.Scene {
 
   private dropAt(wx: number, wy: number): number | null {
     for (const [id, img] of this.dropViews) {
-      if (Phaser.Math.Distance.Between(wx, wy, img.x, img.y - 8) < this.pickRadius() * 0.7) return id;
+      if (Phaser.Math.Distance.Between(wx, wy, img.x, img.y - 8) < this.pickRadius() * 0.9) return id;
     }
     return null;
   }

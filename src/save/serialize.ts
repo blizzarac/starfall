@@ -1,8 +1,8 @@
-import { createMover } from '../core/entities';
+import { createMover, HOTBAR_SIZE } from '../core/entities';
 import { MAX_REFINE, type EquipSlot, type GearPiece } from '../core/equipment';
 import type { ItemDef } from '../data/schemas';
 import { JOBS } from '../core/jobs';
-import { isSkillId } from '../core/skills';
+import { isSkillId, SKILLS } from '../core/skills';
 import { PET_SPECIES } from '../core/pets';
 import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
@@ -44,6 +44,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     position: p.dead ? { ...p.savePoint } : { map: world.map.id, x: at.x, y: at.y },
     savePoint: { ...p.savePoint },
     pet: p.pet ? { ...p.pet } : null,
+    hotbar: [...p.hotbar],
   };
 }
 
@@ -87,6 +88,11 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   };
   world.restoreFlags(doc.flags);
   p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
+  // The quick bar keeps only skills still known and items that still exist.
+  const usable = (id: string) => (isSkillId(id) ? SKILLS[id].kind !== 'passive' && p.skills.has(id) : world.content.items.get(id)?.type === 'consumable');
+  p.hotbar = doc.hotbar
+    ? doc.hotbar.filter(usable)
+    : [...p.skills.keys()].filter((id) => isSkillId(id) && SKILLS[id].kind !== 'passive').slice(0, HOTBAR_SIZE);
   // A pet whose species can no longer be tamed is let go.
   p.pet = doc.pet && PET_SPECIES[doc.pet.species] && world.content.monsters.has(doc.pet.species) ? { ...doc.pet } : null;
 

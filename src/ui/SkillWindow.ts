@@ -77,9 +77,18 @@ export class SkillWindow {
         ...TEXT,
         fontSize: '11px',
         color: TONE.muted,
-        wordWrap: { width: w - 80 },
+        wordWrap: { width: w - 130 },
       }),
     );
+    if (s.kind !== 'passive' && lv > 0) {
+      const onBar = p.hotbar.includes(s.id);
+      this.panel.add(
+        makeButton(this.scene, w - 108, y + 6, 46, 40, onBar ? 'Bar ✓' : 'Bar', () => {
+          this.message = this.world.toggleHotbar(s.id) ?? '';
+          this.refresh();
+        }, onBar ? 0xffd84a : 0xffffff).root,
+      );
+    }
     this.panel.add(
       makeButton(this.scene, w - 56, y + 6, 44, 40, '+', () => {
         this.message = this.world.learnSkill(s.id) ?? '';

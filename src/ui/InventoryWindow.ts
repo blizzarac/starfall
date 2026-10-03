@@ -107,7 +107,16 @@ export class InventoryWindow {
     const count = w.player.inventory.get(item.id) ?? 0;
     const detail = item.card ? describeCard(item.card) : (item.description ?? item.type);
     this.line(`${item.name} ×${count}`, `${detail} · wt ${item.weight}`, y, pw);
-    if (item.type === 'consumable') this.button('Use', pw, y, () => w.useItem(item.id));
+    if (item.type === 'consumable') {
+      this.button('Use', pw, y, () => w.useItem(item.id));
+      const onBar = w.player.hotbar.includes(item.id);
+      this.panel.add(
+        makeButton(this.scene, pw - 128, y + 4, 46, 36, onBar ? 'Bar ✓' : 'Bar', () => {
+          this.message = w.toggleHotbar(item.id) ?? '';
+          this.refresh();
+        }, onBar ? 0xffd84a : 0xffffff).root,
+      );
+    }
     else if (item.card)
       this.button('Insert', pw, y, () => {
         this.inserting = item;
@@ -180,7 +189,7 @@ export class InventoryWindow {
 
   private line(title: string, detail: string, y: number, pw: number): void {
     this.panel.add(this.scene.add.text(12, y + 2, title, { ...TEXT, fontSize: '13px' }));
-    this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 100 } }));
+    this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 150 } }));
   }
 
   private button(label: string, pw: number, y: number, onTap: () => void): void {

@@ -16,6 +16,7 @@ import { ShopWindow } from '../ui/ShopWindow';
 import { QuestWindow } from '../ui/QuestWindow';
 import { StorageWindow } from '../ui/StorageWindow';
 import { PetWindow } from '../ui/PetWindow';
+import { HotbarWindow } from '../ui/HotbarWindow';
 import { audio } from '../audio/engine';
 import type { SaveDb } from '../save/db';
 import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
@@ -24,15 +25,12 @@ import { SkillWindow } from '../ui/SkillWindow';
 import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
 import type { Panel } from '../ui/widgets';
 
-const HOTBAR: Array<{ key: string; itemId: string }> = [
-  { key: 'F1', itemId: 'red_tonic' },
-  { key: 'F2', itemId: 'sweet_apple' },
-];
 const LOG_LINES = 7;
+const MENU_ROW = 41;
 const BUTTON_R = 26;
 const BUTTON_GAP = 8;
 const SKILL_R = 22;
-const SKILL_KEYS = ['F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10'];
+const SKILL_KEYS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'];
 /** Below this width the log moves above the button row. */
 const NARROW = 700;
 
@@ -68,11 +66,13 @@ export class UIScene extends Phaser.Scene {
   private questWindow!: QuestWindow;
   private storageWindow!: StorageWindow;
   private petWindow!: PetWindow;
+  private hotbarWindow!: HotbarWindow;
   /** Active hunts under the status panel. */
   private tracker!: Phaser.GameObjects.Text;
   private skillWindow!: SkillWindow;
   /** Learned active skills, one round button each, above the main row. */
-  private skillButtons: Array<{ skill: SkillDef; root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Arc; cd: Phaser.GameObjects.Text; badge: Phaser.GameObjects.Text }> = [];
+  /** Quick-bar buttons: a skill or a consumable item each. */
+  private skillButtons: Array<{ id: string; skill: SkillDef | null; root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Arc; cd: Phaser.GameObjects.Text; badge: Phaser.GameObjects.Text }> = [];
   private shop!: ShopWindow;
   private dialogue!: DialogueBox;
   private mapBanner!: Phaser.GameObjects.Text;
@@ -124,6 +124,7 @@ export class UIScene extends Phaser.Scene {
     this.questWindow = new QuestWindow(this, this.world);
     this.storageWindow = new StorageWindow(this, this.world);
     this.petWindow = new PetWindow(this, this.world);
+    this.hotbarWindow = new HotbarWindow(this, this.world);
     const openPet = () => this.petWindow.open();
     this.game.events.on('openPet', openPet);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off('openPet', openPet));
@@ -249,16 +250,16 @@ export class UIScene extends Phaser.Scene {
 
   /** Round on-screen buttons for every keyboard action, so the game plays on touch screens. */
   private buildButtons(): void {
-    const inv = () => this.world.player.inventory;
-    for (const { key, itemId, label } of [
-      { ...HOTBAR[0]!, label: 'Tonic' },
-      { ...HOTBAR[1]!, label: 'Apple' },
-    ]) {
-      this.addButton(label, key, 0xff5a6a, () => this.world.useItem(itemId), () => {
-        const n = inv().get(itemId) ?? 0;
-        return { badge: String(n), lit: false, enabled: n > 0 };
-      });
-    }
+    // One potion button: drinks whatever fits the missing HP best.
+    this.addButton('Potion', 'Q', 0xff5a6a, () => this.world.useBestPotion(), () => {
+      const n = this.world.hpPotions().reduce((sum, it) => sum + (this.world.player.inventory.get(it.id) ?? 0), 0);
+      return { badge: String(n), lit: false, enabled: n > 0 && !this.world.player.dead };
+    });
+    this.addButton('Auto', 'T', 0xff9a3a, () => this.world.setAuto(!this.world.auto), () => ({
+      badge: '',
+      lit: this.world.auto,
+      enabled: !this.world.player.dead,
+    }));
     this.addButton('Sit', 'Z', 0x3fcf8a, () => this.world.toggleSit(), () => ({
       badge: '',
       lit: this.world.player.sitting,
@@ -333,11 +334,13 @@ export class UIScene extends Phaser.Scene {
   private buildSkillButtons(): void {
     for (const b of this.skillButtons) b.root.destroy();
     const p = this.world.player;
-    const actives = Object.values(SKILLS).filter((s) => s.kind !== 'passive' && skillLevel(p, s.id) > 0);
-    this.skillButtons = actives.slice(0, SKILL_KEYS.length).map((skill, i) => {
+    this.skillButtons = p.hotbar.slice(0, SKILL_KEYS.length).map((id, i) => {
+      const skill = isSkillId(id) ? SKILLS[id] : null;
+      const item = skill ? null : this.world.content.items.get(id);
       const shadow = this.add.circle(3, 3, SKILL_R, COLORS.ink);
-      const face = this.add.circle(0, 0, SKILL_R, 0xa77cf0).setStrokeStyle(3, COLORS.ink);
-      const label = this.add.text(0, -2, skill.short, { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: '15px', fontStyle: 'normal' }).setOrigin(0.5);
+      const face = this.add.circle(0, 0, SKILL_R, skill ? 0xa77cf0 : 0xff9aa8).setStrokeStyle(3, COLORS.ink);
+      const short = skill ? skill.short : shortItemName(item?.name ?? id);
+      const label = this.add.text(0, -2, short, { ...WORLD_TEXT, fontFamily: IMPACT_FONT, fontSize: short.length > 6 ? '13px' : '15px', fontStyle: 'normal' }).setOrigin(0.5);
       const cd = this.add.text(0, 11, '', { ...WORLD_TEXT, fontSize: '10px', color: '#ffe27a', strokeThickness: 3 }).setOrigin(0.5);
       const badge = this.add
         .text(SKILL_R - 2, -SKILL_R + 2, '', { ...TEXT, fontSize: '10px', color: '#ffffff', backgroundColor: '#16131c', padding: { x: 3, y: 0 } })
@@ -348,11 +351,11 @@ export class UIScene extends Phaser.Scene {
       face.setInteractive({ useHandCursor: true });
       face.on('pointerdown', () => {
         root.setScale(0.9);
-        this.world.useSkill(skill.id);
+        this.world.useHotbar(i);
       });
       face.on('pointerup', () => root.setScale(1));
       face.on('pointerout', () => root.setScale(1));
-      return { skill, root, face, cd, badge };
+      return { id, skill, root, face, cd, badge };
     });
     this.layout();
   }
@@ -360,6 +363,13 @@ export class UIScene extends Phaser.Scene {
   private drawSkillButtons(): void {
     const p = this.world.player;
     for (const b of this.skillButtons) {
+      if (!b.skill) {
+        const n = p.inventory.get(b.id) ?? 0;
+        b.badge.setText(String(n));
+        b.cd.setText('');
+        b.root.setAlpha(n > 0 && !p.dead ? 1 : 0.45);
+        continue;
+      }
       const lv = skillLevel(p, b.skill.id);
       const cost = b.skill.spCost(lv);
       const cdMs = p.cooldowns.get(b.skill.id) ?? 0;
@@ -372,7 +382,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -383,6 +393,7 @@ export class UIScene extends Phaser.Scene {
     if (this.questWindow.panel.visible) this.questWindow.refresh();
     if (this.storageWindow.panel.visible) this.storageWindow.refresh();
     if (this.petWindow.panel.visible) this.petWindow.refresh();
+    if (this.hotbarWindow.panel.visible) this.hotbarWindow.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -501,9 +512,10 @@ export class UIScene extends Phaser.Scene {
   private bindKeys(): void {
     const kb = this.input.keyboard!;
     kb.addCapture('F1,F2,F3,F4,F5,F6');
-    SKILL_KEYS.forEach((key, i) => kb.on(`keydown-${key}`, () => this.skillButtons[i] && this.world.useSkill(this.skillButtons[i]!.skill.id)));
+    SKILL_KEYS.forEach((key, i) => kb.on(`keydown-${key}`, () => this.world.useHotbar(i)));
+    kb.on('keydown-Q', () => this.world.useBestPotion());
+    kb.on('keydown-T', () => this.world.setAuto(!this.world.auto));
     kb.on('keydown-S', () => this.toggleSkills());
-    for (const { key, itemId } of HOTBAR) kb.on(`keydown-${key}`, () => this.world.useItem(itemId));
     kb.on('keydown-Z', () => this.world.toggleSit());
     kb.on('keydown-INSERT', () => this.world.toggleSit());
     kb.on('keydown-A', () => this.toggleStats());
@@ -545,11 +557,12 @@ export class UIScene extends Phaser.Scene {
       ['Export save file', () => this.exportSave()],
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
       ['Pet', () => (this.toggleMenu(), this.petWindow.open())],
+      ['Edit quick bar', () => (this.toggleMenu(), this.hotbarWindow.open())],
       ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
       ['Save and quit to title', () => void endSession(this)],
       ['Close', () => this.toggleMenu()],
     ];
-    const h = 44 + entries.length * 46;
+    const h = 44 + entries.length * MENU_ROW;
     const panelChildren: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(6, 6, w, h, COLORS.ink),
       this.add.rectangle(0, 0, w, h, COLORS.paper).setStrokeStyle(3, COLORS.ink).setInteractive(),
@@ -557,17 +570,17 @@ export class UIScene extends Phaser.Scene {
       this.add.text(0, -h / 2 + 4, 'MENU', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5, 0),
     ];
     entries.forEach(([label, fn], i) => {
-      const y = -h / 2 + 62 + i * 46;
+      const y = -h / 2 + 60 + i * MENU_ROW;
       const text = this.add.text(0, y, typeof label === 'string' ? label : label(), { ...TEXT, fontSize: '13px', fontStyle: 'bold' }).setOrigin(0.5);
       const refreshLabel = () => typeof label !== 'string' && text.setText(label());
       const bg = this.add
-        .rectangle(0, y, w - 28, 38, 0xffffff)
+        .rectangle(0, y, w - 28, 34, 0xffffff)
         .setStrokeStyle(2.5, COLORS.ink)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => bg.setFillStyle(0xffe27a))
         .on('pointerout', () => bg.setFillStyle(0xffffff))
         .on('pointerup', () => (bg.setFillStyle(0xffffff), audio.play('tap'), fn(), refreshLabel()));
-      panelChildren.push(this.add.rectangle(3, y + 3, w - 28, 38, COLORS.ink), bg, text);
+      panelChildren.push(this.add.rectangle(3, y + 3, w - 28, 34, COLORS.ink), bg, text);
     });
     this.menuPanel = this.add.container(0, 0, panelChildren);
     this.menu = this.add.container(0, 0, [this.menuDim, this.menuPanel]).setVisible(false).setDepth(100);
@@ -614,6 +627,8 @@ export class UIScene extends Phaser.Scene {
       }),
       ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
+      ev.on('hotbarChanged', () => this.buildSkillButtons()),
+      ev.on('autoChanged', (e) => this.addLog(e.on ? 'Auto on: fighting nearby monsters and picking up loot. Tap the map to take over.' : 'Auto off.')),
       ev.on('petTamed', (e) => this.addLog(`You tamed a ${e.name}! Tap it to see how it's doing.`)),
       ev.on('tameFailed', (e) => this.addLog(`The ${e.name} wasn't fooled. Wear it down and try again.`)),
       ev.on('petRanAway', (e) => this.addLog(`${e.name} got too hungry and ran away…`)),
@@ -671,4 +686,10 @@ export class UIScene extends Phaser.Scene {
       ].join('\n'),
     );
   }
+}
+
+/** A potion or item name short enough for a round button: "Red Tonic" → "Red". */
+function shortItemName(name: string): string {
+  const first = name.split(' ')[0]!;
+  return first.length <= 7 ? first : first.slice(0, 6);
 }

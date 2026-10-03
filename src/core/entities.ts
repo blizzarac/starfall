@@ -70,7 +70,11 @@ export interface Player extends Mover {
   savePoint: Place;
   /** The tamed monster following the player, if any. */
   pet: Pet | null;
+  /** Quick-use bar: skill ids and consumable item ids, in order, at most HOTBAR_SIZE. */
+  hotbar: string[];
 }
+
+export const HOTBAR_SIZE = 8;
 
 export type PlayerIntent =
   | { kind: 'none' }

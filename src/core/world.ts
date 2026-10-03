@@ -3,7 +3,7 @@ import type { DialogueAction, ItemDef, MapDef, NpcDef, PortalDef } from '../data
 import * as F from './combat/formulas';
 import type { StatName } from './combat/formulas';
 import type { GroundDrop, Monster, Mover, Player } from './entities';
-import { createMover } from './entities';
+import { createMover, HOTBAR_SIZE } from './entities';
 import { Emitter } from './events';
 import { Grid, sameTile, tileDistance, type Tile } from './grid';
 import { findPath } from './pathfinding';
@@ -52,6 +52,8 @@ export interface WorldEvents extends Record<string, unknown> {
   /** The current map was swapped for another; scenes rebuild. */
   mapChanged: { mapId: string };
   storageChanged: Record<string, never>;
+  hotbarChanged: Record<string, never>;
+  autoChanged: { on: boolean };
   petTamed: { name: string };
   tameFailed: { name: string };
   petFed: { delta: number };
@@ -76,6 +78,9 @@ const PLAYER_ATTACK_RANGE = 1;
 const SKILL_AUTO_TARGET_RANGE = 8;
 const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
+/** Auto mode looks this far (tiles) for monsters, and this far for loot. */
+const AUTO_RANGE = 10;
+const AUTO_LOOT_RANGE = 5;
 /** A hit at least this share of max HP interrupts a cast. */
 export const CAST_BREAK_SHARE = 0.1;
 
@@ -103,6 +108,10 @@ export class World {
   time = 0;
   /** Saved key/value state: boss respawn times, quest flags. */
   readonly flags = new Map<string, string | number | boolean>();
+  /** Auto mode: fight the nearest monster and pick up loot until switched off. */
+  auto = false;
+  /** After a manual move, Auto waits this long (ms) before taking over again. */
+  private autoPauseMs = 0;
   /** Where the pet stands; null without a pet. Not saved: it reappears next to the player. */
   petMover: Mover | null = null;
   private petHungerMs = 0;
@@ -238,6 +247,117 @@ export class World {
     }
     this.removeItem(itemId, 1);
     this.events.emit('itemUsed', { item });
+  }
+
+  // ---- Quick bar, potions and Auto ------------------------------------------
+
+  /** Adds or removes a skill or consumable on the quick bar. Returns why not, or null. */
+  toggleHotbar(id: string): string | null {
+    const bar = this.player.hotbar;
+    const at = bar.indexOf(id);
+    if (at >= 0) {
+      bar.splice(at, 1);
+    } else {
+      const item = this.content.items.get(id);
+      const ok = (S.isSkillId(id) && S.SKILLS[id].kind !== 'passive' && this.skillLevel(id) > 0) || item?.type === 'consumable';
+      if (!ok) return "That can't go on the bar.";
+      if (bar.length >= HOTBAR_SIZE) return `The bar holds ${HOTBAR_SIZE}. Remove something first.`;
+      bar.push(id);
+    }
+    this.events.emit('hotbarChanged', {});
+    return null;
+  }
+
+  /** Moves a quick-bar entry one place left (-1) or right (+1). */
+  moveHotbar(id: string, dir: -1 | 1): void {
+    const bar = this.player.hotbar;
+    const i = bar.indexOf(id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= bar.length) return;
+    [bar[i], bar[j]] = [bar[j]!, bar[i]!];
+    this.events.emit('hotbarChanged', {});
+  }
+
+  /** Uses quick-bar slot `i`. */
+  useHotbar(i: number): void {
+    const id = this.player.hotbar[i];
+    if (!id) return;
+    if (S.isSkillId(id)) this.useSkill(id);
+    else this.useItem(id);
+  }
+
+  /** HP potions the player carries, weakest first. */
+  hpPotions(): ItemDef[] {
+    return [...this.player.inventory.keys()]
+      .map((id) => this.content.items.get(id)!)
+      .filter((it) => it.type === 'consumable' && (it.heal?.hp ?? 0) > 0 && !it.effect)
+      .sort((a, b) => a.heal!.hp - b.heal!.hp);
+  }
+
+  /** Drinks the smallest potion that covers the missing HP, or the biggest one. */
+  useBestPotion(): void {
+    const p = this.player;
+    const missing = derivedStats(p).maxHp - p.hp;
+    const pots = this.hpPotions();
+    if (pots.length === 0) return void this.events.emit('notice', { text: 'No HP potions left.' });
+    const pick = pots.find((it) => it.heal!.hp >= missing) ?? pots[pots.length - 1]!;
+    this.useItem(pick.id);
+  }
+
+  setAuto(on: boolean): void {
+    this.auto = on;
+    this.autoPauseMs = 0;
+    this.events.emit('autoChanged', { on });
+  }
+
+  private updateAuto(dt: number): void {
+    const p = this.player;
+    if (!this.auto || p.dead || p.casting || this.stunned()) return;
+    // A manual move takes over; Auto resumes a moment after arriving.
+    if (p.intent.kind === 'move' || p.intent.kind === 'talk') {
+      this.autoPauseMs = 1500;
+      return;
+    }
+    if (p.sitting) return;
+    this.autoPauseMs -= dt;
+    if (this.autoPauseMs > 0) return;
+    const d = derivedStats(p);
+    if (p.hp < d.maxHp * 0.35) {
+      if (this.hpPotions().length > 0) this.useBestPotion();
+      else {
+        this.setAuto(false);
+        this.events.emit('notice', { text: 'Auto stopped: HP is low and you have no potions.' });
+        return;
+      }
+    }
+    if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) {
+      this.setAuto(false);
+      this.events.emit('notice', { text: 'Auto stopped: your bag is too heavy.' });
+      return;
+    }
+    if (p.intent.kind !== 'none') return;
+    const fighting = [...this.monsters.values()].some((m) => m.hostile && tileDistance(m.tile, p.tile) <= 2);
+    if (!fighting) {
+      let drop: GroundDrop | null = null;
+      for (const dr of this.drops.values()) {
+        if (tileDistance(dr.tile, p.tile) > AUTO_LOOT_RANGE) continue;
+        if (this.weight() + (this.content.items.get(dr.itemId)?.weight ?? 0) > this.maxWeight()) continue;
+        if (!drop || tileDistance(dr.tile, p.tile) < tileDistance(drop.tile, p.tile)) drop = dr;
+      }
+      if (drop) return this.pickUp(drop.id);
+    }
+    let best: Monster | null = null;
+    let score = Infinity;
+    for (const m of this.monsters.values()) {
+      const dist = tileDistance(m.tile, p.tile);
+      if (dist > AUTO_RANGE) continue;
+      const s = dist - (m.hostile ? 100 : 0);
+      if (s < score) {
+        best = m;
+        score = s;
+      }
+    }
+    if (best) this.attack(best.id);
   }
 
   // ---- Pets ------------------------------------------------------------------
@@ -478,8 +598,12 @@ export class World {
 
   /** Spends a skill point. Returns why not, or null on success. */
   learnSkill(id: S.SkillId): string | null {
+    const wasNew = this.player.skills.get(id) === undefined;
     const err = learnSkill(this.player, id);
     if (!err) {
+      // A newly learned active skill lands on the quick bar if there's room.
+      const bar = this.player.hotbar;
+      if (wasNew && S.SKILLS[id].kind !== 'passive' && !bar.includes(id) && bar.length < HOTBAR_SIZE) bar.push(id);
       this.refreshStats();
       this.events.emit('skillsChanged', {});
     }
@@ -1062,6 +1186,7 @@ export class World {
     const dt = F.TICK_MS;
     this.time += dt;
     const mapBefore = this.map;
+    this.updateAuto(dt);
     this.updatePlayer(dt);
     // A portal swapped the map mid-tick; the new map's monsters start fresh next tick.
     if (this.map !== mapBefore) return;
@@ -1463,6 +1588,7 @@ export class World {
     this.refreshStats();
     p.statuses.clear();
     this.session.deaths += 1;
+    if (this.auto) this.setAuto(false);
     const xpLost = applyDeathPenalty(p);
     for (const m of this.monsters.values()) m.hostile = false;
     this.events.emit('playerDied', { xpLost });
