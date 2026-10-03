@@ -37,7 +37,9 @@ export function nextGoal(world: World): string {
   if (p.baseLevel >= 18 && !been('saltmere')) return 'Head east from Whisperwood to the harbor town of Saltmere.';
   if (p.baseLevel >= 30 && !been('sunspire')) return "Captain Rook's ship sails from Saltmere to the desert city of Sunspire.";
   if (p.baseLevel >= 28 && p.baseLevel < 45 && !world.flags.has(bossFlag('crystal_golem'))) return 'The Crystal Golem waits below the Glimmer Caves (Lv 30 boss).';
+  if (p.baseLevel >= 45 && !been('iron-wastes')) return 'Pass through the east gate of Sunspire into the Iron Wastes.';
   if (p.baseLevel >= 50 && !world.flags.has(bossFlag('dust_pharaoh'))) return 'Face the Dust Pharaoh in the heart of the Sunken Ruins (Lv 55 boss).';
+  if (p.baseLevel >= 58 && !world.flags.has(bossFlag('clockwork_titan'))) return 'Bring down the Clockwork Titan atop the Clockwork Citadel (Lv 65 boss).';
   const map = recommendedMap(world);
   const range = map ? mapLevelRange(world, map) : null;
   return map && range ? `Train in ${map.name} (monsters Lv ${range[0]}–${range[1]}).` : 'Explore!';

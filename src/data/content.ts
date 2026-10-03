@@ -80,6 +80,9 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
   const needItem = (id: string, where: string) => content.items.has(id) || fail(`${where} refers to unknown item '${id}'`);
 
   for (const m of content.monsters.values()) for (const d of m.drops) needItem(d.item, `Monster '${m.id}' drop`);
+  for (const m of content.monsters.values()) {
+    for (const ph of m.phases) if (ph.summon && !content.monsters.has(ph.summon.monster)) fail(`Monster '${m.id}' summons unknown monster '${ph.summon.monster}'`);
+  }
   for (const item of content.items.values()) {
     if (item.tames && !content.monsters.has(item.tames)) fail(`Lure '${item.id}' tames unknown monster '${item.tames}'`);
     if (item.tames && !PET_SPECIES[item.tames]) fail(`Lure '${item.id}' tames '${item.tames}', which has no pet entry`);

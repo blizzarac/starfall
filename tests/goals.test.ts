@@ -39,8 +39,12 @@ describe('next goal', () => {
     w.player.baseLevel = 20;
     const mid = recommendedMap(w)!;
     expect(mapLevelRange(w, mid)![0]).toBeLessThanOrEqual(22);
-    w.player.baseLevel = 60;
+    w.player.baseLevel = 42;
     expect(recommendedMap(w)!.id).toBe('sunken-ruins');
+    w.player.baseLevel = 48;
+    expect(recommendedMap(w)!.id).toBe('iron-wastes');
+    w.player.baseLevel = 60;
+    expect(recommendedMap(w)!.id).toBe('clockwork-citadel');
     for (let lv = 1; lv <= 60; lv++) {
       w.player.baseLevel = lv;
       expect(recommendedMap(w)!.id).not.toBe('caves-2');

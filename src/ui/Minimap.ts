@@ -25,6 +25,7 @@ const TERRAIN_COLOR: Record<Terrain, number> = {
   wall: 0xe8563f,
   cavewall: 0x3d3945,
   ruin: 0xcfa564,
+  machine: 0x4a5064,
 };
 
 /**

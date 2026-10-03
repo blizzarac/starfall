@@ -1,5 +1,5 @@
 import { buildGrid, type Content } from '../data/content';
-import type { DialogueAction, ItemDef, MapDef, NpcDef, PortalDef } from '../data/schemas';
+import type { DialogueAction, ItemDef, MapDef, MonsterDef, NpcDef, PortalDef } from '../data/schemas';
 import * as F from './combat/formulas';
 import type { StatName } from './combat/formulas';
 import type { GroundDrop, Monster, Mover, Player } from './entities';
@@ -42,6 +42,8 @@ export interface WorldEvents extends Record<string, unknown> {
   /** A monster is winding up an area attack: get out of the circle. */
   telegraph: { monsterId: number; tile: Tile; radius: number; ms: number };
   slam: { monsterId: number; tile: Tile; radius: number };
+  /** A boss entered a new phase (1 = the first change). */
+  bossPhase: { monsterId: number; phase: number; shout: string };
   statusApplied: { status: St.StatusId };
   statusEnded: { status: St.StatusId };
   questProgress: { questId: string; progress: number; count: number };
@@ -1394,13 +1396,16 @@ export class World {
     target.hostile = true;
     this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
     if (target.hp <= 0) this.killMonster(target);
+    else if (target.def.phases.length > 0) this.checkPhase(target);
   }
 
   private killMonster(m: Monster): void {
     const p = this.player;
     this.monsters.delete(m.id);
     const respawnMs = this.map.spawns[m.spawnIndex]!.respawnMs;
-    if (m.def.boss) {
+    if (m.summoned) {
+      // Minions a boss called in don't come back.
+    } else if (m.def.boss) {
       const at = this.now() + respawnMs;
       this.flags.set(bossFlag(m.def.id), at);
       this.bossWaits.push({ spawnIndex: m.spawnIndex, at });
@@ -1511,7 +1516,9 @@ export class World {
    * within the radius. Returns true while the monster is busy with it.
    */
   private updateSpecial(m: Monster, dt: number): boolean {
-    const sp = m.def.special!;
+    const base = m.def.special!;
+    const mods = this.phaseMods(m);
+    const sp = { ...base, radius: mods.slamRadius ?? base.radius, everyMs: mods.slamEveryMs ?? base.everyMs, modifier: base.modifier * mods.atkMul };
     const p = this.player;
     if (m.windup) {
       m.windup.remainingMs -= dt;
@@ -1540,12 +1547,13 @@ export class World {
   private monsterAttack(m: Monster): void {
     const p = this.player;
     const d = derivedStats(p);
-    m.attackCooldown = m.def.attackDelayMs;
+    const mods = this.phaseMods(m);
+    m.attackCooldown = Math.round(m.def.attackDelayMs * mods.delayMul);
     if (this.rng() >= F.hitChance(m.def.hit, d.flee)) {
       this.events.emit('miss', { sourceId: m.id, targetId: 'player' });
       return;
     }
-    this.hurtPlayer(m, F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]), def: d.def }, this.rng));
+    this.hurtPlayer(m, F.damage({ atk: randInt(this.rng, m.def.atk[0], m.def.atk[1]) * mods.atkMul, def: d.def }, this.rng));
     const inf = m.def.inflict;
     if (inf) this.inflict(inf.status, inf.chance, inf.durationMs);
   }
@@ -1638,8 +1646,13 @@ export class World {
     const def = this.content.monsters.get(spawn.monster)!;
     const tile = this.randomWalkableIn(spawn.area);
     if (!tile) return;
+    this.addMonster(def, tile, spawnIndex);
+    if (def.boss) this.events.emit('boss', { kind: 'appeared', name: def.name });
+  }
+
+  private addMonster(def: MonsterDef, tile: Tile, spawnIndex: number): Monster {
     const id = this.nextId++;
-    this.monsters.set(id, {
+    const m: Monster = {
       ...createMover(tile, def.moveMs),
       id,
       def,
@@ -1651,8 +1664,41 @@ export class World {
       attackCooldown: 0,
       specialTimer: def.special?.everyMs ?? 0,
       windup: null,
-    });
-    if (def.boss) this.events.emit('boss', { kind: 'appeared', name: def.name });
+      phase: 0,
+    };
+    this.monsters.set(id, m);
+    return m;
+  }
+
+  /** The combined effect of every phase a boss has reached. */
+  private phaseMods(m: Monster): { atkMul: number; delayMul: number; slamRadius?: number; slamEveryMs?: number } {
+    const mods: { atkMul: number; delayMul: number; slamRadius?: number; slamEveryMs?: number } = { atkMul: 1, delayMul: 1 };
+    for (const ph of m.def.phases.slice(0, m.phase)) {
+      mods.atkMul *= ph.atkMul;
+      mods.delayMul *= ph.delayMul;
+      mods.slamRadius = ph.slamRadius ?? mods.slamRadius;
+      mods.slamEveryMs = ph.slamEveryMs ?? mods.slamEveryMs;
+    }
+    return mods;
+  }
+
+  /** Moves a boss into its next phase(s) once its HP falls far enough. */
+  private checkPhase(m: Monster): void {
+    while (m.phase < m.def.phases.length && m.hp < m.def.hp * m.def.phases[m.phase]!.belowHp) {
+      const ph = m.def.phases[m.phase]!;
+      m.phase += 1;
+      this.events.emit('bossPhase', { monsterId: m.id, phase: m.phase, shout: ph.shout });
+      if (!ph.summon) continue;
+      const minion = this.content.monsters.get(ph.summon.monster);
+      if (!minion) continue;
+      for (let i = 0; i < ph.summon.count; i++) {
+        const tile = this.randomWalkableIn({ x: m.tile.x - 3, y: m.tile.y - 3, w: 7, h: 7 });
+        if (!tile) continue;
+        const add = this.addMonster(minion, tile, m.spawnIndex);
+        add.summoned = true;
+        add.hostile = true;
+      }
+    }
   }
 
   private randomWalkableIn(area: { x: number; y: number; w: number; h: number }): Tile | null {

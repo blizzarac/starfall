@@ -1,0 +1,108 @@
+{
+  "id": "clockwork-citadel",
+  "name": "Clockwork Citadel",
+  "kind": "dungeon",
+  "grass": [
+    "#5d6272",
+    "#585d6c"
+  ],
+  "music": "cave",
+  "width": 36,
+  "height": 36,
+  "rows": [
+    "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    "MMMMMMMM....................MMMMMMMM",
+    "MMMMMMMM....................MMMMMMMM",
+    "MMMMMMMM...M............M...MMMMMMMM",
+    "MMMMMMMM....................MMMMMMMM",
+    "MMMMMMMM..+.+.+.+.+.+.+.+...MMMMMMMM",
+    "MMMMMMMM...M............M...MMMMMMMM",
+    "MMMMMMMM....................MMMMMMMM",
+    "MMMMMMMM....................MMMMMMMM",
+    "MMMMMMMMMMMMMMMM::::MMMMMMMMMMMMMMMM",
+    "MMMMMMMMMMMMMMMM::::MMMMMMMMMMMMMMMM",
+    "MMMMMMMMMMMMMMMM::::MMMMMMMMMMMMMMMM",
+    "MMMMMMMMMMMMMMMM::::MMMMMMMMMMMMMMMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMM...M......MMM::::MMM...M......MMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMM::::::::::::::::::::::::::::::MMM",
+    "MMM::::::::::::::::::::::::::::::MMM",
+    "MMM::::::::::::::::::::::::::::::MMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMM......M...MMM::::MMM......M...MMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMM..........MMM::::MMM..........MMM",
+    "MMMMMMMMMMMMMMMM::::MMMMMMMMMMMMMMMM",
+    "MMMMMMMMMMMM....::::....MMMMMMMMMMMM",
+    "MMMMMMMMMMMM............MMMMMMMMMMMM",
+    "MMMMMMMMMMMM..M......M..MMMMMMMMMMMM",
+    "MMMMMMMMMMMM............MMMMMMMMMMMM",
+    "MMMMMMMMMMMM.+..+..+..+.MMMMMMMMMMMM",
+    "MMMMMMMMMMMM............MMMMMMMMMMMM",
+    "MMMMMMMMMMMM..M......M..MMMMMMMMMMMM",
+    "MMMMMMMMMMMM............MMMMMMMMMMMM",
+    "MMMMMMMMMMMM............MMMMMMMMMMMM",
+    "MMMMMMMMMMMMMMMMM::MMMMMMMMMMMMMMMMM"
+  ],
+  "playerStart": {
+    "x": 17,
+    "y": 33
+  },
+  "savePoint": {
+    "x": 17,
+    "y": 33
+  },
+  "spawns": [
+    {
+      "monster": "clockwork_titan",
+      "count": 1,
+      "respawnMs": 1800000,
+      "area": {
+        "x": 14,
+        "y": 2,
+        "w": 8,
+        "h": 4
+      }
+    },
+    {
+      "monster": "clockwork_knight",
+      "count": 7,
+      "respawnMs": 20000,
+      "area": {
+        "x": 3,
+        "y": 13,
+        "w": 30,
+        "h": 12
+      }
+    },
+    {
+      "monster": "sentry_drone",
+      "count": 5,
+      "respawnMs": 20000,
+      "area": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 10
+      }
+    }
+  ],
+  "portals": [
+    {
+      "area": {
+        "x": 17,
+        "y": 35,
+        "w": 2,
+        "h": 1
+      },
+      "to": {
+        "map": "iron-wastes",
+        "x": 19,
+        "y": 2
+      }
+    }
+  ]
+}

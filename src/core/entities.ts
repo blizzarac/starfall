@@ -103,6 +103,10 @@ export interface Monster extends Mover {
   specialTimer: number;
   /** A special attack being wound up: it lands on `tile` when the timer runs out. */
   windup: { remainingMs: number; tile: Tile } | null;
+  /** Boss phase reached (0 = the opening phase). */
+  phase: number;
+  /** Called in by a boss: never respawns. */
+  summoned?: boolean;
 }
 
 export interface GroundDrop {

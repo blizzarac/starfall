@@ -993,5 +993,305 @@
       "scale": 2,
       "shape": "pharaoh"
     }
+  },
+  {
+    "id": "scrap_hound",
+    "name": "Scrap Hound",
+    "level": 47,
+    "hp": 3800,
+    "atk": [
+      82,
+      100
+    ],
+    "def": 42,
+    "hit": 105,
+    "flee": 45,
+    "element": "neutral",
+    "size": "medium",
+    "attackDelayMs": 1300,
+    "attackRange": 1,
+    "moveMs": 300,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 12,
+      "wanderRadius": 4
+    },
+    "baseXp": 1450,
+    "jobXp": 1000,
+    "drops": [
+      {
+        "item": "scrap_metal",
+        "chance": 0.5
+      },
+      {
+        "item": "gear_cog",
+        "chance": 0.12
+      },
+      {
+        "item": "rail_bow",
+        "chance": 0.004
+      },
+      {
+        "item": "scrap_hound_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#9aa3b0",
+      "scale": 1.05,
+      "shape": "wolf"
+    }
+  },
+  {
+    "id": "gear_beetle",
+    "name": "Gear Beetle",
+    "level": 49,
+    "hp": 4600,
+    "atk": [
+      86,
+      104
+    ],
+    "def": 70,
+    "hit": 100,
+    "flee": 25,
+    "element": "earth",
+    "size": "small",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 420,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 3
+    },
+    "baseXp": 1650,
+    "jobXp": 1150,
+    "drops": [
+      {
+        "item": "gear_cog",
+        "chance": 0.45
+      },
+      {
+        "item": "scrap_metal",
+        "chance": 0.3
+      },
+      {
+        "item": "piston_mace",
+        "chance": 0.004
+      },
+      {
+        "item": "gear_beetle_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#c98a3a",
+      "scale": 1.05,
+      "shape": "beetle"
+    }
+  },
+  {
+    "id": "sentry_drone",
+    "name": "Sentry Drone",
+    "level": 52,
+    "hp": 3400,
+    "atk": [
+      90,
+      110
+    ],
+    "def": 30,
+    "hit": 120,
+    "flee": 70,
+    "element": "wind",
+    "size": "small",
+    "attackDelayMs": 1100,
+    "attackRange": 3,
+    "moveMs": 300,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 4
+    },
+    "baseXp": 1800,
+    "jobXp": 1250,
+    "drops": [
+      {
+        "item": "power_cell",
+        "chance": 0.3
+      },
+      {
+        "item": "scrap_metal",
+        "chance": 0.3
+      },
+      {
+        "item": "tesla_staff",
+        "chance": 0.004
+      },
+      {
+        "item": "sentry_drone_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#b8c4d8",
+      "scale": 1,
+      "shape": "drone"
+    },
+    "inflict": {
+      "status": "blind",
+      "chance": 0.08,
+      "durationMs": 5000
+    }
+  },
+  {
+    "id": "clockwork_knight",
+    "name": "Clockwork Knight",
+    "level": 56,
+    "hp": 7200,
+    "atk": [
+      110,
+      135
+    ],
+    "def": 75,
+    "hit": 130,
+    "flee": 45,
+    "element": "neutral",
+    "size": "medium",
+    "attackDelayMs": 1500,
+    "attackRange": 1,
+    "moveMs": 380,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 12,
+      "wanderRadius": 3
+    },
+    "baseXp": 2600,
+    "jobXp": 1800,
+    "drops": [
+      {
+        "item": "gear_cog",
+        "chance": 0.4
+      },
+      {
+        "item": "power_cell",
+        "chance": 0.2
+      },
+      {
+        "item": "clockwork_plate",
+        "chance": 0.004
+      },
+      {
+        "item": "gearblade",
+        "chance": 0.004
+      },
+      {
+        "item": "clockwork_knight_card",
+        "chance": 0.0005
+      }
+    ],
+    "look": {
+      "color": "#b07a3a",
+      "scale": 1.1,
+      "shape": "automaton"
+    },
+    "inflict": {
+      "status": "stun",
+      "chance": 0.06,
+      "durationMs": 2000
+    }
+  },
+  {
+    "id": "clockwork_titan",
+    "name": "Clockwork Titan",
+    "level": 65,
+    "hp": 150000,
+    "atk": [
+      220,
+      280
+    ],
+    "def": 80,
+    "hit": 160,
+    "flee": 60,
+    "element": "neutral",
+    "size": "large",
+    "attackDelayMs": 1700,
+    "attackRange": 1,
+    "moveMs": 360,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 7,
+      "chaseRange": 18,
+      "wanderRadius": 2
+    },
+    "baseXp": 80000,
+    "jobXp": 56000,
+    "drops": [
+      {
+        "item": "titan_core",
+        "chance": 1
+      },
+      {
+        "item": "power_cell",
+        "chance": 0.8
+      },
+      {
+        "item": "gear_cog",
+        "chance": 1
+      },
+      {
+        "item": "reactor_ring",
+        "chance": 0.25
+      },
+      {
+        "item": "clockwork_titan_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#7a8aa0",
+      "scale": 2.2,
+      "shape": "titan"
+    },
+    "boss": true,
+    "special": {
+      "kind": "slam",
+      "everyMs": 7000,
+      "windupMs": 1400,
+      "radius": 2,
+      "modifier": 2.2,
+      "inflict": {
+        "status": "stun",
+        "chance": 0.4,
+        "durationMs": 2500
+      }
+    },
+    "phases": [
+      {
+        "belowHp": 0.6,
+        "shout": "OVERDRIVE!!",
+        "atkMul": 1.15,
+        "delayMul": 0.75,
+        "summon": {
+          "monster": "sentry_drone",
+          "count": 2
+        }
+      },
+      {
+        "belowHp": 0.25,
+        "shout": "CORE MELTDOWN!!",
+        "atkMul": 1.25,
+        "delayMul": 0.85,
+        "slamRadius": 3,
+        "slamEveryMs": 5000,
+        "summon": {
+          "monster": "clockwork_knight",
+          "count": 1
+        }
+      }
+    ]
   }
 ]

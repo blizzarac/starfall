@@ -37,7 +37,7 @@ const JOB_STYLE: Record<JobId, { gear: Gear; weapon: Weapon; glow: number }> = {
 type GearLook = Pick<KnightLook, 'weapon' | 'weaponTier' | 'shield' | 'helm' | 'armor' | 'cloak' | 'shimmer'>;
 
 const HELMS: Record<string, KnightLook['helm']> = { leather_cap: 'cap', moss_cap: 'moss', desert_turban: 'turban', sun_crown: 'crown' };
-const ARMORS: Record<string, KnightLook['armor']> = { leather_vest: 'leather', crystal_mail: 'crystal', sunsteel_armor: 'sun', seafarer_coat: 'coat' };
+const ARMORS: Record<string, KnightLook['armor']> = { leather_vest: 'leather', crystal_mail: 'crystal', sunsteel_armor: 'sun', seafarer_coat: 'coat', clockwork_plate: 'clockwork' };
 const CLOAKS: Record<string, number> = { traveler_cloak: 0x7a5a3a };
 /** Refine level from which a weapon sparkles. */
 export const SHIMMER_REFINE = 7;

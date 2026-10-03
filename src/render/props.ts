@@ -40,6 +40,7 @@ export function makeProps(scene: Phaser.Scene): void {
   prop(scene, 'drop', 10, 10, drop);
   for (const windows of [false, true]) prop(scene, windows ? 'house-window' : 'house', 32, 36, (p) => house(p, windows), { outline: false });
   prop(scene, 'cavewall', 32, 36, cavewall, { outline: false });
+  prop(scene, 'machine', 32, 36, machine, { outline: false });
   for (const glyph of [false, true]) prop(scene, glyph ? 'ruin-glyph' : 'ruin', 32, 36, (p) => ruin(p, glyph), { outline: false });
   prop(scene, 'portal', 32, 16, portal, { outline: false, alpha: 230 });
   prop(scene, 'tile-outline', 32, 16, (p) => diamondEdge(p, 0xffffff), { outline: false });
@@ -218,6 +219,23 @@ function cavewall(p: Pix): void {
   };
   crystal(7, 18, 0x9fd8ff);
   crystal(22, 22, 0x6ff2ff);
+}
+
+/** A block of clockwork machinery: riveted steel, vents, a glowing panel and a gauge. */
+function machine(p: Pix): void {
+  const steel = ramp(0x5a6072);
+  block(p, steel.l, steel.b, steel.d);
+  // Rivets on the top plate, seams on the faces.
+  for (const [x, y] of [[8, 7], [16, 3], [24, 7], [16, 13]] as const) p.set(x, y, steel.h);
+  p.line(0, 19, 16, 27, steel.k);
+  p.line(16, 27, 32, 19, steel.k);
+  // Left face: a glowing status panel; right face: vents and an amber gauge.
+  p.poly([[3, 15], [12, 19.5], [12, 23.5], [3, 19]], 0x1e2a3a);
+  p.line(4, 17, 11, 20.5, 0x6ff2ff);
+  p.set(5, 18, 0xffffff);
+  for (const k of [0, 3, 6]) p.line(20, 24 - k / 2 + k, 28, 20 - k / 2 + k, steel.k);
+  p.ellipse(24, 30, 1.8, 1.8, 0xffa83a);
+  p.set(24, 29, 0xfff0c0);
 }
 
 function ruin(p: Pix, glyph: boolean): void {

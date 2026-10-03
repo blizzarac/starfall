@@ -120,7 +120,9 @@ export const MonsterSchema = z.object({
   look: z.object({
     color: z.string().regex(/^#[0-9a-f]{6}$/i),
     scale: z.number().positive(),
-    shape: z.enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird', 'scorpion', 'worm', 'skeleton', 'mummy', 'pharaoh']).default('blob'),
+    shape: z
+      .enum(['blob', 'beetle', 'sprout', 'boar', 'wolf', 'mushroom', 'bat', 'golem', 'crab', 'bird', 'scorpion', 'worm', 'skeleton', 'mummy', 'pharaoh', 'drone', 'automaton', 'titan'])
+      .default('blob'),
   }),
   /** A status effect this monster's normal attacks may cause. */
   inflict: InflictSchema.optional(),
@@ -137,6 +139,26 @@ export const MonsterSchema = z.object({
       inflict: InflictSchema.optional(),
     })
     .optional(),
+  /**
+   * Boss phases, in order: each starts when HP drops below `belowHp` (a
+   * fraction), with a shout, harder or faster attacks, a changed slam and
+   * minions called in. Effects stack: later phases build on earlier ones.
+   */
+  phases: z
+    .array(
+      z.object({
+        belowHp: z.number().gt(0).lt(1),
+        shout: z.string(),
+        /** Multiplies attack damage. */
+        atkMul: z.number().positive().default(1),
+        /** Multiplies the time between attacks (below 1 is faster). */
+        delayMul: z.number().positive().default(1),
+        slamRadius: z.number().int().positive().optional(),
+        slamEveryMs: z.number().int().positive().optional(),
+        summon: z.object({ monster: z.string(), count: z.number().int().positive() }).optional(),
+      }),
+    )
+    .default([]),
 });
 export type MonsterDef = z.infer<typeof MonsterSchema>;
 
@@ -157,6 +179,7 @@ export const TERRAIN_CHARS = {
   '+': 'plank',
   P: 'palm',
   W: 'ruin',
+  M: 'machine',
 } as const;
 
 const PlaceSchema = z.object({ map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative() });

@@ -32,10 +32,14 @@ interface MonsterView {
   anim: string;
   attackUntil: number;
   light?: Phaser.GameObjects.Image;
+  /** Boss phase reached; tints it redder. */
+  rage?: number;
   /** HP the bar was last drawn for; it's only redrawn when this changes. */
   lastHp: number;
 }
 
+/** How red an enraged boss glows in each phase. */
+const RAGE_TINT = [0xffffff, 0xffc8b0, 0xff8a7a];
 /** Lights sit above the night overlay so they shine through it. */
 const LIGHT_DEPTH = 5000;
 /** Each job's energy color, for the glow around the player at night. */
@@ -51,7 +55,7 @@ const JOB_GLOW: Partial<Record<string, number>> = {
   priest: 0x8af0ff,
 };
 /** Glow color of each monster's eyes or core. */
-const MONSTER_GLOW: Partial<Record<string, number>> = { boar: 0xff4a4a, bat: 0xff4a4a, skeleton: 0xff4a4a, pharaoh: 0xff4a4a, mummy: 0xffe27a, beetle: 0xffc84a, scorpion: 0x9dff5e, sprout: 0xc8ff8a };
+const MONSTER_GLOW: Partial<Record<string, number>> = { drone: 0xff4a4a, automaton: 0xffa83a, titan: 0xff6a3a, boar: 0xff4a4a, bat: 0xff4a4a, skeleton: 0xff4a4a, pharaoh: 0xff4a4a, mummy: 0xffe27a, beetle: 0xffc84a, scorpion: 0x9dff5e, sprout: 0xc8ff8a };
 
 const DROP_TINT: Record<string, number> = { etc: 0xc9d4e6, consumable: 0xff7a7a, card: 0xffd84a, equipment: 0x9be38f };
 const BOLT_COLORS: Record<string, number> = {
@@ -240,7 +244,7 @@ export class WorldScene extends Phaser.Scene {
         if (t === undefined) return 'void';
         if (t === 'tree' || t === 'rock' || t === 'flower') return desert ? 'sand' : 'grass';
         if (t === 'palm') return 'sand';
-        return t === 'wall' || t === 'ruin' ? 'cobble' : t;
+        return t === 'wall' || t === 'ruin' || t === 'machine' ? 'cobble' : t;
       };
       const canvas = paintGround({
         width,
@@ -261,7 +265,7 @@ export class WorldScene extends Phaser.Scene {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const t = this.world.grid.terrainAt(x, y);
-        if (t !== 'tree' && t !== 'rock' && t !== 'wall' && t !== 'cavewall' && t !== 'palm' && t !== 'ruin') continue;
+        if (t !== 'tree' && t !== 'rock' && t !== 'wall' && t !== 'cavewall' && t !== 'palm' && t !== 'ruin' && t !== 'machine') continue;
         const p = tileToWorld(x, y);
         let img: Phaser.GameObjects.Image;
         if (t === 'tree') {
@@ -272,8 +276,8 @@ export class WorldScene extends Phaser.Scene {
           const key = hash(x, y) % 3 === 0 ? 'house-window' : 'house';
           img = this.add.image(p.x, p.y, key).setOrigin(0.5, feetOrigin(this, key, 56));
           this.trees.push({ img, tile: { x, y } });
-        } else if (t === 'cavewall' || t === 'ruin') {
-          const key = t === 'ruin' ? (hash(x, y) % 4 === 0 ? 'ruin-glyph' : 'ruin') : 'cavewall';
+        } else if (t === 'cavewall' || t === 'ruin' || t === 'machine') {
+          const key = t === 'ruin' ? (hash(x, y) % 4 === 0 ? 'ruin-glyph' : 'ruin') : t;
           img = this.add.image(p.x, p.y, key).setOrigin(0.5, feetOrigin(this, key, 56));
           this.trees.push({ img, tile: { x, y } });
         } else if (t === 'palm') {
@@ -427,12 +431,14 @@ export class WorldScene extends Phaser.Scene {
       'house-window': [[-23, -11, 0xffd890], [23, -11, 0x6ff2ff]],
       cavewall: [[15, -7, 0x6ff2ff]],
       'ruin-glyph': [[-16, -6, 0xffc84a]],
+      machine: [[-15, -18, 0x6ff2ff], [16, 4, 0xffa83a]],
     };
     // Only some blocks glow: lights add up, and a wall of them would wash the scene out.
     for (const img of [...this.decor]) {
       const key = img.texture.key;
       const h = hash(Math.round(img.x), Math.round(img.y));
-      if (key === 'cavewall' && h % 11 !== 0) continue;
+      const every = key === 'cavewall' ? 11 : key === 'machine' ? (this.world.map.kind === 'dungeon' ? 16 : 3) : 1;
+      if (h % every !== 0) continue;
       for (const [dx, dy, color] of spots[key] ?? []) this.lamp(img.x + dx, img.y + dy, color, key === 'house-window' ? 1 : 1.2, key === 'house-window' ? 0.55 : 0.5, true);
     }
     for (const portal of this.world.map.portals) {
@@ -786,6 +792,19 @@ export class WorldScene extends Phaser.Scene {
         this.camFx('shake', 220, 0.01);
         this.soundEffect(e.monsterId, pick(SFX.slam), '#ff9a4a', true);
         this.lines(at.x, at.y, { inner: 60, outer: 200, count: 34 });
+      }),
+      ev.on('bossPhase', (e) => {
+        const view = this.monsterViews.get(e.monsterId);
+        if (!view) return;
+        // Each phase runs hotter: the boss glows redder and its light grows.
+        view.rage = e.phase;
+        view.body.setTint(RAGE_TINT[Math.min(e.phase, RAGE_TINT.length - 1)]!);
+        view.light?.setTint(0xff3a2a).setScale(view.light.scale * 1.4);
+        this.soundEffect(e.monsterId, e.shout, '#ff6a3a', true);
+        this.ring({ x: view.root.x, y: view.root.y }, 0xff6a3a, 6);
+        this.lines(view.root.x, view.root.y - 40, { inner: 60, outer: 240, count: 44, color: 0x8a1a1a });
+        this.camFx('flash', 220, 255, 90, 60);
+        this.camFx('shake', 300, 0.012);
       }),
       ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('refined', (e) => {
@@ -1155,7 +1174,7 @@ export class WorldScene extends Phaser.Scene {
     const view = this.monsterViews.get(id);
     if (!view) return;
     view.body.setTintFill(0xffffff);
-    this.time.delayedCall(80, () => view.body.clearTint());
+    this.time.delayedCall(80, () => (view.rage ? view.body.setTint(RAGE_TINT[Math.min(view.rage, RAGE_TINT.length - 1)]!) : view.body.clearTint()));
   }
 
   // ---- Debug -------------------------------------------------------------

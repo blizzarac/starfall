@@ -480,4 +480,100 @@ const PAINTERS: Record<Shape, Painter> = {
     p.poly([[cx, hy - 3], [cx + 1.5, hy - 6], [cx + 3, hy - 3]], gold.l);
     p.set(cx + 1, hy - 4, CYAN);
   },
+
+  drone(p, r, f) {
+    const cx = CX + f.lunge;
+    const cy = FY - 18 + f.bob * 2 + (f.open ? 2 : 0);
+    // Rotor: blades swap between frames so it spins.
+    const spin = f.i % 2 === 0;
+    p.line(cx, cy - 6, cx, cy - 8, STEEL.d);
+    if (spin) p.line(cx - 7, cy - 9, cx + 7, cy - 9, STEEL.l);
+    else {
+      p.line(cx - 4, cy - 10, cx + 4, cy - 8, STEEL.l);
+      p.line(cx - 4, cy - 8, cx + 4, cy - 10, STEEL.d);
+    }
+    // Side thrusters.
+    for (const sx of [-1, 1]) {
+      p.rect(cx + sx * 7 - 1, cy - 1, 3, 4, DARK.b);
+      p.set(cx + sx * 7, cy + 3 + (f.i % 2), CYAN);
+    }
+    body(p, cx, cy, 6, 5.5, r);
+    p.line(cx - 6, cy, cx + 6, cy, r.k);
+    // The lens: a glowing eye that fires when it attacks.
+    p.ellipse(cx + 3, cy - 1, 2.4, 2.2, DARK.k);
+    p.ellipse(cx + 3, cy - 1, 1.4, 1.3, f.open ? 0xffffff : RED);
+    p.set(cx + 2, cy - 2, 0xffd0d0);
+  },
+
+  automaton(p, r, f) {
+    const cx = CX + f.lunge;
+    const by = FY + f.bob;
+    const gold = ramp(0xd9a441);
+    // Jointed steel legs.
+    p.line(cx - 2, by - 11, cx - 2 - f.step * 2, FY - 1, STEEL.d, 3);
+    p.line(cx + 2, by - 11, cx + 2 + f.step * 2, FY - 1, STEEL.b, 3);
+    p.rect(cx - 4 - f.step * 2, FY - 1, 4, 1, DARK.b);
+    p.rect(cx + 1 + f.step * 2, FY - 1, 4, 1, DARK.b);
+    // Armored torso with a turning gear.
+    p.rect(cx - 5, by - 22, 11, 12, r.b);
+    p.rect(cx + 3, by - 22, 3, 12, r.d);
+    p.rect(cx - 5, by - 22, 11, 1, r.l);
+    const g = [[0, -2], [2, 0], [0, 2], [-2, 0]][f.i % 4]!;
+    p.ellipse(cx, by - 16, 2.6, 2.6, gold.b);
+    p.set(cx + g[0]!, by - 16 + g[1]!, gold.k);
+    p.set(cx, by - 16, 0xffc84a);
+    p.rect(cx - 6, by - 12, 13, 2, DARK.b);
+    // Helm with a glowing visor slit.
+    p.ellipse(cx + 1, by - 26, 4.5, 4, r.l);
+    p.rect(cx - 2, by - 27, 7, 2, DARK.k);
+    p.line(cx - 1, by - 26, cx + 4, by - 26, 0xff9a3a);
+    p.poly([[cx - 1, by - 30], [cx + 1, by - 34], [cx + 2, by - 30]], gold.l);
+    // Piston lance, thrust forward on attack.
+    const reach = f.open ? 6 : f.raise > 0.5 ? -2 : 0;
+    p.rect(cx + 5, by - 19, 3, 6, STEEL.b);
+    p.line(cx + 7, by - 16, cx + 15 + reach, by - 16, STEEL.l, 2);
+    p.poly([[cx + 15 + reach, by - 18], [cx + 19 + reach, by - 16], [cx + 15 + reach, by - 14]], STEEL.h);
+    p.set(cx + 16 + reach, by - 16, CYAN);
+    // Shoulder plate.
+    p.ellipse(cx - 5, by - 21, 2.6, 2.2, r.d);
+  },
+
+  titan(p, r, f) {
+    const cx = CX + f.lunge;
+    const by = FY + f.bob;
+    const gold = ramp(0xd9a441);
+    // Piston legs.
+    p.rect(cx - 9, by - 11 - (f.step > 0 ? 1 : 0), 6, 11, DARK.b);
+    p.rect(cx + 3, by - 11 - (f.step < 0 ? 1 : 0), 6, 11, DARK.d);
+    p.rect(cx - 9, by - 8, 6, 2, STEEL.l);
+    p.rect(cx + 3, by - 8, 6, 2, STEEL.b);
+    // Huge armored chest with a reactor core.
+    p.rect(cx - 12, by - 28, 24, 17, r.b);
+    p.rect(cx + 5, by - 28, 7, 17, r.d);
+    p.rect(cx - 12, by - 28, 24, 2, r.l);
+    p.rect(cx - 12, by - 13, 24, 2, r.k);
+    for (const [gx, gy] of [[-8, -24], [8, -15]] as const) {
+      p.ellipse(cx + gx, by + gy, 3, 3, gold.b);
+      p.set(cx + gx + (f.i % 2 ? 1 : -1), by + gy, gold.k);
+    }
+    const core = f.open ? 0xffffff : mix(0xff6a3a, 0xffd84a, (f.i % 2) * 0.5);
+    p.ellipse(cx, by - 20, 4, 4, DARK.k);
+    p.ellipse(cx, by - 20, 2.8, 2.8, core);
+    p.set(cx - 1, by - 21, 0xffffff);
+    // Head with a single glowing eye.
+    p.rect(cx - 5, by - 34, 10, 6, r.l);
+    p.rect(cx + 2, by - 34, 3, 6, r.b);
+    p.rect(cx - 3, by - 32, 7, 2, DARK.k);
+    p.rect(cx, by - 32, 2, 2, RED);
+    p.poly([[cx - 5, by - 34], [cx - 7, by - 38], [cx - 3, by - 34]], gold.l);
+    p.poly([[cx + 3, by - 34], [cx + 7, by - 38], [cx + 5, by - 34]], gold.l);
+    // Hammer arms: raised to wind up, slammed down on the strike.
+    const arm = Math.round(f.raise * -9 + (f.open ? 4 : 0));
+    for (const ax of [cx - 18, cx + 12]) {
+      p.rect(ax, by - 26 + arm, 6, 12, ax < cx ? r.d : r.b);
+      p.rect(ax - 1, by - 15 + arm, 8, 5, STEEL.b);
+      p.rect(ax - 1, by - 15 + arm, 8, 1, STEEL.h);
+      p.set(ax + 2, by - 13 + arm, CYAN);
+    }
+  },
 };

@@ -670,6 +670,10 @@ export class UIScene extends Phaser.Scene {
       ev.on('statusEnded', (e) => this.addLog(`No longer ${STATUS_INFO[e.status].name.toLowerCase()}.`)),
       ev.on('questReady', (e) => this.addLog(`Hunt done: ${e.name}. Turn it in at the Hunting Board.`)),
       ev.on('questCompleted', (e) => this.showBanner(`Bounty collected: ${e.name}`, '#9be38f')),
+      ev.on('bossPhase', (e) => {
+        const boss = this.world.monsters.get(e.monsterId);
+        if (boss) this.addLog(`${boss.def.name}: ${e.shout}`);
+      }),
       ev.on('boss', (e) => {
         if (e.kind === 'appeared') {
           this.addLog(`${e.name} has appeared!`);

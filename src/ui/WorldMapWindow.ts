@@ -21,6 +21,8 @@ export const WORLD_LAYOUT: Record<string, { x: number; y: number }> = {
   sunspire: { x: 0, y: 0.54 },
   'sunscorch-dunes': { x: 0, y: 0.7 },
   'sunken-ruins': { x: 0, y: 0.86 },
+  'iron-wastes': { x: 0, y: 0.38 },
+  'clockwork-citadel': { x: 0.5, y: 0.06 },
 };
 
 /** Ship routes (drawn dashed): they come from NPC dialogue, not portals. */

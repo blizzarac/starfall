@@ -38,7 +38,7 @@ export interface KnightLook {
   weaponTier?: 0 | 1 | 2;
   shield?: boolean;
   helm?: 'cap' | 'moss' | 'turban' | 'crown';
-  armor?: 'leather' | 'crystal' | 'sun' | 'coat';
+  armor?: 'leather' | 'crystal' | 'sun' | 'coat' | 'clockwork';
   /** Cape color, when a cloak is worn. */
   cloak?: number;
   /** Highly refined weapons sparkle. */
@@ -314,7 +314,7 @@ class Painter {
   ) {
     // Worn armor and cloaks override the job's outfit.
     const base = SPECS[look.gear];
-    const plated = look.armor === 'crystal' || look.armor === 'sun';
+    const plated = look.armor === 'crystal' || look.armor === 'sun' || look.armor === 'clockwork';
     this.spec = {
       ...base,
       torso: plated ? 'plate' : look.armor === 'coat' ? 'robe' : look.armor === 'leather' && base.torso !== 'robe' ? 'vest' : base.torso,
@@ -322,7 +322,7 @@ class Painter {
       greaves: base.greaves || plated,
       cape: base.cape || look.cloak !== undefined,
     };
-    this.plateR = look.armor === 'crystal' ? ramp(0x9fd8ff) : look.armor === 'sun' ? ramp(0xf2c14e) : STEEL;
+    this.plateR = look.armor === 'crystal' ? ramp(0x9fd8ff) : look.armor === 'sun' ? ramp(0xf2c14e) : look.armor === 'clockwork' ? ramp(0xc9883a) : STEEL;
     this.cloth = ramp(look.armor === 'coat' ? 0x2f4a7a : look.cloth);
     this.capeR = look.cloak !== undefined ? ramp(look.cloak) : this.cloth;
     this.hair = ramp(look.hair);
