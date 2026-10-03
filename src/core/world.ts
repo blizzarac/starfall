@@ -921,24 +921,19 @@ export class World {
 
   /**
    * One refine attempt: costs gold and one ore either way. Success raises the
-   * piece by one; failure above +4 destroys it, cards and all.
+   * piece by one; failure (possible above +4) leaves it as it was.
    */
   refine(uid: number): { error: string } | { success: boolean; level: number } {
     const blocker = this.refineBlocker(uid);
     if (blocker) return { error: blocker };
-    const { piece, slot } = this.findPiece(uid)!;
+    const { piece } = this.findPiece(uid)!;
     const next = piece.refine + 1;
     this.player.gold -= F.refineCost(next);
     this.removeItem(F.REFINE_ORE, 1);
     const success = this.rng() < F.refineChance(next);
     const name = piece.item.name;
-    if (success) {
-      piece.refine = next;
-    } else if (slot) {
-      delete this.player.equipment[slot];
-    } else {
-      this.player.gear = this.player.gear.filter((g) => g !== piece);
-    }
+    // A failure only costs the ore and gold: the piece keeps its refine level.
+    if (success) piece.refine = next;
     this.afterGearChange();
     this.events.emit('inventoryChanged', {});
     this.events.emit('refined', { name, level: next, success });

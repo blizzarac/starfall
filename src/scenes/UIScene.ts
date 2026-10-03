@@ -687,7 +687,7 @@ export class UIScene extends Phaser.Scene {
         const item = this.world.content.items.get(e.itemId);
         this.addLog(`Crafted ${item?.name ?? e.itemId}${e.count > 1 ? ` ×${e.count}` : ''}!`);
       }),
-      ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
+      ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `Refining ${e.name} to +${e.level} failed; it's unharmed.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
       ev.on('hotbarChanged', () => this.buildSkillButtons()),
       ev.on('autoChanged', (e) => this.addLog(e.on ? 'Auto on: fighting nearby monsters and picking up loot. Tap the map to take over.' : 'Auto off.')),

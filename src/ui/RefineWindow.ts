@@ -14,7 +14,6 @@ export class RefineWindow {
   private message = '';
   private messageColor = TONE.good;
   /** Piece awaiting confirmation of a risky attempt. */
-  private confirming: number | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -25,7 +24,6 @@ export class RefineWindow {
 
   open(): void {
     this.message = '';
-    this.confirming = null;
     this.panel.setVisible(true);
     this.refresh();
   }
@@ -44,7 +42,7 @@ export class RefineWindow {
       this.scene.add.text(12, 40, `Gold ${w.player.gold}    ${ore.name} ×${w.itemCount(REFINE_ORE)}`, { ...TEXT, fontSize: '12px', color: TONE.gold }),
     );
     p.add(
-      this.scene.add.text(12, 58, 'Up to +4 is safe. Above that a failed attempt destroys the piece.', {
+      this.scene.add.text(12, 58, 'Up to +4 always works. Above that an attempt can fail: you lose the ore and gold, never the gear.', {
         ...TEXT,
         fontSize: '11px',
         color: TONE.muted,
@@ -71,24 +69,15 @@ export class RefineWindow {
     const chance = refineChance(next);
     const risky = chance < 1;
     this.panel.add(
-      this.scene.add.text(12, y + 20, `→ +${next}: ${Math.round(chance * 100)}% · ${refineCost(next)} gold + 1 ore${risky ? ' · may break' : ''}`, {
+      this.scene.add.text(12, y + 20, `→ +${next}: ${Math.round(chance * 100)}% · ${refineCost(next)} gold + 1 ore${risky ? ' · may fail' : ''}`, {
         ...TEXT,
         fontSize: '11px',
         color: risky ? TONE.warn : TONE.muted,
       }),
     );
-    const confirming = this.confirming === piece.uid;
     const blocker = w.refineBlocker(piece.uid);
     this.panel.add(
-      makeButton(this.scene, pw - 92, y + 4, 80, 38, confirming ? 'Sure?' : 'Refine', () => {
-        if (risky && !confirming) {
-          this.confirming = piece.uid;
-          this.message = `Tap Sure? to risk ${pieceName(piece)} (${Math.round(chance * 100)}% to succeed).`;
-          this.messageColor = TONE.warn;
-          this.refresh();
-          return;
-        }
-        this.confirming = null;
+      makeButton(this.scene, pw - 92, y + 4, 80, 38, 'Refine', () => {
         const name = pieceName(piece);
         const result = w.refine(piece.uid);
         if ('error' in result) {
@@ -98,11 +87,11 @@ export class RefineWindow {
           this.message = `Success! ${pieceName(piece)}.`;
           this.messageColor = TONE.good;
         } else {
-          this.message = `${name} shattered.`;
-          this.messageColor = TONE.bad;
+          this.message = `No luck: ${name} stays as it is. Try again?`;
+          this.messageColor = TONE.warn;
         }
         this.refresh();
-      }, confirming ? 0xff7a5a : 0xffffff).setEnabled(!blocker).root,
+      }).setEnabled(!blocker).root,
     );
   }
 }

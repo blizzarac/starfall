@@ -296,7 +296,7 @@
         ]
       },
       "refine_info": {
-        "text": "Each attempt costs one Brightstone and some gold. Up to +4 I never fail. Past that, the metal can shatter and the piece is gone, cards and all. I'll show you the odds first.",
+        "text": "Each attempt costs one Brightstone and some gold. Up to +4 I never fail. Past that, the metal can resist me: then the ore and gold are spent, but your gear comes back exactly as it was. I'll show you the odds first.",
         "choices": [
           {
             "label": "Let's refine",

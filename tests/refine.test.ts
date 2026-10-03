@@ -46,19 +46,24 @@ describe('refining', () => {
     expect(w.player.gold).toBe(0);
   });
 
-  it('a failure above +4 destroys the piece, even a worn one', () => {
-    let destroyed = 0;
-    for (let seed = 1; seed <= 30 && destroyed === 0; seed++) {
+  it('a failure above +4 keeps the piece and its level, worn or not', () => {
+    let failures = 0;
+    for (let seed = 1; seed <= 10; seed++) {
       const w = rich(seed);
       const knife = w.player.equipment.weapon!;
-      for (let i = 0; i < 10 && w.player.equipment.weapon; i++) w.refine(knife.uid);
-      if (!w.player.equipment.weapon) {
-        destroyed++;
-        expect(knife.refine).toBeGreaterThanOrEqual(4);
-        expect(weaponOf(w.player).type).toBe('fist');
+      for (let i = 0; i < 12; i++) {
+        const before = knife.refine;
+        const result = w.refine(knife.uid);
+        if ('error' in result) break;
+        if (!result.success) {
+          failures++;
+          expect(knife.refine).toBe(before);
+        }
+        expect(w.player.equipment.weapon).toBe(knife);
+        expect(weaponOf(w.player).type).not.toBe('fist');
       }
     }
-    expect(destroyed).toBe(1);
+    expect(failures).toBeGreaterThan(0);
   });
 
   it('success rates match the table over many attempts', () => {

@@ -837,7 +837,7 @@ export class WorldScene extends Phaser.Scene {
       ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('refined', (e) => {
         this.refreshPlayerSprite();
-        this.floatText('player', e.success ? `+${e.level}!` : 'Shattered…', e.success ? '#ffe27a' : '#ff6b6b', 18, 1200);
+        this.floatText('player', e.success ? `+${e.level}!` : 'Failed…', e.success ? '#ffe27a' : '#ff6b6b', 18, 1200);
         if (e.success && e.level >= 5) this.camFx('flash', 250, 255, 240, 180);
         if (!e.success) this.camFx('shake', 200, 0.008);
       }),
