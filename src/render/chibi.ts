@@ -10,6 +10,8 @@ import { ensureHero, HERO_FEET, HERO_H, HERO_RES, type Outfit } from './hero';
 
 /** Scale to show a character sprite at its intended on-screen size. */
 export const CHAR_SCALE = 1 / HERO_RES;
+/** Characters in the world are a bit smaller than in portraits, to fit the tiles and buildings. */
+export const WORLD_CHAR_SCALE = CHAR_SCALE * 0.75;
 
 export interface ChibiLook {
   hairStyle: HairStyle;

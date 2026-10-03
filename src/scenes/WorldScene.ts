@@ -8,7 +8,7 @@ import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
-import { CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
+import { WORLD_CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
@@ -141,9 +141,9 @@ export class WorldScene extends Phaser.Scene {
     this.debugGfx = this.add.graphics().setDepth(5000);
 
     const playerKey = this.playerTexture();
-    this.playerBody = this.add.image(0, 0, playerKey).setOrigin(0.5, chibiOrigin(this, playerKey)).setScale(CHAR_SCALE);
+    this.playerBody = this.add.image(0, 0, playerKey).setOrigin(0.5, chibiOrigin(this, playerKey)).setScale(WORLD_CHAR_SCALE);
     this.castBar = this.add.graphics();
-    this.statusLabel = this.add.text(0, -112, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
+    this.statusLabel = this.add.text(0, -86, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
 
     const cam = this.cameras.main;
@@ -340,10 +340,10 @@ export class WorldScene extends Phaser.Scene {
           : this.add
               .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), npcAppearance(npc.id, hexColor(npc.look.hair))))
               .setOrigin(0.5, chibiOrigin(this, `npc-${npc.id}`))
-              .setScale(CHAR_SCALE)
+              .setScale(WORLD_CHAR_SCALE)
               .setFlipX(hash(npc.x, npc.y) % 2 === 0);
       const label = this.add
-        .text(0, npc.sprite === 'board' ? -66 : -110, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
+        .text(0, npc.sprite === 'board' ? -66 : -84, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
         .setOrigin(0.5, 1);
       const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
       const s = body.scaleY;
@@ -386,7 +386,7 @@ export class WorldScene extends Phaser.Scene {
     const moving = p.next !== null;
     const bob = moving ? Math.abs(Math.sin(now / 70)) * 2 : 0;
     this.playerBody.setY(-bob);
-    this.playerBody.setScale(CHAR_SCALE, CHAR_SCALE * (p.sitting ? 0.72 : 1));
+    this.playerBody.setScale(WORLD_CHAR_SCALE, WORLD_CHAR_SCALE * (p.sitting ? 0.72 : 1));
     this.player.setAlpha(p.dead ? 0.35 : 1);
     // Fainted players lie down; stunned ones wobble.
     this.playerBody.setAngle(p.dead ? 90 : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
@@ -613,7 +613,7 @@ export class WorldScene extends Phaser.Scene {
 
   private npcAt(wx: number, wy: number): string | null {
     for (const [id, view] of this.npcViews) {
-      if (Phaser.Math.Distance.Between(wx, wy, view.x, view.y - 44) < this.pickRadius() * 1.4) return id;
+      if (Phaser.Math.Distance.Between(wx, wy, view.x, view.y - 36) < this.pickRadius() * 1.2) return id;
     }
     return null;
   }
@@ -928,7 +928,7 @@ export class WorldScene extends Phaser.Scene {
   private holyBeam(targetId: number): void {
     const view = this.monsterViews.get(targetId);
     if (!view) return;
-    const beam = this.add.rectangle(view.root.x, view.root.y - 100, 34, 200, 0xfff6c8, 0.85).setStrokeStyle(3, 0x16131c).setDepth(4000).setScale(0.2, 1);
+    const beam = this.add.rectangle(view.root.x, view.root.y - 80, 34, 160, 0xfff6c8, 0.85).setStrokeStyle(3, 0x16131c).setDepth(4000).setScale(0.2, 1);
     this.tweens.add({ targets: beam, scaleX: 1, duration: 120, yoyo: true, hold: 120, onComplete: () => beam.destroy() });
     this.lines(view.root.x, view.root.y - 30, { inner: 30, outer: 120, count: 20 });
     this.soundEffect(targetId, pick(SFX.holy_light), '#fff6c8', true);
@@ -945,7 +945,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private anchorOf(id: EntityId): { x: number; y: number } | null {
-    if (id === 'player') return { x: this.player.x, y: this.player.y - 100 };
+    if (id === 'player') return { x: this.player.x, y: this.player.y - 78 };
     const view = this.monsterViews.get(id);
     return view ? { x: view.root.x, y: view.root.y - 40 } : null;
   }
