@@ -155,6 +155,30 @@ describe('Knight', () => {
     expect(Math.min(...hits)).toBeGreaterThan(0);
   });
 
+  it('Holy Aura deals a little holy damage and weakens DEF while monsters attack you', () => {
+    const w = promoted('swordsman', 'knight');
+    const m = duel(w, 'sandworm');
+    w.player.hp = 1e6;
+    const full = w.monsterDef(m);
+    expect(full).toBeGreaterThan(0);
+    const hits: Array<{ amount: number; holy?: boolean }> = [];
+    const weakened: number[] = [];
+    w.events.on('auraHit', (e) => e.targetId === m.id && hits.push(e));
+    w.events.on('weakened', (e) => weakened.push(e.targetId));
+    for (let i = 0; i < 10; i++) expect(w.learnSkill('holy_aura')).toBeNull();
+    m.hostile = true;
+    for (let t = 0; t < 2500; t += F.TICK_MS) w.tick();
+    // Level 10 cuts 40% of DEF, announced once however long it lasts.
+    expect(w.monsterDef(m)).toBe(Math.round(m.def.def * (1 - S.holyAuraDefCut(10))));
+    expect(weakened).toEqual([m.id]);
+    expect(hits.length).toBeGreaterThanOrEqual(2);
+    expect(hits.every((h) => h.holy && h.amount > 0)).toBe(true);
+    // It wears off a few seconds after the monster stops fighting you.
+    m.hostile = false;
+    for (let t = 0; t < S.HOLY_WEAKEN_MS + 1000; t += F.TICK_MS) w.tick();
+    expect(w.monsterDef(m)).toBe(full);
+  });
+
   it('Two-Hand Mastery adds ATK and crit with a two-handed sword only', () => {
     const w = promoted('swordsman', 'knight');
     w.addItem('short_sword', 1);

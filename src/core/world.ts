@@ -68,8 +68,10 @@ export interface WorldEvents extends Record<string, unknown> {
   petChanged: Record<string, never>;
   /** The pet bit a monster. */
   petAttack: { targetId: number; amount: number };
-  /** Battle Aura burned a monster. */
-  auraHit: { targetId: number; amount: number };
+  /** Battle Aura (or Holy Aura, `holy`) burned a monster. */
+  auraHit: { targetId: number; amount: number; holy?: boolean };
+  /** Holy Aura just weakened a monster's DEF. */
+  weakened: { targetId: number };
   petLevelUp: { name: string; level: number };
   notice: { text: string };
 }
@@ -128,6 +130,7 @@ export class World {
   private petHungerMs = 0;
   private petAttackMs = 0;
   private auraMs = 0;
+  private holyAuraMs = 0;
   /** Drops the pet couldn't pick up (too heavy), so it doesn't keep trying. */
   private petSkips = new Set<number>();
 
@@ -571,8 +574,34 @@ export class World {
     const atk = derivedStats(p).atk * (S.auraPercent(lv) / 100);
     for (const m of [...this.monsters.values()]) {
       if (!m.hostile || tileDistance(m.tile, p.tile) > radius) continue;
-      this.hurtMonster(m, F.damage({ atk, def: m.def.def }, this.rng), false, 'aura');
+      this.hurtMonster(m, F.damage({ atk, def: this.monsterDef(m) }, this.rng), false, 'aura');
     }
+  }
+
+  /** Holy Aura: a little holy damage each second, and the DEF of everything it touches drops for a while. */
+  private updateHolyAura(dt: number): void {
+    const p = this.player;
+    const lv = S.skillLevel(p, 'holy_aura');
+    if (lv === 0 || p.dead) return;
+    this.holyAuraMs -= dt;
+    if (this.holyAuraMs > 0) return;
+    this.holyAuraMs = S.AURA_TICK_MS;
+    const radius = S.auraRadius(lv);
+    const atk = derivedStats(p).atk * (S.holyAuraPercent(lv) / 100);
+    for (const m of [...this.monsters.values()]) {
+      if (!m.hostile || tileDistance(m.tile, p.tile) > radius) continue;
+      const fresh = !m.weakened || m.weakened.until <= this.time;
+      m.weakened = { share: S.holyAuraDefCut(lv), until: this.time + S.HOLY_WEAKEN_MS };
+      if (fresh) this.events.emit('weakened', { targetId: m.id });
+      const amount = F.damage({ atk, elementModifier: F.elementModifier('holy', m.def.element), def: this.monsterDef(m) }, this.rng);
+      if (amount > 0) this.hurtMonster(m, amount, false, 'holy');
+    }
+  }
+
+  /** A monster's DEF right now, after any Holy Aura weakening. */
+  monsterDef(m: Monster): number {
+    const cut = m.weakened && m.weakened.until > this.time ? m.weakened.share : 0;
+    return Math.round(m.def.def * (1 - cut));
   }
 
   /** The pet joins the fight: it bites what you're attacking, or whatever is attacking you. */
@@ -785,7 +814,7 @@ export class World {
         const elem = F.elementModifier(magic.element, m.def.element);
         for (let i = 0; i < magic.hits(lv) && this.monsters.has(m.id); i++) {
           m.hostile = true;
-          this.hurtMonster(m, F.magicDamage(d.matk, magic.perHit(lv) * this.cardDamageFactor(m), elem, m.def.def, this.rng), false);
+          this.hurtMonster(m, F.magicDamage(d.matk, magic.perHit(lv) * this.cardDamageFactor(m), elem, this.monsterDef(m), this.rng), false);
         }
       }
     } else if (id === 'pierce' && target) {
@@ -815,7 +844,7 @@ export class World {
       for (const m of victims) {
         if (!this.monsters.has(m.id)) continue;
         const amount = F.damage(
-          { atk: d.atk, skillModifier: S.claymoreModifier(lv) * this.cardDamageFactor(m), elementModifier: F.elementModifier('fire', m.def.element), def: m.def.def },
+          { atk: d.atk, skillModifier: S.claymoreModifier(lv) * this.cardDamageFactor(m), elementModifier: F.elementModifier('fire', m.def.element), def: this.monsterDef(m) },
           this.rng,
         );
         this.hurtMonster(m, amount, false);
@@ -1363,6 +1392,7 @@ export class World {
     for (const m of [...this.monsters.values()]) this.updateMonster(m, dt);
     this.updatePet(dt);
     this.updateAura(dt);
+    this.updateHolyAura(dt);
     this.updateDrops(dt);
     this.updateRespawns();
   }
@@ -1538,7 +1568,7 @@ export class World {
         skillModifier: o.modifier * this.cardDamageFactor(target),
         elementModifier: F.elementModifier(o.element, target.def.element),
         sizeModifier: F.sizeModifier(weaponOf(p).type, target.def.size),
-        def: target.def.def,
+        def: this.monsterDef(target),
         crit,
       },
       this.rng,
@@ -1552,11 +1582,11 @@ export class World {
     return 1 + (fx.vsElement[target.def.element] ?? 0) + (fx.vsSize[target.def.size] ?? 0);
   }
 
-  private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' | 'aura' = 'player'): void {
+  private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' | 'aura' | 'holy' = 'player'): void {
     target.hp -= amount;
     target.hostile = true;
     if (source === 'pet') this.events.emit('petAttack', { targetId: target.id, amount });
-    else if (source === 'aura') this.events.emit('auraHit', { targetId: target.id, amount });
+    else if (source === 'aura' || source === 'holy') this.events.emit('auraHit', { targetId: target.id, amount, holy: source === 'holy' });
     else this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
     if (target.hp <= 0) this.killMonster(target);
     else if (target.def.phases.length > 0) this.checkPhase(target);

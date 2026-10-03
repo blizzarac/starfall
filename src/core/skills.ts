@@ -30,6 +30,7 @@ export type SkillId =
   | 'riding'
   | 'two_hand_mastery'
   | 'battle_aura'
+  | 'holy_aura'
   | 'sight_rasher'
   | 'thunderstorm'
   | 'meteor_storm'
@@ -406,6 +407,19 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     describe: (lv) => `A fighting spirit burns around you: every second, monsters attacking you within ${auraRadius(lv)} tile${auraRadius(lv) > 1 ? 's' : ''} take ${auraPercent(lv)}% of your ATK. It never misses.`,
     short: 'Aura',
   },
+  holy_aura: {
+    id: 'holy_aura',
+    name: 'Holy Aura',
+    job: 'knight',
+    maxLevel: 10,
+    kind: 'passive',
+    requires: [],
+    spCost: () => 0,
+    cooldownMs: 0,
+    describe: (lv) =>
+      `A holy light surrounds you: every second, monsters attacking you within ${auraRadius(lv)} tile${auraRadius(lv) > 1 ? 's' : ''} take ${holyAuraPercent(lv)}% of your ATK as holy damage and lose ${Math.round(holyAuraDefCut(lv) * 100)}% DEF for ${HOLY_WEAKEN_MS / 1000} s.`,
+    short: 'Holy',
+  },
 
   // ---- Wizard ----
   sight_rasher: {
@@ -680,6 +694,19 @@ export function auraRadius(level: number): number {
 }
 
 export const AURA_TICK_MS = 1000;
+
+/** Holy Aura: a little holy damage each second (share of ATK)… */
+export function holyAuraPercent(level: number): number {
+  return 5 + 2 * level;
+}
+
+/** …and a DEF cut on everything it touches: 13% at level 1 to 40% at 10. */
+export function holyAuraDefCut(level: number): number {
+  return (10 + 3 * level) / 100;
+}
+
+/** How long Holy Aura's DEF cut lasts after a monster leaves the light. */
+export const HOLY_WEAKEN_MS = 3000;
 
 /** ATK per level of Two-Hand Mastery, with a two-handed sword. */
 export const TWO_HAND_MASTERY_ATK = 5;

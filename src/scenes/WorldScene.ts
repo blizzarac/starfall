@@ -3,7 +3,7 @@ import type { Monster } from '../core/entities';
 import type { Tile } from '../core/grid';
 import { weaponOf } from '../core/equipment';
 import { jobOf } from '../core/jobs';
-import { auraRadius, skillLevel } from '../core/skills';
+import { auraRadius, skillLevel, type SkillId } from '../core/skills';
 import { STATUS_INFO } from '../core/status';
 import type { MonsterDef, NpcDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
@@ -39,6 +39,11 @@ interface MonsterView {
   lastHp: number;
 }
 
+/** Each aura's ground glow: color, and its size relative to the reach. */
+const AURA_LOOKS: Array<[SkillId, number, number]> = [
+  ['battle_aura', 0x4fe6ff, 1],
+  ['holy_aura', 0xfffbe8, 0.9],
+];
 /** How red an enraged boss glows in each phase. */
 const RAGE_TINT = [0xffffff, 0xffc8b0, 0xff8a7a];
 /** Lights sit above the dark overlay so they shine through it. */
@@ -123,8 +128,8 @@ export class WorldScene extends Phaser.Scene {
     biteUntil: number;
   } | null = null;
   private hover!: Phaser.GameObjects.Image;
-  /** Battle Aura's reach, drawn on the ground around the player; null without the skill. */
-  private aura: { shape: Phaser.GameObjects.Polygon; radius: number } | null = null;
+  /** The knight's auras, drawn on the ground around the player to show their reach. */
+  private auras = new Map<SkillId, { shape: Phaser.GameObjects.Polygon; radius: number }>();
   /** Pulsing ring under whatever the player is fighting. */
   private targetRing!: Phaser.GameObjects.Ellipse;
   private debugGfx!: Phaser.GameObjects.Graphics;
@@ -191,7 +196,7 @@ export class WorldScene extends Phaser.Scene {
     this.castBar = this.add.graphics();
     this.statusLabel = this.add.text(0, -86, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
-    this.aura = null;
+    this.auras.clear();
 
     const cam = this.cameras.main;
     const { width, height } = this.world.map;
@@ -809,14 +814,18 @@ export class WorldScene extends Phaser.Scene {
         pet.biteUntil = this.time.now + 400;
       }),
       ev.on('auraHit', (e) => {
-        this.damageNumber(e.targetId, String(e.amount), '#8ff4ff', 18);
+        this.damageNumber(e.targetId, String(e.amount), e.holy ? '#fff2a8' : '#8ff4ff', e.holy ? 16 : 18);
         this.hitSpark(e.targetId, false);
         this.flashHit(e.targetId);
-        if (this.aura) {
-          this.aura.shape.setScale(1.08);
-          this.tweens.add({ targets: this.aura.shape, scale: 1, duration: 250 });
+        const skill = e.holy ? 'holy_aura' : 'battle_aura';
+        const aura = this.auras.get(skill);
+        if (aura) {
+          const base = AURA_LOOKS.find(([s]) => s === skill)![2];
+          aura.shape.setScale(base * 1.08);
+          this.tweens.add({ targets: aura.shape, scale: base, duration: 250 });
         }
       }),
+      ev.on('weakened', (e) => this.floatText(e.targetId, 'DEF↓', '#fff2a8', 13, 900)),
       ev.on('petLevelUp', (e) => {
         if (!this.petView) return;
         const at = { x: this.petView.root.x, y: this.petView.root.y - 40 };
@@ -877,21 +886,39 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** The tiles a slam hits (every tile within `radius` steps), as one diamond on screen. */
-  /** Keeps the Battle Aura's glow under the player, sized to its reach (cyan, so it never looks like a red slam warning). */
+  /**
+   * Keeps each aura's glow under the player, sized to its reach: Battle Aura in
+   * cyan, Holy Aura in pale gold and a little smaller so both outlines show.
+   * Neither is red, so they never look like a slam warning.
+   */
   private syncAura(): void {
-    const lv = skillLevel(this.world.player, 'battle_aura');
-    const radius = lv > 0 ? auraRadius(lv) : 0;
-    if (this.aura && this.aura.radius !== radius) {
-      this.tweens.killTweensOf(this.aura.shape);
-      this.aura.shape.destroy();
-      this.aura = null;
+    for (const [skill, color, scale] of AURA_LOOKS) {
+      const lv = skillLevel(this.world.player, skill);
+      const radius = lv > 0 ? auraRadius(lv) : 0;
+      let aura = this.auras.get(skill);
+      if (aura && aura.radius !== radius) {
+        this.tweens.killTweensOf(aura.shape);
+        aura.shape.destroy();
+        this.auras.delete(skill);
+        aura = undefined;
+      }
+      if (radius > 0 && !aura) {
+        const shape = this.add.polygon(0, 0, this.slamArea(radius), color, 0.16).setStrokeStyle(3, color, 0.95).setDepth(2.5).setScale(scale);
+        // A darker rim under the light outline, so a pale aura still reads on sand and stone.
+        if (skill === 'holy_aura') {
+          const rim = this.add.polygon(0, 0, this.slamArea(radius)).setStrokeStyle(6, 0xb07a10, 0.7).setDepth(2.49).setScale(scale);
+          shape.on('destroy', () => rim.destroy());
+          shape.setData('rim', rim);
+        }
+        this.tweens.add({ targets: shape, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: skill === 'holy_aura' ? 1300 : 900, ease: 'Sine.easeInOut' });
+        aura = { shape, radius };
+        this.auras.set(skill, aura);
+      }
+      if (aura) {
+        aura.shape.setPosition(this.player.x, this.player.y);
+        (aura.shape.getData('rim') as Phaser.GameObjects.Polygon | undefined)?.setPosition(this.player.x, this.player.y).setAlpha(aura.shape.alpha).setScale(aura.shape.scale);
+      }
     }
-    if (radius > 0 && !this.aura) {
-      const shape = this.add.polygon(0, 0, this.slamArea(radius), 0x4fe6ff, 0.18).setStrokeStyle(3, 0x4fe6ff, 0.95).setDepth(2.5);
-      this.tweens.add({ targets: shape, alpha: { from: 1, to: 0.6 }, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
-      this.aura = { shape, radius };
-    }
-    this.aura?.shape.setPosition(this.player.x, this.player.y);
   }
 
   private slamArea(radius: number): number[] {

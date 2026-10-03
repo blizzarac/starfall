@@ -107,6 +107,8 @@ export interface Monster extends Mover {
   phase: number;
   /** Called in by a boss: never respawns. */
   summoned?: boolean;
+  /** Holy Aura's DEF cut (0.2 = DEF −20%) and the world time it wears off. */
+  weakened?: { share: number; until: number };
 }
 
 export interface GroundDrop {

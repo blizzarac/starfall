@@ -6,7 +6,7 @@
 
 | Path | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50 | 55 | 60 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| knight | 4 | 20 | 38 | 59 | 80 | 103 | 126 | 148 | 168 | 189 | 203 | 222 |
+| knight | 4 | 20 | 38 | 59 | 80 | 103 | 126 | 148 | 167 | 187 | 203 | 223 |
 | wizard | 13 | 52 | 77 | 95 | 128 | 139 | 148 | 154 | 190 | 213 | 238 | 260 |
 | hunter | 10 | 43 | 77 | 120 | 151 | 177 | 199 | 221 | 238 | 256 | 277 | 296 |
 | priest | 6 | 30 | 63 | 90 | 108 | 121 | 131 | 140 | 148 | 154 | 165 | 175 |
@@ -24,7 +24,7 @@
 
 | Path | Kills/min | Deaths/hour | Potions/hour | Gold earned/hour | Final level |
 |---|---:|---:|---:|---:|---|
-| knight | 16.4 | 3.8 | 48 | 29485 | 97 / knight 50 |
+| knight | 16.0 | 4.0 | 40 | 27819 | 99 / knight 50 |
 | wizard | 12.5 | 5.3 | 26 | 18313 | 84 / wizard 50 |
 | hunter | 11.4 | 2.8 | 19 | 24131 | 83 / hunter 50 |
 | priest | 15.8 | 0.6 | 4 | 47760 | 99 / priest 50 |
@@ -39,8 +39,8 @@
 | knight | Whisperwood | 10 | 6.9 | 738 | 18.1 |
 | knight | Saltmere Coast | 16 | 7.0 | 1326 | 0.0 |
 | knight | Glimmer Caves | 69 | 13.9 | 2478 | 0.0 |
-| knight | Sunscorch Dunes | 128 | 18.8 | 8956 | 2.3 |
-| knight | Sunken Ruins | 84 | 20.0 | 20783 | 9.3 |
+| knight | Sunscorch Dunes | 112 | 17.4 | 8333 | 3.2 |
+| knight | Sunken Ruins | 100 | 19.9 | 20938 | 7.8 |
 | wizard | Southern Meadow | 46 | 7.1 | 64 | 0.0 |
 | wizard | Thornfield | 20 | 7.1 | 71 | 8.8 |
 | wizard | Mossy Hollow | 14 | 12.6 | 652 | 0.0 |
