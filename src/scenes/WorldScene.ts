@@ -8,6 +8,7 @@ import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
+import { GROUND_RES, setArtRes } from '../render/art';
 import { WORLD_CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
@@ -181,11 +182,24 @@ export class WorldScene extends Phaser.Scene {
     const { width, height } = this.world.map;
     const ox = height * (TILE_W / 2);
     const oy = TILE_H / 2;
-    const key = `ground-${this.world.map.id}`;
+    const texW = (width + height) * (TILE_W / 2);
+    const texH = (width + height) * (TILE_H / 2);
+    // The ground is drawn at GROUND_RES in chunks, since one texture that big
+    // would exceed what phone GPUs accept.
+    const res = quality.low ? 1 : GROUND_RES;
+    const chunk = Math.floor(2048 / res);
+    const prefix = `ground-${this.world.map.id}-${res}-`;
+    const chunks: Array<{ key: string; x: number; y: number; w: number; h: number }> = [];
+    for (let y = 0; y < texH; y += chunk) {
+      for (let x = 0; x < texW; x += chunk) chunks.push({ key: `${prefix}${x}-${y}`, x, y, w: Math.min(chunk, texW - x), h: Math.min(chunk, texH - y) });
+    }
     // Each ground image is several megabytes; keep only the current map's.
-    for (const k of this.textures.getTextureKeys()) if (k.startsWith('ground-') && k !== key) this.textures.remove(k);
-    if (this.textures.exists(key)) {
-      this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
+    for (const k of this.textures.getTextureKeys()) if (k.startsWith('ground-') && !k.startsWith(prefix)) this.textures.remove(k);
+    const place = () => {
+      for (const c of chunks) this.add.image(-ox + c.x, -oy + c.y, c.key).setOrigin(0, 0).setDepth(0);
+    };
+    if (chunks.every((c) => this.textures.exists(c.key))) {
+      place();
       return;
     }
     const g = this.make.graphics({}, false);
@@ -273,11 +287,14 @@ export class WorldScene extends Phaser.Scene {
         if (y === 0 || classOf(x, y - 1) !== here) g.lineBetween(cx + TILE_W / 2, cy, cx, cy - TILE_H / 2);
       }
     }
-    const texW = (width + height) * (TILE_W / 2);
-    const texH = (width + height) * (TILE_H / 2);
-    g.generateTexture(key, texW, texH);
+    g.setScale(res);
+    for (const c of chunks) {
+      g.setPosition(-c.x * res, -c.y * res);
+      g.generateTexture(c.key, Math.ceil(c.w * res), Math.ceil(c.h * res));
+      setArtRes(c.key, res);
+    }
     g.destroy();
-    this.add.image(-ox, -oy, key).setOrigin(0, 0).setDepth(0);
+    place();
   }
 
   private placeObstacles(): void {

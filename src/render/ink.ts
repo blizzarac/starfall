@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { ART_RES, artRes, setArtRes } from './art';
 
 /**
  * Color-manga treatment for generated textures: a bold black ink outline
@@ -24,7 +25,9 @@ export interface InkOptions {
 /** Replaces texture `key` with an outlined, screentoned copy. Safe to call once per key. */
 export function inkify(scene: Phaser.Scene, key: string, opts: InkOptions = {}): void {
   if (pads.has(key) || !scene.textures.exists(key)) return;
-  const outline = opts.outline ?? 2.5;
+  // Outline and dots are in world pixels; the texture may be drawn at a higher resolution.
+  const res = artRes(key);
+  const outline = (opts.outline ?? 2.5) * res;
   const pad = Math.ceil(outline) + 1;
   const src = scene.textures.get(key).getSourceImage() as HTMLCanvasElement;
   const w = src.width + pad * 2;
@@ -63,7 +66,7 @@ export function inkify(scene: Phaser.Scene, key: string, opts: InkOptions = {}):
     ctx.closePath();
     ctx.clip();
     ctx.fillStyle = 'rgba(22, 19, 28, 0.28)';
-    const step = opts.toneStep ?? 4;
+    const step = (opts.toneStep ?? 4) * res;
     for (let y = 0; y < h; y += step) {
       for (let x = (y / step) % 2 ? step / 2 : 0; x < w; x += step) {
         ctx.beginPath();
@@ -77,6 +80,7 @@ export function inkify(scene: Phaser.Scene, key: string, opts: InkOptions = {}):
   scene.textures.remove(key);
   scene.textures.addCanvas(key, out);
   pads.set(key, pad);
+  setArtRes(key, res);
 }
 
 /** Padding inkify added around a texture (0 if not inked). */
@@ -88,7 +92,7 @@ export function inkPad(key: string): number {
 export function feetOrigin(scene: Phaser.Scene, key: string, feetPx: number): number {
   const pad = inkPad(key);
   const h = scene.textures.get(key).getSourceImage().height;
-  return (feetPx + pad) / h;
+  return (feetPx * artRes(key) + pad) / h;
 }
 
 /** Radial manga speed lines around a point, fading out quickly. */
@@ -129,10 +133,11 @@ export const BURST_RADIUS = 48;
 
 /** Draws the comic starburst once at boot; effects scale the image instead of redrawing polygons. */
 export function makeBurstTexture(scene: Phaser.Scene): void {
-  const g = scene.make.graphics({}, false);
+  const g = scene.make.graphics({}, false).setScale(ART_RES);
   const size = BURST_RADIUS * 2 + 8;
   g.translateCanvas(size / 2, size / 2);
   starburst(g, BURST_RADIUS, 12, 0xffffff);
-  g.generateTexture('burst', size, size);
+  g.generateTexture('burst', size * ART_RES, size * ART_RES);
+  setArtRes('burst', ART_RES);
   g.destroy();
 }

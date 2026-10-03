@@ -4,6 +4,7 @@ import '@fontsource/m-plus-rounded-1c/latin-800.css';
 import Phaser from 'phaser';
 import { audio } from './audio/engine';
 import { DPR } from './render/view';
+import { installArtImages } from './render/art';
 import { setupPwa, showUpdateBanner } from './pwa';
 import type { SaveManager } from './save/manager';
 import { BootScene } from './scenes/BootScene';
@@ -20,6 +21,7 @@ async function fontsReady(): Promise<void> {
 await fontsReady();
 
 // Every Text renders at the screen's pixel density, so lettering stays sharp.
+installArtImages();
 const addText = Phaser.GameObjects.GameObjectFactory.prototype.text;
 Phaser.GameObjects.GameObjectFactory.prototype.text = function (this: Phaser.GameObjects.GameObjectFactory, x, y, text, style) {
   return addText.call(this, x, y, text, { resolution: DPR, ...style });
