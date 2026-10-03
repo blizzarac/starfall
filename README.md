@@ -2,7 +2,7 @@
 
 A single-player, browser-based action RPG in the spirit of classic 2D isometric MMOs: chibi sprites, click-to-move combat, stat builds and a job tree. Runs entirely in the browser; no server.
 
-**Play:** https://blizzarac.github.io/starfall/
+**Play:** https://blizzarac.github.io/starfall/ (on a phone, use *Add to Home Screen* to install it; it then runs fullscreen and offline)
 
 This is the **prototype** phase from the design doc: one map, click-to-move, auto-attack, one monster and a debug overlay. Its gate is a fun check on the kill loop. All art is placeholder shapes drawn at boot.
 
@@ -61,4 +61,6 @@ Three slots on the title screen. The game autosaves every 60 seconds and wheneve
 
 When the save format changes, bump `SAVE_SCHEMA_VERSION` in `src/save/schema.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts`; old saves upgrade on load.
 
-The PWA and the starter town are next in the vertical slice.
+## Offline and updates
+
+`vite-plugin-pwa` generates the manifest and a service worker that precaches the whole build, so once loaded the game runs offline and can be installed to the home screen. When a new version is deployed, a banner offers **Save & reload** instead of swapping files mid-session.

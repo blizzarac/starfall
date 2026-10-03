@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { setupPwa, showUpdateBanner } from './pwa';
+import type { SaveManager } from './save/manager';
 import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { UIScene } from './scenes/UIScene';
@@ -15,3 +17,12 @@ const game = new Phaser.Game({
 
 // Lets browser tests and the console reach the running game in development.
 if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+
+// When a new version is ready, offer it; the current session is saved before reloading.
+setupPwa((apply) => {
+  showUpdateBanner(async () => {
+    const saves = game.registry.get('saves') as SaveManager | undefined;
+    await saves?.save();
+    apply();
+  });
+});
