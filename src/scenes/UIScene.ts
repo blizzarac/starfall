@@ -17,6 +17,9 @@ import { QuestWindow } from '../ui/QuestWindow';
 import { StorageWindow } from '../ui/StorageWindow';
 import { PetWindow } from '../ui/PetWindow';
 import { HotbarWindow } from '../ui/HotbarWindow';
+import { Minimap } from '../ui/Minimap';
+import { WorldMapWindow } from '../ui/WorldMapWindow';
+import { nextGoal } from '../core/goals';
 import { audio } from '../audio/engine';
 import type { SaveDb } from '../save/db';
 import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
@@ -67,6 +70,8 @@ export class UIScene extends Phaser.Scene {
   private storageWindow!: StorageWindow;
   private petWindow!: PetWindow;
   private hotbarWindow!: HotbarWindow;
+  private worldMap!: WorldMapWindow;
+  private minimap!: Minimap;
   /** Active hunts under the status panel. */
   private tracker!: Phaser.GameObjects.Text;
   private skillWindow!: SkillWindow;
@@ -125,6 +130,8 @@ export class UIScene extends Phaser.Scene {
     this.storageWindow = new StorageWindow(this, this.world);
     this.petWindow = new PetWindow(this, this.world);
     this.hotbarWindow = new HotbarWindow(this, this.world);
+    this.worldMap = new WorldMapWindow(this, this.world);
+    this.minimap = new Minimap(this, this.world, () => this.worldMap.toggle());
     const openPet = () => this.petWindow.open();
     this.game.events.on('openPet', openPet);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off('openPet', openPet));
@@ -156,6 +163,7 @@ export class UIScene extends Phaser.Scene {
     this.drawStatus();
     this.drawButtons();
     this.drawSkillButtons();
+    this.minimap.update(delta);
     this.drawBossBar();
     this.drawTracker();
     this.drawStatWindow();
@@ -168,6 +176,7 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const narrow = width < NARROW;
     this.menuButton.setPosition(width - 10, 10);
+    this.minimap.root.setPosition(width - 14 - this.minimap.width, 56);
     this.savedText.setPosition(width - 18 - this.menuButton.width, 18);
     this.menuDim.setSize(width, height);
     this.menuPanel.setPosition(width / 2, height / 2);
@@ -382,7 +391,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel, this.worldMap.panel];
   }
 
   private refreshPanels(): void {
@@ -394,6 +403,7 @@ export class UIScene extends Phaser.Scene {
     if (this.storageWindow.panel.visible) this.storageWindow.refresh();
     if (this.petWindow.panel.visible) this.petWindow.refresh();
     if (this.hotbarWindow.panel.visible) this.hotbarWindow.refresh();
+    if (this.worldMap.panel.visible) this.worldMap.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -425,7 +435,7 @@ export class UIScene extends Phaser.Scene {
 
   private drawTracker(): void {
     const w = this.world;
-    const lines = [...w.player.quests.active].map(([id, n]) => {
+    const quests = [...w.player.quests.active].map(([id, n]) => {
       const q = w.content.quests.get(id);
       if (!q) return '';
       const name = w.content.monsters.get(q.target.monster)?.name ?? q.target.monster;
@@ -433,7 +443,13 @@ export class UIScene extends Phaser.Scene {
     });
     const narrow = this.scale.width < NARROW;
     const bossShown = this.bossText.visible && narrow;
-    this.tracker.setText(lines.join('\n')).setPosition(12, bossShown ? 188 : 150).setVisible(!this.statWindow.visible);
+    // The goal only changes on level-ups and map changes; recomputing it every frame is cheap enough.
+    const lines = [`★ ${nextGoal(w)}`, ...quests];
+    this.tracker
+      .setText(lines.join('\n'))
+      .setPosition(12, bossShown ? 188 : 150)
+      .setWordWrapWidth(Math.min(360, this.scale.width - 24))
+      .setVisible(!this.statWindow.visible);
   }
 
   private showBanner(text: string, color = '#f4f7fb'): void {
@@ -557,6 +573,7 @@ export class UIScene extends Phaser.Scene {
       ['Export save file', () => this.exportSave()],
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
       ['Pet', () => (this.toggleMenu(), this.petWindow.open())],
+      ['World map', () => (this.toggleMenu(), this.worldMap.open())],
       ['Edit quick bar', () => (this.toggleMenu(), this.hotbarWindow.open())],
       ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
       ['Save and quit to title', () => void endSession(this)],
@@ -649,6 +666,9 @@ export class UIScene extends Phaser.Scene {
         this.shop.close();
         this.refineWindow.close();
         this.storageWindow.close();
+        this.minimap.rebuild();
+        this.layout();
+        if (this.worldMap.panel.visible) this.worldMap.refresh();
         this.showMapName();
       }),
     ];

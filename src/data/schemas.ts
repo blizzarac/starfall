@@ -187,6 +187,8 @@ export const MapSchema = z
     kind: z.enum(['town', 'field', 'dungeon']),
     /** Two alternating grass shades, so each field has its own feel. */
     grass: z.tuple([z.string().regex(/^#[0-9a-f]{6}$/i), z.string().regex(/^#[0-9a-f]{6}$/i)]).optional(),
+    /** Suggested as a training ground by the next-goal hint (boss lairs aren't). */
+    hunt: z.boolean().default(true),
     /** Background tune; defaults by kind (town, field, cave). */
     music: z.enum(['title', 'town', 'harbor', 'field', 'forest', 'cave', 'desert']).optional(),
     width: z.number().int().positive(),
