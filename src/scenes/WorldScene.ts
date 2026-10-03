@@ -13,6 +13,7 @@ import { animKey, type Anim, type Facing } from '../render/knight';
 import { ensureMonster, MON_ORIGIN_Y, monsterAnimKey, WORLD_PX, type MonsterAnim } from '../render/monsters';
 import { paintGround } from '../render/ground';
 import { setArtRes } from '../render/art';
+import type { FxKey } from '../render/fx';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
@@ -650,6 +651,8 @@ export class WorldScene extends Phaser.Scene {
         if (e.sourceId === 'player') this.playAttack(e.targetId);
         else this.monsterAttack(e.sourceId);
         if (toPlayer && e.amount > 0) this.hurtUntil = this.time.now + 200;
+        if (e.amount > 0) this.hitSpark(e.targetId, crit);
+        if (crit && e.sourceId === 'player') this.camFx('shake', 70, 0.003);
         this.flashHit(e.targetId);
       }),
       ev.on('miss', (e) => {
@@ -716,21 +719,45 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** A streak from the caster to the target for each bolt. */
+  /** Plays a pixel effect once at a world position, then removes it. */
+  private playFx(key: FxKey, x: number, y: number, opts: { tint?: number; scale?: number; originY?: number; add?: boolean; depth?: number; flip?: boolean; angle?: number } = {}): Phaser.GameObjects.Sprite {
+    const fx = this.add
+      .sprite(x, y, key, '0')
+      .setOrigin(0.5, opts.originY ?? 0.5)
+      .setScale(opts.scale ?? WORLD_PX)
+      .setDepth(opts.depth ?? 4000)
+      .setFlipX(!!opts.flip)
+      .setAngle(opts.angle ?? 0);
+    if (opts.tint !== undefined) fx.setTint(opts.tint);
+    if (opts.add !== false) fx.setBlendMode(Phaser.BlendModes.ADD);
+    fx.play(key).once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => fx.destroy());
+    return fx;
+  }
+
+  /** A pixel spark where a hit lands; bigger and golden for crits. */
+  private hitSpark(id: EntityId, crit: boolean): void {
+    if (quality.low && !crit) return;
+    const at = id === 'player' ? { x: this.player.x, y: this.player.y - 40 } : this.monsterViews.get(id)?.root;
+    if (!at) return;
+    const y = id === 'player' ? at.y : at.y - 22;
+    this.playFx('fx-spark', at.x + Phaser.Math.Between(-6, 6), y + Phaser.Math.Between(-6, 6), { tint: crit ? 0xffd84a : 0xffffff, scale: crit ? 3.2 : 2, depth: 4600 });
+  }
+
+  /** An energy orb flying from the player to the target, bursting on impact. */
   private boltEffect(targets: number[], color: number): void {
     const view = targets[0] !== undefined ? this.monsterViews.get(targets[0]) : undefined;
     if (!view) return;
     const from = { x: this.player.x, y: this.player.y - 40 };
     const to = { x: view.root.x, y: view.root.y - 18 };
-    const orb = this.add.circle(from.x, from.y, 7, color, 0.95).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
+    const orb = this.add.sprite(from.x, from.y, 'fx-orb', '0').setScale(WORLD_PX).setTint(color).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD).play('fx-orb');
     this.tweens.add({
       targets: orb,
       x: to.x,
       y: to.y,
       duration: 180,
       onComplete: () => {
-        const burst = this.add.circle(to.x, to.y, 10, color, 0.7).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: burst, scale: 2.4, alpha: 0, duration: 260, onComplete: () => burst.destroy() });
         orb.destroy();
+        this.playFx('fx-burst', to.x, to.y, { tint: color });
       },
     });
   }
@@ -739,14 +766,17 @@ export class WorldScene extends Phaser.Scene {
     const at = { x: this.player.x, y: this.player.y };
     const center = tile ? tileToWorld(tile.x, tile.y) : at;
     const target = targets[0];
+    const slash = (color: number) => {
+      const v = target !== undefined ? this.monsterViews.get(target) : undefined;
+      if (v) this.playFx('fx-slash', v.root.x, v.root.y - 22, { tint: color, scale: 2.4, flip: v.root.x < this.player.x });
+    };
     if (skillId === 'bash') {
+      slash(0xffb15a);
       if (target !== undefined) this.soundEffect(target, pick(SFX.hit), '#ffb15a', true);
       this.camFx('shake', 90, 0.004);
     } else if (skillId === 'magnum_break') {
-      const ring = this.add.ellipse(at.x, at.y, 40, 20).setStrokeStyle(6, 0xff7a3a, 0.9).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
-      const glow = this.add.ellipse(at.x, at.y, 40, 20, 0xffb15a, 0.35).setDepth(3999).setBlendMode(Phaser.BlendModes.ADD);
       // Radius 2 tiles: 5 tiles across in iso space.
-      this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * 5) / 40, scaleY: (TILE_H * 5) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
+      this.ring(at, 0xff7a3a, 5);
       this.camFx('shake', 150, 0.006);
       this.soundEffect('player', pick(SFX.magnum_break), '#ff7a3a', true);
       this.lines(at.x, at.y - 20, { inner: 50, outer: 190 });
@@ -765,9 +795,10 @@ export class WorldScene extends Phaser.Scene {
     } else if (skillId === 'holy_light') {
       if (target !== undefined) this.holyBeam(target);
     } else if (skillId === 'heal') {
-      this.lightPillar(0x7dff9a);
+      this.lightPillar(0x7dff9a, true);
       this.soundEffect('player', 'HEAL!', '#7dff9a');
     } else if (skillId === 'pierce') {
+      slash(0x9fd8ff);
       if (target !== undefined) this.soundEffect(target, 'PIERCE!', '#9fd8ff', true);
       this.camFx('shake', 90, 0.004);
     } else if (skillId === 'bowling_bash') {
@@ -820,28 +851,18 @@ export class WorldScene extends Phaser.Scene {
     if (!quality.low) speedLines(this, x, y, opts);
   }
 
-  /** A flat ring bursting outward on the ground; `tiles` across. */
+  /** A pixel shockwave bursting outward on the ground; `tiles` across. */
   private ring(at: { x: number; y: number }, color: number, tiles: number): void {
-    const ring = this.add.ellipse(at.x, at.y, 40, 20).setStrokeStyle(6, color, 0.9).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD);
-    const glow = this.add.ellipse(at.x, at.y, 40, 20, color, 0.35).setDepth(3999).setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: [ring, glow], scaleX: (TILE_W * tiles) / 40, scaleY: (TILE_H * tiles) / 20, alpha: 0, duration: 420, onComplete: () => (ring.destroy(), glow.destroy()) });
+    // The ring art ends 62 pixels across.
+    this.playFx('fx-ring', at.x, at.y, { tint: color, scale: (TILE_W * tiles) / 62, depth: 3999 });
   }
 
-  /** A jagged bolt from the sky onto a monster. */
+  /** A jagged pixel bolt from the sky onto a monster. */
   private lightning(targetId: number): void {
     const view = this.monsterViews.get(targetId);
     if (!view) return;
-    const g = this.add.graphics().setDepth(4000);
-    const x = view.root.x;
-    let y = view.root.y - 220;
-    const pts = [{ x, y }];
-    while (y < view.root.y - 16) {
-      y += 24;
-      pts.push({ x: x + Phaser.Math.Between(-12, 12), y });
-    }
-    g.lineStyle(7, 0x16131c).strokePoints(pts as Phaser.Math.Vector2[]);
-    g.lineStyle(4, 0xfff27a).strokePoints(pts as Phaser.Math.Vector2[]);
-    this.tweens.add({ targets: g, alpha: 0, delay: 120, duration: 200, onComplete: () => g.destroy() });
+    this.playFx('fx-bolt', view.root.x, view.root.y, { tint: 0xfff27a, originY: 92 / 96, scale: 2.4 });
+    this.playFx('fx-burst', view.root.x, view.root.y - 10, { tint: 0xfff27a });
   }
 
   /** Flaming rocks streaking down onto an area. */
@@ -849,15 +870,17 @@ export class WorldScene extends Phaser.Scene {
     for (let i = 0; i < (quality.low ? 2 : 4); i++) {
       const x = center.x + Phaser.Math.Between(-50, 50);
       const y = center.y + Phaser.Math.Between(-16, 16);
-      const rock = this.add.circle(x - 120, y - 260, 11, 0xff7a3a).setStrokeStyle(3, 0x16131c).setDepth(4000);
-      const tail = this.add.ellipse(x - 120, y - 260, 46, 12, 0xffd84a, 0.8).setDepth(3999).setRotation(Math.atan2(260, 120));
+      const rock = this.add.sprite(x - 130, y - 260, 'fx-meteor', '0').setScale(WORLD_PX * 1.4).setDepth(4000).play('fx-meteor');
       this.tweens.add({
-        targets: [rock, tail],
-        x: (t: Phaser.GameObjects.GameObject) => (t === rock ? x : x - 14),
-        y: (t: Phaser.GameObjects.GameObject) => (t === rock ? y : y - 30),
+        targets: rock,
+        x,
+        y: y - 14,
         delay: i * 70,
         duration: 260,
-        onComplete: () => (rock.destroy(), tail.destroy()),
+        onComplete: () => {
+          rock.destroy();
+          this.playFx('fx-burst', x, y - 14, { tint: 0xff8a3a, scale: 3 });
+        },
       });
     }
   }
@@ -879,19 +902,23 @@ export class WorldScene extends Phaser.Scene {
     this.time.delayedCall(180, () => this.soundEffect(targetId, 'SCREE!', '#ffe27a', true));
   }
 
-  /** An arrow flying from the player to a monster. */
+  /** A pixel arrow flying from the player to a monster. */
   private arrowEffect(targetId: number): void {
     const view = this.monsterViews.get(targetId);
     if (!view) return;
     const from = { x: this.player.x, y: this.player.y - 34 };
     const to = { x: view.root.x, y: view.root.y - 18 };
-    const arrow = this.add.container(from.x, from.y, [
-      this.add.rectangle(0, 0, 22, 3, 0x16131c),
-      this.add.rectangle(-9, 0, 6, 5, 0xff6a5a).setStrokeStyle(1, 0x16131c),
-      this.add.triangle(13, 0, 0, -4, 6, 0, 0, 4, 0xe8edf5).setStrokeStyle(1, 0x16131c),
-    ]);
-    arrow.setDepth(4000).setRotation(Math.atan2(to.y - from.y, to.x - from.x));
-    this.tweens.add({ targets: arrow, x: to.x, y: to.y, duration: 140, onComplete: () => arrow.destroy() });
+    const arrow = this.add.image(from.x, from.y, 'fx-arrow', '0').setScale(WORLD_PX).setDepth(4000).setRotation(Math.atan2(to.y - from.y, to.x - from.x));
+    this.tweens.add({
+      targets: arrow,
+      x: to.x,
+      y: to.y,
+      duration: 140,
+      onComplete: () => {
+        arrow.destroy();
+        this.playFx('fx-spark', to.x, to.y, { tint: 0x9be3ff });
+      },
+    });
   }
 
   /** Arrows falling from the sky onto each target. */
@@ -902,11 +929,7 @@ export class WorldScene extends Phaser.Scene {
       for (let i = 0; i < (quality.low ? 2 : 4); i++) {
         const x = view.root.x + Phaser.Math.Between(-18, 18);
         const y = view.root.y - 10 + Phaser.Math.Between(-6, 6);
-        const arrow = this.add.container(x - 30, y - 140, [
-          this.add.rectangle(0, 0, 20, 3, 0x16131c),
-          this.add.triangle(12, 0, 0, -4, 6, 0, 0, 4, 0xe8edf5).setStrokeStyle(1, 0x16131c),
-        ]);
-        arrow.setDepth(4000).setRotation(Math.atan2(140, 30));
+        const arrow = this.add.image(x - 30, y - 140, 'fx-arrow', '0').setScale(WORLD_PX).setDepth(4000).setRotation(Math.atan2(140, 30));
         this.tweens.add({ targets: arrow, x, y, delay: i * 60, duration: 160, onComplete: () => arrow.destroy() });
       }
     }
@@ -916,19 +939,22 @@ export class WorldScene extends Phaser.Scene {
   private holyBeam(targetId: number): void {
     const view = this.monsterViews.get(targetId);
     if (!view) return;
-    const beam = this.add.rectangle(view.root.x, view.root.y - 80, 34, 160, 0xfff6c8, 0.85).setStrokeStyle(3, 0x16131c).setDepth(4000).setScale(0.2, 1);
-    this.tweens.add({ targets: beam, scaleX: 1, duration: 120, yoyo: true, hold: 120, onComplete: () => beam.destroy() });
+    this.playFx('fx-pillar', view.root.x, view.root.y + 4, { tint: 0xfff6c8, originY: 60 / 64, scale: 2.6 });
     this.lines(view.root.x, view.root.y - 30, { inner: 30, outer: 120, count: 20 });
     this.soundEffect(targetId, pick(SFX.holy_light), '#fff6c8', true);
   }
 
-  /** A soft column of light rising around the player, for heals and buffs. */
-  private lightPillar(color: number): void {
+  /** A column of light around the player, with "+" sparkles for heals. */
+  private lightPillar(color: number, sparkles = false): void {
     const x = this.player.x;
     const y = this.player.y;
-    for (let i = 0; i < (quality.low ? 3 : 8); i++) {
-      const spark = this.add.star(x + Phaser.Math.Between(-20, 20), y - Phaser.Math.Between(0, 20), 4, 2, 6, color).setStrokeStyle(1.5, 0x16131c).setDepth(4000);
-      this.tweens.add({ targets: spark, y: spark.y - 60, alpha: 0, angle: 180, delay: i * 40, duration: 600, onComplete: () => spark.destroy() });
+    this.playFx('fx-pillar', x, y + 4, { tint: color, originY: 60 / 64, scale: 2.2, depth: depthFor(y) + 1 });
+    if (!sparkles) return;
+    for (let i = 0; i < (quality.low ? 2 : 5); i++) {
+      this.time.delayedCall(i * 70, () => {
+        const plus = this.playFx('fx-plus', x + Phaser.Math.Between(-22, 22), y - Phaser.Math.Between(10, 60), { tint: color, depth: 4500 });
+        this.tweens.add({ targets: plus, y: plus.y - 24, duration: 400 });
+      });
     }
   }
 
@@ -1033,11 +1059,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const view = this.monsterViews.get(id);
     if (!view) return;
-    const m = this.world.monsters.get(id);
     view.body.setTintFill(0xffffff);
-    this.time.delayedCall(80, () => {
-      if (m) view.body.setTint(Phaser.Display.Color.HexStringToColor(m.def.look.color).color);
-    });
+    this.time.delayedCall(80, () => view.body.clearTint());
   }
 
   // ---- Debug -------------------------------------------------------------

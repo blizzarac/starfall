@@ -6,6 +6,7 @@ import { loadAudioSettings } from '../audio/settings';
 import { loadQuality } from '../render/quality';
 import { makeBurstTexture } from '../render/ink';
 import { makeProps } from '../render/props';
+import { makeFx } from '../render/fx';
 
 /**
  * Validates content, opens the save database and draws placeholder textures.
@@ -29,9 +30,10 @@ export class BootScene extends Phaser.Scene {
     this.scene.start('Title');
   }
 
-  /** Pixel-art scenery and props, plus the comic starburst used by effects. */
+  /** Pixel-art scenery, props and effects, plus the comic starburst used by sound effects. */
   private makeTextures(): void {
     makeProps(this);
+    makeFx(this);
     makeBurstTexture(this);
   }
 }
