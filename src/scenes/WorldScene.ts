@@ -32,6 +32,8 @@ export class WorldScene extends Phaser.Scene {
   private hover!: Phaser.GameObjects.Image;
   private debugGfx!: Phaser.GameObjects.Graphics;
   private holdTimer = 0;
+  /** True while a press that started on the map (not on a HUD button) is held. */
+  private pressOnMap = false;
   private lastPlayerX = 0;
   private attackAnimUntil = 0;
   private attackDir = { x: 0, y: 0 };
@@ -266,6 +268,7 @@ export class WorldScene extends Phaser.Scene {
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       if (ptr.rightButtonDown()) return;
       this.holdTimer = HOLD_REPATH_MS;
+      this.pressOnMap = true;
       this.handleClick(ptr);
     });
   }
@@ -288,7 +291,8 @@ export class WorldScene extends Phaser.Scene {
   /** Holding the button keeps walking toward the pointer, unless a fight or pickup is under way. */
   private updateHold(delta: number): void {
     const ptr = this.input.activePointer;
-    if (!ptr.isDown || ptr.rightButtonDown() || this.world.player.intent.kind === 'attack' || this.world.player.intent.kind === 'pickup') return;
+    if (!ptr.isDown) this.pressOnMap = false;
+    if (!this.pressOnMap || !ptr.isDown || ptr.rightButtonDown() || this.world.player.intent.kind === 'attack' || this.world.player.intent.kind === 'pickup') return;
     this.holdTimer -= delta;
     if (this.holdTimer > 0) return;
     this.holdTimer = HOLD_REPATH_MS;
@@ -300,7 +304,7 @@ export class WorldScene extends Phaser.Scene {
 
   private monsterAt(wx: number, wy: number): Monster | null {
     let best: Monster | null = null;
-    let bestDist = PICK_RADIUS;
+    let bestDist = this.pickRadius();
     for (const m of this.world.monsters.values()) {
       const view = this.monsterViews.get(m.id);
       if (!view) continue;
@@ -315,9 +319,14 @@ export class WorldScene extends Phaser.Scene {
 
   private dropAt(wx: number, wy: number): number | null {
     for (const [id, img] of this.dropViews) {
-      if (Phaser.Math.Distance.Between(wx, wy, img.x, img.y - 8) < PICK_RADIUS * 0.7) return id;
+      if (Phaser.Math.Distance.Between(wx, wy, img.x, img.y - 8) < this.pickRadius() * 0.7) return id;
     }
     return null;
+  }
+
+  /** Fingers are less precise than a mouse, so taps get a bigger target. */
+  private pickRadius(): number {
+    return this.sys.game.device.input.touch ? PICK_RADIUS * 1.5 : PICK_RADIUS;
   }
 
   private updateHover(): void {
@@ -330,7 +339,7 @@ export class WorldScene extends Phaser.Scene {
     const w = tileToWorld(tile.x, tile.y);
     this.hover
       .setPosition(w.x, w.y)
-      .setVisible(this.world.grid.inBounds(tile.x, tile.y) && !overMonster)
+      .setVisible(!this.sys.game.device.input.touch && this.world.grid.inBounds(tile.x, tile.y) && !overMonster)
       .setTint(this.world.grid.isWalkable(tile.x, tile.y) ? 0xffffff : 0xff6060);
   }
 

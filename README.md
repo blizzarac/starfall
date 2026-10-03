@@ -17,6 +17,8 @@ npm run build      # production build in dist/
 
 ## Controls
 
+On touch screens, tap where you'd click; the round buttons in the bottom-right cover every key below.
+
 | Input | Action |
 | --- | --- |
 | Left click ground | Walk there (hold to keep walking toward the pointer) |
