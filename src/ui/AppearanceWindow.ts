@@ -55,7 +55,7 @@ export class AppearanceWindow {
     p.add(this.scene.add.rectangle(cx, 120, 150, 182, 0xffe9a8).setStrokeStyle(3, COLORS.ink));
     p.add(this.scene.add.ellipse(cx, 202, 90, 16, COLORS.ink, 0.15));
     // Pixel art scaled up with nearest-neighbor filtering, playing its idle animation.
-    const key = playerChibi(this.scene, jobOf(w.player), a);
+    const key = playerChibi(this.scene, jobOf(w.player), a, w.player.equipment);
     p.add(this.scene.add.sprite(cx, 204, key).setOrigin(0.5, chibiOrigin()).setScale(3.5).play(animKey(key, 'F', 'idle')));
 
     let y = 222;

@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { appearanceKey, EYE_COLORS, HAIR_COLORS, SKIN_TONES, type Appearance, type HairStyle } from '../core/appearance';
+import type { Equipment } from '../core/equipment';
 import type { JobDef, JobId } from '../core/jobs';
-import { ensureKnight, KNIGHT_FEET, KNIGHT_H, type Gear, type Weapon } from './knight';
+import { ensureKnight, KNIGHT_FEET, KNIGHT_H, type Gear, type KnightLook, type Weapon } from './knight';
 
 /**
  * Character sprites. (The name is historical: they used to be chibis.) The
@@ -33,10 +34,43 @@ const JOB_STYLE: Record<JobId, { gear: Gear; weapon: Weapon; glow: number }> = {
   priest: { gear: 'priest', weapon: 'mace', glow: 0x8af0ff },
 };
 
-/** The player's sprite sheet for a job and appearance; painted once per combination. */
-export function playerChibi(scene: Phaser.Scene, job: JobDef, a: Appearance): string {
+type GearLook = Pick<KnightLook, 'weapon' | 'weaponTier' | 'shield' | 'helm' | 'armor' | 'cloak' | 'shimmer'>;
+
+const HELMS: Record<string, KnightLook['helm']> = { leather_cap: 'cap', moss_cap: 'moss', desert_turban: 'turban', sun_crown: 'crown' };
+const ARMORS: Record<string, KnightLook['armor']> = { leather_vest: 'leather', crystal_mail: 'crystal', sunsteel_armor: 'sun', seafarer_coat: 'coat' };
+const CLOAKS: Record<string, number> = { traveler_cloak: 0x7a5a3a };
+/** Refine level from which a weapon sparkles. */
+export const SHIMMER_REFINE = 7;
+
+/** How worn gear shows on the sprite: the weapon (plain, plasma or heavy plasma by its worth), shield, headgear, armor plating and cloak. */
+export function gearLook(eq: Equipment): GearLook {
+  const w = eq.weapon;
+  const type = w?.item.equip?.weaponType;
+  const weapon: Weapon = !type ? 'none' : type === 'sword' && w.item.equip?.twoHanded ? 'greatsword' : type;
+  const price = w?.item.price ?? 0;
+  return {
+    weapon,
+    weaponTier: price < 1000 ? 0 : price < 5000 ? 1 : 2,
+    shimmer: (w?.refine ?? 0) >= SHIMMER_REFINE,
+    shield: !!eq.shield,
+    helm: eq.head ? HELMS[eq.head.item.id] : undefined,
+    armor: eq.body ? ARMORS[eq.body.item.id] : undefined,
+    cloak: eq.cloak ? (CLOAKS[eq.cloak.item.id] ?? 0x6a4a6a) : undefined,
+  };
+}
+
+/**
+ * The player's sprite sheet for a job and appearance, wearing `equipment`
+ * when given (portraits without it show the job's signature weapon).
+ * Painted once per combination.
+ */
+export function playerChibi(scene: Phaser.Scene, job: JobDef, a: Appearance, equipment?: Equipment): string {
   const style = JOB_STYLE[job.id];
-  return ensureKnight(scene, `knight-${job.id}-${appearanceKey(a)}`, {
+  const gear: GearLook = equipment ? gearLook(equipment) : { weapon: style.weapon };
+  const sig = Object.values(gear)
+    .map((v) => (v === undefined ? '' : String(v)))
+    .join('.');
+  return ensureKnight(scene, `knight-${job.id}-${appearanceKey(a)}-${sig}`, {
     hairStyle: a.hairStyle,
     hair: HAIR_COLORS[a.hairColor]!,
     eye: EYE_COLORS[a.eyeColor]!,
@@ -44,7 +78,7 @@ export function playerChibi(scene: Phaser.Scene, job: JobDef, a: Appearance): st
     cloth: job.look.body,
     glow: style.glow,
     gear: style.gear,
-    weapon: style.weapon,
+    ...gear,
   });
 }
 

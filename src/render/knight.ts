@@ -18,7 +18,7 @@ export const KNIGHT_H = 56;
 export const KNIGHT_FEET = 52;
 
 export type Gear = 'novice' | 'swordsman' | 'knight' | 'mage' | 'wizard' | 'archer' | 'hunter' | 'acolyte' | 'priest' | 'townsfolk' | 'guard';
-export type Weapon = 'none' | 'sword' | 'greatsword' | 'staff' | 'bow' | 'mace';
+export type Weapon = 'none' | 'dagger' | 'sword' | 'greatsword' | 'staff' | 'bow' | 'mace';
 export type Facing = 'F' | 'B';
 export type Anim = 'idle' | 'walk' | 'attack' | 'cast' | 'hurt' | 'sit';
 
@@ -33,6 +33,16 @@ export interface KnightLook {
   glow: number;
   gear: Gear;
   weapon: Weapon;
+  /** Equipped gear shown on the sprite (all optional; the job's look fills in). */
+  /** 0 plain steel, 1 plasma, 2 heavy plasma. */
+  weaponTier?: 0 | 1 | 2;
+  shield?: boolean;
+  helm?: 'cap' | 'moss' | 'turban' | 'crown';
+  armor?: 'leather' | 'crystal' | 'sun' | 'coat';
+  /** Cape color, when a cloak is worn. */
+  cloak?: number;
+  /** Highly refined weapons sparkle. */
+  shimmer?: boolean;
 }
 
 export const ANIMS: ReadonlyArray<{ name: Anim; frames: number; rate: number; repeat: number }> = [
@@ -113,7 +123,7 @@ interface Pose {
 
 function basePose(weapon: Weapon, i: number): Pose {
   const p: Pose = { bob: 0, lean: 0, legB: [0, 0], legF: [0, 0], armB: 6, bendB: 10, armF: 12, bendF: 32, weapon: 0, i };
-  if (weapon === 'sword') Object.assign(p, { armF: 15, bendF: 40, weapon: 145 });
+  if (weapon === 'sword' || weapon === 'dagger') Object.assign(p, { armF: 15, bendF: 40, weapon: 145 });
   else if (weapon === 'greatsword') Object.assign(p, { armF: 18, bendF: 36, weapon: 162 });
   else if (weapon === 'staff') Object.assign(p, { armF: 14, bendF: 30, weapon: 176 });
   else if (weapon === 'bow') Object.assign(p, { armF: 14, bendF: 22, weapon: 55 });
@@ -161,14 +171,14 @@ function pose(weapon: Weapon, anim: Anim, i: number): Pose {
     p.armF = 20;
     p.bendF = 50;
     p.armB = 10;
-    p.weapon = weapon === 'staff' || weapon === 'greatsword' || weapon === 'sword' ? 175 : p.weapon;
+    p.weapon = weapon === 'staff' || weapon === 'greatsword' || weapon === 'sword' || weapon === 'dagger' ? 175 : p.weapon;
   }
   return p;
 }
 
 function attackPose(p: Pose, weapon: Weapon, i: number): void {
   const set = (o: Partial<Pose>) => Object.assign(p, o);
-  if (weapon === 'sword' || weapon === 'greatsword') {
+  if (weapon === 'sword' || weapon === 'greatsword' || weapon === 'dagger') {
     [
       { armF: 165, bendF: 15, weapon: 205, lean: -1, legF: [-1, 0] as [number, number] },
       { armF: 130, bendF: 0, weapon: 125, lean: 0 },
@@ -289,6 +299,9 @@ class Painter {
   private readonly skin: Ramp;
   private readonly eye: Ramp;
   private readonly glow: Ramp;
+  /** Armor plating (steel, crystal or sunsteel) and the cape's cloth. */
+  private readonly plateR: Ramp;
+  private readonly capeR: Ramp;
   /** Upper-body offset (lean, bob). */
   private readonly ux: number;
   private readonly uy: number;
@@ -299,8 +312,19 @@ class Painter {
     private readonly look: KnightLook,
     private readonly pose: Pose,
   ) {
-    this.spec = SPECS[look.gear];
-    this.cloth = ramp(look.cloth);
+    // Worn armor and cloaks override the job's outfit.
+    const base = SPECS[look.gear];
+    const plated = look.armor === 'crystal' || look.armor === 'sun';
+    this.spec = {
+      ...base,
+      torso: plated ? 'plate' : look.armor === 'coat' ? 'robe' : look.armor === 'leather' && base.torso !== 'robe' ? 'vest' : base.torso,
+      pauldrons: plated ? 2 : base.pauldrons,
+      greaves: base.greaves || plated,
+      cape: base.cape || look.cloak !== undefined,
+    };
+    this.plateR = look.armor === 'crystal' ? ramp(0x9fd8ff) : look.armor === 'sun' ? ramp(0xf2c14e) : STEEL;
+    this.cloth = ramp(look.armor === 'coat' ? 0x2f4a7a : look.cloth);
+    this.capeR = look.cloak !== undefined ? ramp(look.cloak) : this.cloth;
     this.hair = ramp(look.hair);
     this.skin = ramp(look.skin);
     this.eye = ramp(look.eye);
@@ -329,6 +353,7 @@ class Painter {
     this.legs();
     this.torso(true);
     if (s.pauldrons === 2) this.pauldron(this.u(25, 28.5), true);
+    if (this.look.shield) this.shield(true);
     this.neck();
     this.face();
     this.hairFront();
@@ -344,6 +369,7 @@ class Painter {
     this.arm(this.u(26, 28), this.pose.armB, this.pose.bendB, true);
     this.torso(false);
     if (s.cape) this.capeBack();
+    if (this.look.shield) this.shield(false);
     this.backOfHead();
     this.headgear(false);
     if (s.pauldrons === 2) this.pauldron(this.u(25, 28.5), true);
@@ -454,7 +480,7 @@ class Painter {
   }
 
   private plate(front: boolean): void {
-    const st = STEEL;
+    const st = this.plateR;
     this.upoly([[27, 28], [37, 28], [36.5, 35.5], [27.5, 35.5]], front ? st.b : st.d);
     this.upoly([[34.5, 28], [37, 28], [36.5, 35.5], [34.5, 35.5]], front ? st.d : st.k);
     if (front) {
@@ -507,11 +533,26 @@ class Painter {
   }
 
   private pauldron([x, y]: Pt, back: boolean): void {
-    const st = STEEL;
+    const st = this.plateR;
     this.p.ellipse(x, y, back ? 3 : 3.6, back ? 2.6 : 3, back ? st.d : st.b);
     this.p.ellipse(x - 0.6, y - 0.8, 2, 1.4, back ? st.b : st.l);
     if (!back) this.p.set(x - 1, y - 2, st.h);
     for (let dx = -2; dx <= 2; dx++) this.p.set(x + dx, y + 2, back ? this.glow.d : this.glow.b);
+  }
+
+  /** A round tech shield on the off arm, with an energy cross. */
+  private shield(front: boolean): void {
+    const st = this.plateR;
+    const [x, y] = this.u(23.5, 34);
+    this.p.ellipse(x, y, 3.6, 5, front ? st.b : st.d);
+    this.p.ellipse(x - 0.8, y - 1.5, 1.8, 2.4, front ? st.l : st.b);
+    if (front) {
+      this.p.line(x, y - 3, x, y + 3, this.glow.b);
+      this.p.line(x - 2, y - 0.5, x + 2, y - 0.5, this.glow.b);
+      this.p.set(x, y - 0.5, this.glow.h);
+    } else {
+      this.p.rect(x - 1, y - 1, 2, 2, DARK.b);
+    }
   }
 
   private neck(): void {
@@ -521,14 +562,14 @@ class Painter {
 
   private capeBehind(): void {
     const sway = this.pose.lean * -1 + (this.pose.i % 2);
-    this.p.poly([this.u(26, 27), this.u(38, 27), [42 + sway, 47], [22 + sway, 47]], this.cloth.k);
-    this.p.poly([this.u(26, 27), this.u(30, 27), [25 + sway, 47], [22 + sway, 47]], this.cloth.d);
+    this.p.poly([this.u(26, 27), this.u(38, 27), [42 + sway, 47], [22 + sway, 47]], this.capeR.k);
+    this.p.poly([this.u(26, 27), this.u(30, 27), [25 + sway, 47], [22 + sway, 47]], this.capeR.d);
     for (let x = 22; x <= 42; x += 2) this.p.tint(x + sway, 46, this.glow.d);
   }
 
   private capeBack(): void {
     const sway = this.pose.lean * -1 + (this.pose.i % 2);
-    const c = this.cloth;
+    const c = this.capeR;
     this.p.poly([this.u(25, 27), this.u(39, 27), [43 + sway, 48], [21 + sway, 48]], c.b);
     this.p.poly([this.u(35, 27), this.u(39, 27), [43 + sway, 48], [37 + sway, 48]], c.d);
     for (const fx of [28, 32, 36]) this.p.line(fx + this.ux, 30 + this.uy, fx + sway + (fx - 32) / 3, 47, c.d);
@@ -718,6 +759,10 @@ class Painter {
   private headgear(front: boolean): void {
     const [hx, hy] = this.headTL();
     const g = this.glow;
+    if (this.look.helm) {
+      this.helm(front);
+      return;
+    }
     const kind = this.spec.head;
     if (kind === 'ear') {
       const ex = front ? hx - 1 : hx + 12;
@@ -757,6 +802,43 @@ class Painter {
     }
   }
 
+  /** Worn headgear replaces the job's earpiece, visor or circlet. */
+  private helm(front: boolean): void {
+    const [hx, hy] = this.headTL();
+    const g = this.glow;
+    const helm = this.look.helm;
+    const cx = hx + 6.5;
+    if (helm === 'cap' || helm === 'moss') {
+      const r = helm === 'cap' ? LEATHER : ramp(0x5aa04a);
+      this.p.ellipse(cx, hy + 3.4, 7.8, 4.6, r.b, (_x, y) => y <= hy + 4);
+      this.p.ellipse(cx - 2, hy + 1, 3, 1.5, r.l);
+      if (front) for (let x = hx + 3; x <= hx + 15; x++) this.p.set(x, hy + 4, r.d);
+      else for (let x = hx - 1; x <= hx + 13; x++) this.p.set(x, hy + 4, r.d);
+      if (helm === 'moss') {
+        this.p.poly([[cx, hy - 1], [cx + 5, hy - 5], [cx + 2, hy]], ramp(0x3fae4f).l);
+        this.p.set(cx + 3, hy - 3, mix(0xc8ff8a, g.b, 0.3));
+      } else if (front) this.p.set(hx + 11, hy + 2, g.b);
+    } else if (helm === 'turban') {
+      this.p.ellipse(cx, hy + 2.6, 8.2, 4.8, SHIRT.b, (_x, y) => y <= hy + 5);
+      for (const k of [0, 3]) this.p.line(hx + k, hy + 4, hx + 8 + k, hy - 1, SHIRT.d);
+      this.p.ellipse(cx + 3, hy + 1, 2.5, 1.4, SHIRT.l);
+      if (front) {
+        this.p.rect(hx + 10, hy + 1, 3, 3, GOLD.b);
+        this.p.set(hx + 11, hy + 2, g.h);
+      }
+    } else if (helm === 'crown') {
+      for (let x = hx; x <= hx + 13; x++) {
+        this.p.set(x, hy + 2, GOLD.b);
+        this.p.set(x, hy + 3, GOLD.d);
+      }
+      for (const k of [0, 4, 9, 13]) {
+        this.p.line(hx + k, hy + 1, hx + k, hy - 1, GOLD.l);
+        this.p.set(hx + k, hy - 2, k === 4 || k === 9 ? g.h : GOLD.h);
+      }
+      if (front) this.p.set(hx + 7, hy + 2, 0xff4a6a);
+    }
+  }
+
   private drone(): void {
     const f = [0, -1, -1, 0, 1, 1][this.pose.i % 6]!;
     const x = 15;
@@ -780,25 +862,30 @@ class Painter {
     const at = (k: number, side = 0): Pt => [hand[0] + d[0] * k + n[0] * side, hand[1] + d[1] * k + n[1] * side];
     const g = this.glow;
     const ln = (p0: Pt, p1: Pt, c: number, width = 1) => this.p.line(p0[0], p0[1], p1[0], p1[1], c, width);
-    if (w === 'sword' || w === 'greatsword') {
+    const tier = this.look.weaponTier ?? 1;
+    if (w === 'sword' || w === 'greatsword' || w === 'dagger') {
       const big = w === 'greatsword';
-      const len = big ? 16 : 12;
+      const len = (w === 'dagger' ? 7 : big ? 16 : 12) + (tier === 2 ? 2 : 0);
+      const width = (big ? 3 : 2) + (tier === 2 && !big ? 1 : 0);
       ln(at(-3), at(1), DARK.b, 2);
       this.p.set(...at(-3.5), GOLD.b);
-      // Plasma blade: colored edge, white-hot core.
-      ln(at(2.5), at(len), g.b, big ? 3 : 2);
-      ln(at(2.5), at(len - 1), g.h, 1);
-      this.p.set(...at(len + 0.8), g.l);
-      ln(at(1.5, big ? -3.5 : -2.5), at(1.5, big ? 3.5 : 2.5), STEEL.l, 2);
-      this.p.set(...at(1.5), g.h);
+      // Plain steel at first; plasma blades (colored edge, white-hot core) on better swords.
+      ln(at(2.5), at(len), tier === 0 ? STEEL.b : g.b, width);
+      ln(at(2.5), at(len - 1), tier === 0 ? STEEL.h : g.h, 1);
+      this.p.set(...at(len + 0.8), tier === 0 ? STEEL.l : g.l);
+      const guard = w === 'dagger' ? 1.5 : big ? 3.5 : 2.5;
+      ln(at(1.5, -guard), at(1.5, guard), STEEL.l, 2);
+      if (tier > 0) this.p.set(...at(1.5), g.h);
     } else if (w === 'staff') {
-      ln(at(-7), at(13), DARK.l, 1);
-      ln(at(-7, 1), at(13, 1), DARK.d, 1);
+      ln(at(-7), at(13), tier === 0 ? LEATHER.l : DARK.l, 1);
+      ln(at(-7, 1), at(13, 1), tier === 0 ? LEATHER.d : DARK.d, 1);
       this.p.set(...at(4), g.b);
       this.p.set(...at(8), g.b);
       ln(at(13, -2), at(13, 2), STEEL.l, 1);
       const [cx, cy] = at(16);
-      this.p.poly([[cx, cy - 3.5], [cx + 2.5, cy], [cx, cy + 3.5], [cx - 2.5, cy]], g.b);
+      const size = tier === 0 ? 0.7 : tier === 2 ? 1.3 : 1;
+      this.p.poly([[cx, cy - 3.5 * size], [cx + 2.5 * size, cy], [cx, cy + 3.5 * size], [cx - 2.5 * size, cy]], tier === 0 ? mix(g.b, 0x8a8a9a, 0.5) : g.b);
+      if (tier === 2) for (const [ox, oy] of [[-4, -2], [4, 1], [0, -6]] as const) this.p.set(cx + ox, cy + oy, g.l);
       this.p.set(cx - 1, cy - 1, g.h);
       this.p.set(cx, cy - 2, g.h);
       this.p.set(cx + 1, cy + 1, g.d);
@@ -812,12 +899,13 @@ class Painter {
         const side = -9 + 18 * t;
         pts.push(at(1 + 3.2 * (1 - (2 * t - 1) ** 2), side));
       }
-      for (let k = 0; k < pts.length - 1; k++) ln(pts[k]!, pts[k + 1]!, k === 4 || k === 5 ? LEATHER.b : DARK.l, 2);
+      for (let k = 0; k < pts.length - 1; k++) ln(pts[k]!, pts[k + 1]!, k === 4 || k === 5 ? LEATHER.b : tier === 0 ? LEATHER.l : DARK.l, 2);
       this.p.rect(tip1[0] - 1, tip1[1] - 1, 2, 2, STEEL.l);
       this.p.rect(tip2[0] - 1, tip2[1] - 1, 2, 2, STEEL.l);
       const nock = at(-draw);
-      ln(tip1, nock, g.l);
-      ln(nock, tip2, g.l);
+      const string = tier === 0 ? SHIRT.b : g.l;
+      ln(tip1, nock, string);
+      ln(nock, tip2, string);
       if (draw > 0) {
         ln(nock, at(6), g.h);
         this.p.set(...at(6.5), STEEL.h);
@@ -829,16 +917,30 @@ class Painter {
       this.p.rect(cx - 2, cy - 2, 5, 5, STEEL.b);
       this.p.rect(cx - 2, cy - 2, 5, 1, STEEL.l);
       this.p.rect(cx - 2, cy + 2, 5, 1, STEEL.d);
-      this.p.rect(cx - 2, cy, 5, 1, g.b);
-      this.p.set(cx, cy, g.h);
+      this.p.rect(cx - 2, cy, 5, 1, tier === 0 ? STEEL.d : g.b);
+      if (tier > 0) this.p.set(cx, cy, g.h);
+      if (tier === 2) for (const [ox, oy] of [[-3, -3], [3, -3]] as const) this.p.set(cx + ox, cy + oy, STEEL.h);
     }
   }
 
   /** Light effects drawn over the outline (they glow, so they have no ink). */
   effects(): void {
     const fx = this.pose.fx;
-    if (!fx) return;
     const g = this.glow;
+    if (this.look.shimmer && this.look.weapon !== 'none') {
+      // +7 and up: sparkles travel along the weapon.
+      const a = (this.pose.weapon * Math.PI) / 180;
+      const [hx, hy] = this.handF;
+      for (const k of [3 + ((this.pose.i * 3) % 9), 6 + ((this.pose.i * 5) % 8)]) {
+        const x = hx + Math.sin(a) * k;
+        const y = hy + Math.cos(a) * k;
+        this.p.set(x, y, 0xffffff);
+        this.p.set(x + 1, y, g.h);
+        this.p.set(x - 1, y, g.h);
+        this.p.set(x, y - 1, g.l);
+      }
+    }
+    if (!fx) return;
     const sh = this.u(38, 28);
     const big = this.look.weapon === 'greatsword' ? 3 : 0;
     const arc = (r: number, from: number, to: number, c: number, step = 3) => {

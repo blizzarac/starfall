@@ -253,7 +253,7 @@ export class WorldScene extends Phaser.Scene {
   /** The player's look follows their job. */
   private playerTexture(): string {
     const job = jobOf(this.world.player);
-    return playerChibi(this, job, this.world.player.appearance);
+    return playerChibi(this, job, this.world.player.appearance, this.world.player.equipment);
   }
 
   private placePortals(): void {
@@ -336,6 +336,14 @@ export class WorldScene extends Phaser.Scene {
     this.player.setAlpha(p.dead ? 0.35 : 1);
     // Fainted players lie down; stunned ones wobble.
     this.playerBody.setAngle(p.dead ? (this.facingLeft ? -90 : 90) : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
+  }
+
+  /** Repaints the player after a change of look, job or gear. */
+  private refreshPlayerSprite(): void {
+    const key = this.playerTexture();
+    if (key === this.playerBody.texture.key) return;
+    this.playerBody.setTexture(key, PORTRAIT_FRAME);
+    this.playerAnim = '';
   }
 
   /** Turns the player toward a screen direction. */
@@ -652,9 +660,9 @@ export class WorldScene extends Phaser.Scene {
       ev.on('heal', (e) => {
         if (e.hp > 0) this.floatText('player', `+${e.hp}`, '#7dff9a', 15);
       }),
+      ev.on('equipmentChanged', () => this.refreshPlayerSprite()),
       ev.on('appearanceChanged', () => {
-        this.playerBody.setTexture(this.playerTexture(), PORTRAIT_FRAME);
-        this.playerAnim = '';
+        this.refreshPlayerSprite();
       }),
       ev.on('jobChanged', () => {
         this.playerBody.setTexture(this.playerTexture(), PORTRAIT_FRAME);
@@ -683,6 +691,7 @@ export class WorldScene extends Phaser.Scene {
       }),
       ev.on('castInterrupted', () => this.floatText('player', 'Interrupted!', '#ff9a7a', 14, 700)),
       ev.on('refined', (e) => {
+        this.refreshPlayerSprite();
         this.floatText('player', e.success ? `+${e.level}!` : 'Shattered…', e.success ? '#ffe27a' : '#ff6b6b', 18, 1200);
         if (e.success && e.level >= 5) this.camFx('flash', 250, 255, 240, 180);
         if (!e.success) this.camFx('shake', 200, 0.008);
