@@ -154,7 +154,7 @@ export function jobLineage(jobId: JobId): JobId[] {
 }
 
 /** Requirements to leave the Novice job, as in the design doc. */
-export const NOVICE_JOB_CHANGE = { jobLevel: 10, basicTraining: 9 };
+export const NOVICE_JOB_CHANGE = { jobLevel: 5, basicTraining: 4 };
 
 /** First jobs move on to their second job at this job level. */
 export const SECOND_JOB_LEVEL = 25;

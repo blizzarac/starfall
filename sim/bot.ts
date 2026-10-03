@@ -9,7 +9,7 @@ import type { StatName } from '../src/core/combat/formulas';
 import { equipBlocker, slotFor } from '../src/core/equipment';
 import type { Monster } from '../src/core/entities';
 import { tileDistance } from '../src/core/grid';
-import { JOBS, SECOND_JOB_LEVEL, type JobId } from '../src/core/jobs';
+import { JOBS, NOVICE_JOB_CHANGE, SECOND_JOB_LEVEL, type JobId } from '../src/core/jobs';
 import { derivedStats } from '../src/core/progression';
 import { learnBlocker, SKILLS, type SkillId } from '../src/core/skills';
 import { World } from '../src/core/world';
@@ -153,7 +153,9 @@ export class Bot {
     this.sinceShop += 200;
 
     // Go home to sell and restock when heavy, out of potions for a while, or every 20 minutes.
-    const hasLoot = [...p.inventory.keys()].some((id) => !POTIONS.includes(id) && id !== SP_POTION && w.content.items.get(id)?.type !== 'card') || p.gear.length > 0;
+    // Story items can't be sold, so they never count as loot.
+    const sellable = (id: string) => !w.content.items.get(id)?.quest;
+    const hasLoot = [...p.inventory.keys()].some((id) => !POTIONS.includes(id) && id !== SP_POTION && w.content.items.get(id)?.type !== 'card' && sellable(id)) || p.gear.some((g) => !g.item.quest);
     if ((w.weightRatio() > 0.45 && hasLoot) || this.sinceShop > 20 * 60_000) return this.shop();
 
     // Hunt in the hardest area we're ready for, unless it killed us 3 times in the last 30 minutes.
@@ -294,7 +296,7 @@ export class Bot {
     const [first, second] = this.build.path;
     const to = p.jobId === 'novice' ? first : p.jobId === first ? second : null;
     if (!to) return;
-    if (p.jobLevel < (p.jobId === 'novice' ? 10 : SECOND_JOB_LEVEL)) return;
+    if (p.jobLevel < (p.jobId === 'novice' ? NOVICE_JOB_CHANGE.jobLevel : SECOND_JOB_LEVEL)) return;
     const before = p.jobId;
     w.applyAction({ type: 'changeJob', job: to });
     if (p.jobId !== before) {

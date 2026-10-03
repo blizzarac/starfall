@@ -1,5 +1,5 @@
 import type { MapDef } from '../data/schemas';
-import { jobOf, SECOND_JOB_LEVEL } from './jobs';
+import { jobOf, NOVICE_JOB_CHANGE, SECOND_JOB_LEVEL } from './jobs';
 import { skillLevel } from './skills';
 import { storyHint } from './story';
 import { bossFlag, visitedFlag, type World } from './world';
@@ -28,8 +28,8 @@ export function nextGoal(world: World): string {
   const job = jobOf(p);
   const been = (map: string) => world.flags.has(visitedFlag(map));
   if (job.id === 'novice') {
-    if (p.jobLevel < 10) return 'Reach job level 10: hunt Jellops in the Southern Meadow, south of Brightmoor.';
-    if (skillLevel(p, 'basic_training') < 9) return 'Put your skill points into Basic Training (Skills).';
+    if (p.jobLevel < NOVICE_JOB_CHANGE.jobLevel) return `Reach job level ${NOVICE_JOB_CHANGE.jobLevel}: hunt Jellops in the Southern Meadow, south of Brightmoor.`;
+    if (skillLevel(p, 'basic_training') < NOVICE_JOB_CHANGE.basicTraining) return `Put ${NOVICE_JOB_CHANGE.basicTraining} skill points into Basic Training (Skills).`;
     return 'Join a guild in Brightmoor: Captain Harlan, Magister Ilse, Wren or Sister Maren.';
   }
   if (job.tier === 1 && p.jobLevel >= SECOND_JOB_LEVEL) {

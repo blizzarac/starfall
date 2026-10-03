@@ -11,7 +11,7 @@ const town = content.maps.get(START_MAP)!;
 describe('next goal', () => {
   it('walks a new player through the novice steps', () => {
     const w = new World(content, town, { seed: 1 });
-    expect(nextGoal(w)).toMatch(/job level 10/);
+    expect(nextGoal(w)).toMatch(/job level 5/);
     gainXp(w.player, 0, 100_000);
     expect(nextGoal(w)).toMatch(/Basic Training/);
     for (let i = 0; i < 9; i++) w.learnSkill('basic_training');

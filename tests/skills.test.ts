@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as F from '../src/core/combat/formulas';
 import { DialogueRunner } from '../src/core/dialogue';
-import { gainXp, derivedStats } from '../src/core/progression';
+import { gainXp, derivedStats, jobChangeBlocker } from '../src/core/progression';
 import { learnBlocker, SKILLS } from '../src/core/skills';
 import { World } from '../src/core/world';
 import { loadContent, START_MAP } from '../src/data/content';
@@ -33,6 +33,24 @@ function swordsman(): World {
   expect(w.player.jobId).toBe('swordsman');
   return w;
 }
+
+describe('first job', () => {
+  it('opens at job level 5 with Basic Training 4, through the guild trial', () => {
+    const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });
+    w.player.jobLevel = 4;
+    w.player.skillPoints = 4;
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    expect(jobChangeBlocker(w.player, 'swordsman')).toMatch(/job level 5/);
+    w.player.jobLevel = 5;
+    expect(jobChangeBlocker(w.player, 'swordsman')).toBeNull();
+    // The guild agrees: the trial is offered.
+    const harlan = content.maps.get(START_MAP)!.npcs.find((n) => n.id === 'swordsman_captain')!;
+    const d = new DialogueRunner(w, content.dialogues.get(harlan.dialogue)!, harlan);
+    d.choose(0);
+    expect(d.view()!.text).not.toMatch(/Not yet/);
+    expect(d.view()!.text).toMatch(/Jelly Drops/);
+  });
+});
 
 describe('skill points', () => {
   it('a Novice earns exactly enough points for Basic Training 9', () => {

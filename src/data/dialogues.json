@@ -107,7 +107,7 @@
         ]
       },
       "stronger": {
-        "text": "Every level gives stat points: open Stats to spend them. At job level 10 you can join a guild: Swordsmen (Captain Harlan), Mages (Magister Ilse), Archers (Wren) or Acolytes (Sister Maren). Sell loot to Bram so your bag never gets too heavy.",
+        "text": "Every level gives stat points: open Stats to spend them. At job level 5 you can join a guild: Swordsmen (Captain Harlan), Mages (Magister Ilse), Archers (Wren) or Acolytes (Sister Maren). Sell loot to Bram so your bag never gets too heavy.",
         "choices": [
           {
             "label": "Anything else?",
@@ -285,10 +285,10 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               },
               "hasItem": {
                 "id": "jelly_drop",
@@ -299,10 +299,10 @@
           },
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               }
             },
             "next": "fee"
@@ -311,7 +311,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training. Open Skills to spend them.",
+        "text": "Not yet. Reach job level 5 and put 4 skill points into Basic Training. Open Skills to spend them.",
         "choices": [
           {
             "label": "I'll be back"
@@ -495,10 +495,10 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               },
               "hasItem": {
                 "id": "beetle_shell",
@@ -509,10 +509,10 @@
           },
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               }
             },
             "next": "fee"
@@ -521,7 +521,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training.",
+        "text": "Not yet. Reach job level 5 and put 4 skill points into Basic Training.",
         "choices": [
           {
             "label": "I'll be back"
@@ -663,10 +663,10 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               },
               "hasItem": {
                 "id": "moss_clump",
@@ -677,10 +677,10 @@
           },
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               }
             },
             "next": "fee"
@@ -689,7 +689,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training.",
+        "text": "Not yet. Reach job level 5 and put 4 skill points into Basic Training.",
         "choices": [
           {
             "label": "I'll be back"
@@ -810,10 +810,10 @@
         "branch": [
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               },
               "hasItem": {
                 "id": "sweet_apple",
@@ -824,10 +824,10 @@
           },
           {
             "if": {
-              "jobLevelMin": 10,
+              "jobLevelMin": 5,
               "skillMin": {
                 "id": "basic_training",
-                "level": 9
+                "level": 4
               }
             },
             "next": "fee"
@@ -836,7 +836,7 @@
         "else": "not_ready"
       },
       "not_ready": {
-        "text": "Not yet. Reach job level 10 and put all 9 of your skill points into Basic Training.",
+        "text": "Not yet. Reach job level 5 and put 4 skill points into Basic Training.",
         "choices": [
           {
             "label": "I'll be back"
