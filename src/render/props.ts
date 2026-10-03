@@ -44,6 +44,31 @@ export function makeProps(scene: Phaser.Scene): void {
   prop(scene, 'portal', 32, 16, portal, { outline: false, alpha: 230 });
   prop(scene, 'tile-outline', 32, 16, (p) => diamondEdge(p, 0xffffff), { outline: false });
   register(scene, 'bird', monsterFrameCanvas('bird', 0xffffff));
+  lightTexture(scene);
+}
+
+/**
+ * A soft round glow in stepped rings (pixel-style falloff), white so a tint
+ * colors it. Drawn additively over the night overlay.
+ */
+function lightTexture(scene: Phaser.Scene): void {
+  const size = 32;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const img = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const d = Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2) / (size / 2);
+      const a = d >= 1 ? 0 : Math.ceil((1 - d) ** 1.4 * 4) / 4;
+      const i = (y * size + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(a * 200);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  register(scene, 'light', canvas);
 }
 
 function tree(p: Pix): void {

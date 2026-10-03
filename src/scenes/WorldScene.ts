@@ -14,6 +14,7 @@ import { ensureMonster, MON_ORIGIN_Y, monsterAnimKey, WORLD_PX, type MonsterAnim
 import { paintGround } from '../render/ground';
 import { setArtRes } from '../render/art';
 import type { FxKey } from '../render/fx';
+import { cyclePhase, lightAt } from '../render/daynight';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
@@ -30,9 +31,27 @@ interface MonsterView {
   key: string;
   anim: string;
   attackUntil: number;
+  light?: Phaser.GameObjects.Image;
   /** HP the bar was last drawn for; it's only redrawn when this changes. */
   lastHp: number;
 }
+
+/** Lights sit above the night overlay so they shine through it. */
+const LIGHT_DEPTH = 5000;
+/** Each job's energy color, for the glow around the player at night. */
+const JOB_GLOW: Partial<Record<string, number>> = {
+  novice: 0x6dffa8,
+  swordsman: 0x4fe6ff,
+  knight: 0x5aa8ff,
+  mage: 0xc77dff,
+  wizard: 0xff6ae0,
+  archer: 0xa8ff5e,
+  hunter: 0xffa84f,
+  acolyte: 0xffe27a,
+  priest: 0x8af0ff,
+};
+/** Glow color of each monster's eyes or core. */
+const MONSTER_GLOW: Partial<Record<string, number>> = { boar: 0xff4a4a, bat: 0xff4a4a, skeleton: 0xff4a4a, pharaoh: 0xff4a4a, mummy: 0xffe27a, beetle: 0xffc84a, scorpion: 0x9dff5e, sprout: 0xc8ff8a };
 
 const DROP_TINT: Record<string, number> = { etc: 0xc9d4e6, consumable: 0xff7a7a, card: 0xffd84a, equipment: 0x9be38f };
 const BOLT_COLORS: Record<string, number> = {
@@ -105,6 +124,12 @@ export class WorldScene extends Phaser.Scene {
   private textPool: Phaser.GameObjects.Text[] = [];
   /** Trees, rocks, houses and their shadows, hidden while off screen. */
   private decor: Phaser.GameObjects.Image[] = [];
+  /** Night darkening over the world, and glows that shine through it. */
+  private nightOverlay!: Phaser.GameObjects.Rectangle;
+  private lamps: Array<{ img: Phaser.GameObjects.Image; strength: number }> = [];
+  private playerLight!: Phaser.GameObjects.Image;
+  private night = 0;
+  private lightTimer = 0;
   private cullTimer = 0;
   private holdTimer = 0;
   /** True while a press that started on the map (not on a HUD button) is held. */
@@ -143,6 +168,7 @@ export class WorldScene extends Phaser.Scene {
     this.decor = this.children.list.slice(before) as Phaser.GameObjects.Image[];
     this.placePortals();
     this.placeNpcs();
+    this.placeLamps();
 
     this.hover = this.add.image(0, 0, 'tile-outline').setDepth(2).setAlpha(0.6);
     this.targetRing = this.add.ellipse(0, 0, 58, 26).setStrokeStyle(3, 0xff4a4a, 0.95).setVisible(false);
@@ -164,6 +190,17 @@ export class WorldScene extends Phaser.Scene {
     // Phones in portrait need to see more of the map; big screens get a closer view.
     cam.setZoom((viewSize(this).width < 500 ? 0.9 : 1) * DPR);
 
+    // Night: a multiply tint over the world (covering any zoom), with glows added on top.
+    this.nightOverlay = this.add
+      .rectangle(cam.width / 2, cam.height / 2, 20000, 20000, 0xffffff)
+      .setScrollFactor(0)
+      .setDepth(LIGHT_DEPTH - 1)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY)
+      .setVisible(false);
+    this.playerLight = this.lamp(0, 0, JOB_GLOW[jobOf(this.world.player).id] ?? 0x6ff2ff, 2.6, 0.55);
+    this.lightTimer = 0;
+    this.updateLighting(0);
+
     this.bindInput();
     this.bindEvents();
     cam.fadeIn(250, 47, 93, 58);
@@ -174,6 +211,7 @@ export class WorldScene extends Phaser.Scene {
     (this.registry.get('saves') as SaveManager).update(delta);
     this.syncPlayer();
     this.cullDecor(delta);
+    this.updateLighting(delta);
     this.fadeOccluders();
     this.syncMonsters();
     this.syncDrops();
@@ -374,6 +412,55 @@ export class WorldScene extends Phaser.Scene {
       .play({ key: animKey(key, 'F', 'idle'), startFrame: h % 4, frameRate: 4 + (h % 3) });
   }
 
+  /** A glow that shines at night: `scale` sizes it, `strength` is its brightness at full dark. */
+  private lamp(x: number, y: number, color: number, scale: number, strength: number, cull = false): Phaser.GameObjects.Image {
+    const img = this.add.image(x, y, 'light').setTint(color).setScale(scale).setDepth(LIGHT_DEPTH).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+    this.lamps.push({ img, strength });
+    if (cull) this.decor.push(img);
+    return img;
+  }
+
+  /** Lit windows, cave crystals, ruin glyphs, portals and the board's holo-screen. */
+  private placeLamps(): void {
+    this.lamps = [];
+    const spots: Record<string, Array<[number, number, number]>> = {
+      'house-window': [[-23, -11, 0xffd890], [23, -11, 0x6ff2ff]],
+      cavewall: [[15, -7, 0x6ff2ff]],
+      'ruin-glyph': [[-16, -6, 0xffc84a]],
+    };
+    // Only some blocks glow: lights add up, and a wall of them would wash the scene out.
+    for (const img of [...this.decor]) {
+      const key = img.texture.key;
+      const h = hash(Math.round(img.x), Math.round(img.y));
+      if (key === 'cavewall' && h % 11 !== 0) continue;
+      for (const [dx, dy, color] of spots[key] ?? []) this.lamp(img.x + dx, img.y + dy, color, key === 'house-window' ? 1 : 1.2, key === 'house-window' ? 0.55 : 0.5, true);
+    }
+    for (const portal of this.world.map.portals) {
+      const c = tileToWorld(portal.area.x + (portal.area.w - 1) / 2, portal.area.y + (portal.area.h - 1) / 2);
+      this.lamp(c.x, c.y, 0x6fd6ff, 3.2 + Math.max(portal.area.w, portal.area.h), 0.9);
+    }
+    for (const npc of this.world.npcs) {
+      if (npc.sprite !== 'board') continue;
+      const p = tileToWorld(npc.x, npc.y);
+      this.lamp(p.x + 12, p.y - 40, 0x6ff2ff, 1.4, 0.8);
+    }
+  }
+
+  /** Follows the clock: tints the world and brightens glows as night falls. */
+  private updateLighting(delta: number): void {
+    const pos = this.player;
+    this.playerLight.setPosition(pos.x, pos.y - 34);
+    for (const view of this.monsterViews.values()) view.light?.setPosition(view.root.x, view.root.y - 18 * view.body.scaleY / WORLD_PX);
+    this.lightTimer -= delta;
+    if (this.lightTimer > 0) return;
+    this.lightTimer = 250;
+    const light = lightAt(cyclePhase(Date.now()), this.world.map.kind === 'dungeon');
+    this.night = light.night;
+    this.nightOverlay.setVisible(light.tint !== 0xffffff).setFillStyle(light.tint);
+    for (const l of this.lamps) l.img.setAlpha(l.strength * light.night);
+    this.registry.set('timeOfDay', light.label);
+  }
+
   /** Hides scenery that's off screen, so the renderer skips it. Checked a few times a second. */
   private cullDecor(delta: number): void {
     this.cullTimer -= delta;
@@ -432,6 +519,10 @@ export class WorldScene extends Phaser.Scene {
     for (const [id, view] of this.monsterViews) {
       if (!seen.has(id)) {
         this.monsterViews.delete(id);
+        if (view.light) {
+          this.lamps = this.lamps.filter((l) => l.img !== view.light);
+          view.light.destroy();
+        }
         this.tweens.add({
           targets: view.root,
           alpha: 0,
@@ -454,7 +545,10 @@ export class WorldScene extends Phaser.Scene {
     const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.9 * Math.max(1, m.def.look.scale * 0.8)), body, hpBar]);
     root.setAlpha(0);
     this.tweens.add({ targets: root, alpha: 1, duration: 400 });
-    const view: MonsterView = { root, body, hpBar, lastX: 0, lastHp: m.def.hp, key, anim: 'idle', attackUntil: 0 };
+    // Tech eyes and cores glow in the dark.
+    const light = quality.low ? undefined : this.lamp(0, 0, MONSTER_GLOW[m.def.look.shape] ?? 0x6ff2ff, 1.2 * Math.max(1, m.def.look.scale), 0.6);
+    light?.setAlpha(light ? 0.6 * this.night : 0);
+    const view: MonsterView = { root, body, hpBar, lastX: 0, lastHp: m.def.hp, key, anim: 'idle', attackUntil: 0, light };
     this.monsterViews.set(m.id, view);
     return view;
   }
@@ -670,6 +764,7 @@ export class WorldScene extends Phaser.Scene {
       ev.on('jobChanged', () => {
         this.playerBody.setTexture(this.playerTexture(), PORTRAIT_FRAME);
         this.playerAnim = '';
+        this.playerLight.setTint(JOB_GLOW[jobOf(this.world.player).id] ?? 0x6ff2ff);
         this.soundEffect('player', 'JOB CHANGE!!', '#ffe27a', true);
         this.lines(this.player.x, this.player.y - 30, { inner: 50, outer: 220, count: 40 });
         this.camFx('flash', 300, 255, 240, 180);
@@ -725,7 +820,7 @@ export class WorldScene extends Phaser.Scene {
       .sprite(x, y, key, '0')
       .setOrigin(0.5, opts.originY ?? 0.5)
       .setScale(opts.scale ?? WORLD_PX)
-      .setDepth(opts.depth ?? 4000)
+      .setDepth(opts.depth ?? LIGHT_DEPTH + 1)
       .setFlipX(!!opts.flip)
       .setAngle(opts.angle ?? 0);
     if (opts.tint !== undefined) fx.setTint(opts.tint);
@@ -740,7 +835,7 @@ export class WorldScene extends Phaser.Scene {
     const at = id === 'player' ? { x: this.player.x, y: this.player.y - 40 } : this.monsterViews.get(id)?.root;
     if (!at) return;
     const y = id === 'player' ? at.y : at.y - 22;
-    this.playFx('fx-spark', at.x + Phaser.Math.Between(-6, 6), y + Phaser.Math.Between(-6, 6), { tint: crit ? 0xffd84a : 0xffffff, scale: crit ? 3.2 : 2, depth: 4600 });
+    this.playFx('fx-spark', at.x + Phaser.Math.Between(-6, 6), y + Phaser.Math.Between(-6, 6), { tint: crit ? 0xffd84a : 0xffffff, scale: crit ? 3.2 : 2, depth: LIGHT_DEPTH + 2 });
   }
 
   /** An energy orb flying from the player to the target, bursting on impact. */
@@ -749,7 +844,7 @@ export class WorldScene extends Phaser.Scene {
     if (!view) return;
     const from = { x: this.player.x, y: this.player.y - 40 };
     const to = { x: view.root.x, y: view.root.y - 18 };
-    const orb = this.add.sprite(from.x, from.y, 'fx-orb', '0').setScale(WORLD_PX).setTint(color).setDepth(4000).setBlendMode(Phaser.BlendModes.ADD).play('fx-orb');
+    const orb = this.add.sprite(from.x, from.y, 'fx-orb', '0').setScale(WORLD_PX).setTint(color).setDepth(LIGHT_DEPTH + 1).setBlendMode(Phaser.BlendModes.ADD).play('fx-orb');
     this.tweens.add({
       targets: orb,
       x: to.x,
@@ -854,7 +949,7 @@ export class WorldScene extends Phaser.Scene {
   /** A pixel shockwave bursting outward on the ground; `tiles` across. */
   private ring(at: { x: number; y: number }, color: number, tiles: number): void {
     // The ring art ends 62 pixels across.
-    this.playFx('fx-ring', at.x, at.y, { tint: color, scale: (TILE_W * tiles) / 62, depth: 3999 });
+    this.playFx('fx-ring', at.x, at.y, { tint: color, scale: (TILE_W * tiles) / 62 });
   }
 
   /** A jagged pixel bolt from the sky onto a monster. */
@@ -948,11 +1043,11 @@ export class WorldScene extends Phaser.Scene {
   private lightPillar(color: number, sparkles = false): void {
     const x = this.player.x;
     const y = this.player.y;
-    this.playFx('fx-pillar', x, y + 4, { tint: color, originY: 60 / 64, scale: 2.2, depth: depthFor(y) + 1 });
+    this.playFx('fx-pillar', x, y + 4, { tint: color, originY: 60 / 64, scale: 2.2 });
     if (!sparkles) return;
     for (let i = 0; i < (quality.low ? 2 : 5); i++) {
       this.time.delayedCall(i * 70, () => {
-        const plus = this.playFx('fx-plus', x + Phaser.Math.Between(-22, 22), y - Phaser.Math.Between(10, 60), { tint: color, depth: 4500 });
+        const plus = this.playFx('fx-plus', x + Phaser.Math.Between(-22, 22), y - Phaser.Math.Between(10, 60), { tint: color, depth: LIGHT_DEPTH + 2 });
         this.tweens.add({ targets: plus, y: plus.y - 24, duration: 400 });
       });
     }

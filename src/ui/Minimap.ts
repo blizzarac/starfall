@@ -62,6 +62,10 @@ export class Minimap {
     return this.frame.width;
   }
 
+  get height(): number {
+    return this.frame.height;
+  }
+
   /** Redraws the ground for the current map (cached per map). */
   rebuild(): void {
     const map = this.world.map;

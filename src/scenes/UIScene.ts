@@ -94,6 +94,8 @@ export class UIScene extends Phaser.Scene {
   private worldMap!: WorldMapWindow;
   private appearanceWindow!: AppearanceWindow;
   private minimap!: Minimap;
+  /** Time of day under the minimap. */
+  private clockText!: Phaser.GameObjects.Text;
   /** Active hunts under the status panel. */
   private tracker!: Phaser.GameObjects.Text;
   private skillWindow!: SkillWindow;
@@ -154,6 +156,7 @@ export class UIScene extends Phaser.Scene {
     this.worldMap = new WorldMapWindow(this, this.world);
     this.appearanceWindow = new AppearanceWindow(this, this.world);
     this.minimap = new Minimap(this, this.world, () => this.worldMap.toggle());
+    this.clockText = this.add.text(0, 0, '', { ...WORLD_TEXT, fontSize: '10px', strokeThickness: 3 }).setOrigin(1, 0);
     const openPet = () => this.petWindow.open();
     this.game.events.on('openPet', openPet);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off('openPet', openPet));
@@ -191,6 +194,8 @@ export class UIScene extends Phaser.Scene {
     this.drawButtons();
     this.drawSkillButtons();
     this.minimap.update(delta);
+    const tod = this.registry.get('timeOfDay') as string | undefined;
+    this.clockText.setText(tod ? `${tod === 'Night' ? '☾' : '☀'} ${tod}` : '');
     this.logTimer -= delta;
     if (this.logTimer <= 0) {
       this.logTimer = 250;
@@ -209,6 +214,7 @@ export class UIScene extends Phaser.Scene {
     const narrow = width < NARROW;
     this.menuButton.setPosition(width - 10 - MENU_BTN_W, 10);
     this.minimap.root.setPosition(width - 14 - this.minimap.width, 50);
+    this.clockText.setPosition(width - 16, 50 + this.minimap.height + 6);
     this.savedText.setPosition(width - 18 - MENU_BTN_W, 18);
     this.menuDim.setSize(width, height);
     this.menuPanel.setPosition(width / 2, height / 2);
