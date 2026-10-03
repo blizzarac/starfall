@@ -49,7 +49,7 @@ describe('equipment', () => {
     const w = fresh();
     w.addItem('short_sword', 1);
     w.addItem('leather_vest', 1);
-    expect(w.equip('short_sword')).toMatch(/swordsman/);
+    expect(w.equip('short_sword')).toMatch(/Only for Swordsman/);
     expect(w.equip('leather_vest')).toMatch(/level 10/);
     gainXp(w.player, 100_000, 0);
     expect(w.equip('leather_vest')).toBeNull();

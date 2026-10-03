@@ -1,13 +1,14 @@
 import type Phaser from 'phaser';
 import { sellPrice } from '../core/combat/formulas';
-import { describeGear, isPlain, pieceName, type GearPiece } from '../core/equipment';
+import { describeGear, equipBlocker, isPlain, pieceName, type GearPiece } from '../core/equipment';
+import { formatDeltas, previewEquip } from '../core/progression';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
 type Tab = 'buy' | 'sell';
-const ROW_H = 54;
+const ROW_H = 74;
 type SellRow = { kind: 'stack'; item: ItemDef } | { kind: 'piece'; piece: GearPiece };
 
 /** Buy from an NPC's stock, or sell anything you carry at half price. */
@@ -124,9 +125,17 @@ export class ShopWindow {
       this.scene.add.text(12, y + 20, `${price} gold · wt ${item.weight} · have ${have}`, { ...TEXT, fontSize: '11px', color: TONE.muted }),
     );
     if (item.equip) {
-      this.panel.add(
-        this.scene.add.text(12, y + 35, describeGear(item.equip), { ...TEXT, fontSize: '10px', color: TONE.accent, wordWrap: { width: pw - 150 } }),
+      const desc = this.panel.add(
+        this.scene.add.text(12, y + 38, describeGear(item.equip), { ...TEXT, fontSize: '10px', color: TONE.accent, wordWrap: { width: pw - 24 } }),
       );
+      if (this.tab === 'buy') {
+        const blocker = equipBlocker(w.player, item);
+        const deltas = blocker ? [] : previewEquip(w.player, w.newPiece(item));
+        const color = blocker ? TONE.bad : deltas.length && deltas.every((d) => d.delta > 0) ? TONE.good : deltas.length && deltas.every((d) => d.delta < 0) ? TONE.bad : TONE.ink;
+        this.panel.add(
+          this.scene.add.text(12, desc.y + desc.height + 1, blocker ?? `If worn: ${formatDeltas(deltas)}`, { ...TEXT, fontSize: '10px', fontStyle: 'bold', color, wordWrap: { width: pw - 24 } }),
+        );
+      }
     }
     const act = (count: number) => () => {
       const err = this.tab === 'buy' ? w.buy(this.shopId!, item.id, count) : w.sell(item.id, count);

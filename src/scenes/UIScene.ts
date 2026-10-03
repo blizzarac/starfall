@@ -1,15 +1,14 @@
 import Phaser from 'phaser';
 import * as F from '../core/combat/formulas';
 import { STAT_NAMES, type StatName } from '../core/combat/formulas';
-import { gearBonus } from '../core/equipment';
 import { isJobId, jobOf, JOBS } from '../core/jobs';
 import { STATUS_INFO } from '../core/status';
 import type { SimClock } from '../core/sim';
-import { derivedStats } from '../core/progression';
+import { derivedStats, effectiveStats, formatDeltas, previewStatRaise } from '../core/progression';
 import type { World } from '../core/world';
 import { downloadSave, type SaveManager } from '../save/manager';
 import { endSession } from './session';
-import { COLORS, IMPACT_FONT, TEXT, WORLD_TEXT } from '../render/palette';
+import { COLORS, IMPACT_FONT, TEXT, TONE, WORLD_TEXT } from '../render/palette';
 import { DialogueBox } from '../ui/DialogueBox';
 import { InventoryWindow } from '../ui/InventoryWindow';
 import { ShopWindow } from '../ui/ShopWindow';
@@ -30,6 +29,11 @@ import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
 import type { Panel } from '../ui/widgets';
 
 const LOG_LINES = 7;
+/** Log lines stay this long (ms), fading out over the last LOG_FADE_MS. */
+const LOG_LIFE_MS = 9000;
+const LOG_FADE_MS = 2500;
+const STAT_W = 312;
+const STAT_ROW = 34;
 const MENU_ROW = 41;
 const BUTTON_R = 26;
 const BUTTON_GAP = 8;
@@ -53,9 +57,13 @@ export class UIScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private buttons: HudButton[] = [];
   private logText!: Phaser.GameObjects.Text;
-  private log: string[] = [];
+  /** Recent log lines and when they arrived; old ones fade away. */
+  private log: Array<{ text: string; at: number }> = [];
   private statWindow!: Phaser.GameObjects.Container;
   private statLines = new Map<StatName, Phaser.GameObjects.Text>();
+  private statPreviews = new Map<StatName, Phaser.GameObjects.Text>();
+  private statPoints!: Phaser.GameObjects.Text;
+  private logTimer = 0;
   private statSummary!: Phaser.GameObjects.Text;
   private debugText!: Phaser.GameObjects.Text;
   private deathText!: Phaser.GameObjects.Text;
@@ -165,6 +173,11 @@ export class UIScene extends Phaser.Scene {
     this.drawButtons();
     this.drawSkillButtons();
     this.minimap.update(delta);
+    this.logTimer -= delta;
+    if (this.logTimer <= 0) {
+      this.logTimer = 250;
+      this.drawLog();
+    }
     this.drawBossBar();
     this.drawTracker();
     this.drawStatWindow();
@@ -474,32 +487,38 @@ export class UIScene extends Phaser.Scene {
   // ---- Stat window -------------------------------------------------------
 
   private buildStatWindow(): void {
+    const W = STAT_W;
+    const H = 46 + STAT_NAMES.length * STAT_ROW + 74;
     const bg = this.add
       .graphics()
       .fillStyle(COLORS.ink)
-      .fillRect(5, 5, 236, 262)
+      .fillRect(5, 5, W, H)
       .fillStyle(COLORS.paper)
-      .fillRect(0, 0, 236, 262)
+      .fillRect(0, 0, W, H)
       .lineStyle(3, COLORS.ink)
-      .strokeRect(0, 0, 236, 262)
+      .strokeRect(0, 0, W, H)
       .fillStyle(COLORS.ink)
-      .fillRect(0, 0, 236, 30);
+      .fillRect(0, 0, W, 30);
     const title = this.add.text(10, 3, 'STATS', { ...TEXT, fontFamily: IMPACT_FONT, fontSize: '20px', color: '#ffffff' });
-    const children: Phaser.GameObjects.GameObject[] = [this.swallowTaps(this.add.zone(0, 0, 236, 262).setOrigin(0)), bg, title];
+    this.statPoints = this.add.text(W - 10, 6, '', { ...TEXT, fontSize: '13px', fontStyle: 'bold', color: '#ffd84a' }).setOrigin(1, 0);
+    const children: Phaser.GameObjects.GameObject[] = [this.swallowTaps(this.add.zone(0, 0, W, H).setOrigin(0)), bg, title, this.statPoints];
     STAT_NAMES.forEach((stat, i) => {
-      const y = 34 + i * 24;
-      const line = this.add.text(10, y, '', { ...TEXT, fontSize: '12px' });
+      const y = 38 + i * STAT_ROW;
+      const line = this.add.text(10, y, '', { ...TEXT, fontSize: '13px', fontStyle: 'bold' });
+      // What one more point would do, so spending is an informed choice.
+      const preview = this.add.text(10, y + 17, '', { ...TEXT, fontSize: '10px', color: TONE.muted, wordWrap: { width: W - 70 } });
       const plus = this.add
-        .text(196, y - 3, '+', { ...TEXT, fontSize: '16px', fontStyle: 'bold', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 9, y: 1 } })
+        .text(W - 48, y + 2, '+', { ...TEXT, fontSize: '18px', fontStyle: 'bold', color: '#16131c', backgroundColor: '#ffd84a', padding: { x: 11, y: 2 } })
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, e: Phaser.Types.Input.EventData) => {
           e.stopPropagation();
           this.world.raiseStat(stat);
         });
       this.statLines.set(stat, line);
-      children.push(line, plus);
+      this.statPreviews.set(stat, preview);
+      children.push(line, preview, plus);
     });
-    this.statSummary = this.add.text(10, 182, '', { ...TEXT, fontSize: '12px', lineSpacing: 2 });
+    this.statSummary = this.add.text(10, 44 + STAT_NAMES.length * STAT_ROW, '', { ...TEXT, fontSize: '12px', lineSpacing: 2 });
     children.push(this.statSummary);
     this.statWindow = this.add.container(0, 0, children).setVisible(false);
   }
@@ -508,15 +527,17 @@ export class UIScene extends Phaser.Scene {
     if (!this.statWindow.visible) return;
     const p = this.world.player;
     const d = derivedStats(p);
-    const bonus = gearBonus(p);
+    const eff = effectiveStats(p);
+    this.statPoints.setText(`${p.statPoints} points`);
     for (const stat of STAT_NAMES) {
       const v = p.stats[stat];
-      const plus = bonus[stat] ? ` +${bonus[stat]}` : '';
-      this.statLines.get(stat)!.setText(`${stat.toUpperCase().padEnd(4)} ${String(v).padStart(3)}${plus.padEnd(4)}  cost ${F.statRaiseCost(v)}`);
+      const extra = eff[stat] - v;
+      const cost = F.statRaiseCost(v);
+      this.statLines.get(stat)!.setText(`${stat.toUpperCase().padEnd(4)} ${v}${extra ? ` +${extra}` : ''}   (costs ${cost})`);
+      this.statPreviews.get(stat)!.setText(`+1: ${formatDeltas(previewStatRaise(p, stat))}`).setColor(p.statPoints >= cost ? TONE.accent : TONE.muted);
     }
     this.statSummary.setText(
       [
-        `Points left: ${p.statPoints}`,
         `ATK ${d.atk}   MATK ${d.matk}   DEF ${d.def}`,
         `HIT ${d.hit}  FLEE ${d.flee}  CRIT ${(d.crit * 100).toFixed(1)}%`,
         `ASPD ${d.aspd}  (${(1000 / d.attackDelayMs).toFixed(2)} hits/s)`,
@@ -623,7 +644,6 @@ export class UIScene extends Phaser.Scene {
     const offs = [
       ev.on('itemPicked', (e) => this.addLog(`Picked up ${e.item.name}.`)),
       ev.on('itemUsed', (e) => this.addLog(`Used ${e.item.name}.`)),
-      ev.on('xpGained', (e) => this.addLog(`Gained ${e.base} base XP and ${e.job} job XP.`)),
       ev.on('levelUp', (e) =>
         this.addLog(e.kind === 'base' ? `Base level ${e.level}! Open Stats to spend your points.` : `Job level ${e.level}! Open Skills to spend the point.`),
       ),
@@ -678,9 +698,29 @@ export class UIScene extends Phaser.Scene {
   }
 
   private addLog(line: string): void {
-    this.log.push(line);
-    if (this.log.length > LOG_LINES) this.log.shift();
-    this.logText?.setText(this.log.join('\n'));
+    // Repeats (e.g. several "Not enough SP.") collapse into one line with a count.
+    const last = this.log[this.log.length - 1];
+    const base = last?.text.replace(/ ×\d+$/, '');
+    if (last && base === line && this.time.now - last.at < LOG_LIFE_MS) {
+      const n = Number(/ ×(\d+)$/.exec(last.text)?.[1] ?? 1) + 1;
+      last.text = `${line} ×${n}`;
+      last.at = this.time.now;
+    } else {
+      this.log.push({ text: line, at: this.time.now });
+      if (this.log.length > LOG_LINES) this.log.shift();
+    }
+    this.drawLog();
+  }
+
+  /** Shows the lines that are still fresh; the block fades as its newest line ages. */
+  private drawLog(): void {
+    if (!this.logText) return;
+    const now = this.time.now;
+    this.log = this.log.filter((l) => now - l.at < LOG_LIFE_MS);
+    const newest = this.log[this.log.length - 1];
+    this.logText.setText(this.log.map((l) => l.text).join('\n'));
+    const age = newest ? now - newest.at : LOG_LIFE_MS;
+    this.logText.setAlpha(Math.max(0, Math.min(1, (LOG_LIFE_MS - age) / LOG_FADE_MS)));
   }
 
   // ---- Debug overlay -----------------------------------------------------

@@ -64,7 +64,7 @@ describe('Archer', () => {
   it('only archers can hold bows, and a bow reaches 5 tiles (more with Vulture\'s Eye)', () => {
     const novice = new World(content, town, { seed: 1 });
     novice.addItem('willow_bow', 1);
-    expect(novice.equip('willow_bow')).toMatch(/archer/);
+    expect(novice.equip('willow_bow')).toMatch(/Only for Archer/);
     const { w } = archerInMeadow();
     expect(w.attackRange()).toBe(S.BOW_RANGE);
     for (let i = 0; i < 3; i++) w.learnSkill('owls_eye');

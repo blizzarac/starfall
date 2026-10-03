@@ -1,14 +1,22 @@
 import type Phaser from 'phaser';
-import { cardBlocker, describeCard, describePiece, EQUIP_SLOTS, pieceName, SLOT_NAMES, type GearPiece } from '../core/equipment';
-import { derivedStats } from '../core/progression';
+import { cardBlocker, describeCard, describePiece, EQUIP_SLOTS, equipBlocker, pieceName, SLOT_NAMES, type GearPiece } from '../core/equipment';
+import { derivedStats, formatDeltas, previewEquip } from '../core/progression';
 import type { World } from '../core/world';
 import type { ItemDef } from '../data/schemas';
 import { TEXT, TONE } from '../render/palette';
 import { centered, makeButton, pagedList, Panel } from './widgets';
 
-const ROW_H = 50;
+const ROW_H = 64;
 const TYPE_ORDER: Record<ItemDef['type'], number> = { consumable: 0, equipment: 1, card: 2, etc: 3 };
 type Tab = 'bag' | 'gear';
+/** Bag filters: everything, or one item type. */
+const FILTERS: Array<{ label: string; type: ItemDef['type'] | null }> = [
+  { label: 'All', type: null },
+  { label: 'Use', type: 'consumable' },
+  { label: 'Gear', type: 'equipment' },
+  { label: 'Cards', type: 'card' },
+  { label: 'Loot', type: 'etc' },
+];
 type Row = { kind: 'stack'; item: ItemDef } | { kind: 'piece'; piece: GearPiece };
 
 /** Your bag (use, equip, slot cards) and what you're wearing. */
@@ -16,6 +24,7 @@ export class InventoryWindow {
   readonly panel: Panel;
   private page = 0;
   private tab: Tab = 'bag';
+  private filter: ItemDef['type'] | null = null;
   private message = '';
   /** Set while choosing which piece of gear a card goes into. */
   private inserting: ItemDef | null = null;
@@ -77,15 +86,27 @@ export class InventoryWindow {
       .map((item) => ({ kind: 'stack', item }));
     const pieces: Row[] = w.player.gear.map((piece) => ({ kind: 'piece', piece }));
     const itemOf = (r: Row) => (r.kind === 'stack' ? r.item : r.piece.item);
-    return [...stacks, ...pieces].sort(
+    return [...stacks, ...pieces]
+      .filter((r) => this.filter === null || itemOf(r).type === this.filter)
+      .sort(
       (a, b) => TYPE_ORDER[itemOf(a).type] - TYPE_ORDER[itemOf(b).type] || itemOf(a).name.localeCompare(itemOf(b).name),
     );
   }
 
   private bag(): void {
+    const chipW = (this.panel.w - 24 - 4 * 6) / FILTERS.length;
+    FILTERS.forEach((f, i) => {
+      this.panel.add(
+        makeButton(this.scene, 12 + i * (chipW + 6), 100, chipW, 28, f.label, () => {
+          this.filter = f.type;
+          this.page = 0;
+          this.refresh();
+        }, this.filter === f.type ? 0xffd84a : 0xffffff).root,
+      );
+    });
     const rows = this.rows();
-    if (rows.length === 0) this.panel.add(this.scene.add.text(12, 106, 'Your bag is empty.', { ...TEXT, fontSize: '13px', color: TONE.muted }));
-    this.page = pagedList(this.panel, rows, this.page, 102, 34, ROW_H, (row, y, pw) => this.bagRow(row, y, pw), (pg) => {
+    if (rows.length === 0) this.panel.add(this.scene.add.text(12, 142, this.filter ? 'Nothing of that kind.' : 'Your bag is empty.', { ...TEXT, fontSize: '13px', color: TONE.muted }));
+    this.page = pagedList(this.panel, rows, this.page, 138, 34, ROW_H, (row, y, pw) => this.bagRow(row, y, pw), (pg) => {
       this.page = pg;
       this.refresh();
     });
@@ -95,7 +116,8 @@ export class InventoryWindow {
     const w = this.world;
     if (row.kind === 'piece') {
       const piece = row.piece;
-      this.line(pieceName(piece), `${describePiece(piece)} · wt ${piece.item.weight}`, y, pw);
+      const detail = this.line(pieceName(piece), `${describePiece(piece)} · wt ${piece.item.weight}`, y, pw);
+      this.compare(piece, Math.max(y + 40, detail.y + detail.height + 1), pw);
       this.button('Equip', pw, y, () => {
         const err = w.equip(piece.uid);
         this.message = err ?? `Equipped ${pieceName(piece)}.`;
@@ -187,9 +209,19 @@ export class InventoryWindow {
     });
   }
 
-  private line(title: string, detail: string, y: number, pw: number): void {
+  /** How this piece compares with what's worn now, in green (better), red (worse) or ink (mixed). */
+  private compare(piece: GearPiece, top: number, pw: number): void {
+    const blocker = equipBlocker(this.world.player, piece.item);
+    const deltas = blocker ? [] : previewEquip(this.world.player, piece);
+    const color = blocker ? TONE.bad : deltas.every((d) => d.delta > 0) && deltas.length ? TONE.good : deltas.every((d) => d.delta < 0) && deltas.length ? TONE.bad : TONE.ink;
+    this.panel.add(
+      this.scene.add.text(12, top, blocker ?? `If worn: ${formatDeltas(deltas)}`, { ...TEXT, fontSize: '11px', fontStyle: 'bold', color, wordWrap: { width: pw - 24 } }),
+    );
+  }
+
+  private line(title: string, detail: string, y: number, pw: number): Phaser.GameObjects.Text {
     this.panel.add(this.scene.add.text(12, y + 2, title, { ...TEXT, fontSize: '13px' }));
-    this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 150 } }));
+    return this.panel.add(this.scene.add.text(12, y + 20, detail, { ...TEXT, fontSize: '11px', color: TONE.muted, wordWrap: { width: pw - 150 } }));
   }
 
   private button(label: string, pw: number, y: number, onTap: () => void): void {

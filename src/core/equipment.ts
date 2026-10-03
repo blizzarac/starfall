@@ -1,7 +1,7 @@
 import type { CardDef, EquipDef, GearBonus, ItemDef } from '../data/schemas';
 import type { Element, Size, WeaponType } from './combat/formulas';
 import type { Player } from './entities';
-import { jobLineage } from './jobs';
+import { isJobId, jobLineage, JOBS } from './jobs';
 
 export const EQUIP_SLOTS = ['weapon', 'shield', 'head', 'body', 'cloak', 'shoes', 'acc1', 'acc2'] as const;
 export type EquipSlot = (typeof EQUIP_SLOTS)[number];
@@ -102,7 +102,9 @@ export function equipBlocker(p: Pick<Player, 'jobId' | 'baseLevel'>, item: ItemD
   const e = item.equip;
   if (!e) return "That can't be equipped.";
   // Second jobs keep using their first job's gear.
-  if (e.jobs && !jobLineage(p.jobId).some((j) => e.jobs!.includes(j))) return `Only for: ${e.jobs.join(', ')}.`;
+  if (e.jobs && !jobLineage(p.jobId).some((j) => e.jobs!.includes(j))) {
+    return `Only for ${e.jobs.map((j) => (isJobId(j) ? JOBS[j].name : j)).join(' or ')}.`;
+  }
   if (p.baseLevel < e.minLevel) return `Requires base level ${e.minLevel}.`;
   return null;
 }

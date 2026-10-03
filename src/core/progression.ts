@@ -4,7 +4,7 @@ import { createMover, type Player } from './entities';
 import type { Tile } from './grid';
 import { JOBS, jobOf, NOVICE_JOB_CHANGE, SECOND_JOB_LEVEL, type JobId } from './jobs';
 import { impositioAtk, learnBlocker, QUICKEN_DELAY, skillLevel, skillStatBonus, type SkillId } from './skills';
-import { gearBonus, weaponOf } from './equipment';
+import { gearBonus, slotFor, weaponOf, type GearPiece } from './equipment';
 import { petBonus } from './pets';
 import { BLIND_FACTOR } from './status';
 
@@ -200,4 +200,57 @@ export function changeJob(p: Player, to: JobId): string | null {
   p.hp = d.maxHp;
   p.sp = d.maxSp;
   return null;
+}
+
+// ---- Previews -------------------------------------------------------------
+
+export interface StatDelta {
+  label: string;
+  delta: number;
+}
+
+/** What changes between two sets of derived stats, in the order players care about. */
+export function statDeltas(before: DerivedStats, after: DerivedStats): StatDelta[] {
+  const rows: Array<[string, number]> = [
+    ['ATK', after.atk - before.atk],
+    ['MATK', after.matk - before.matk],
+    ['DEF', after.def - before.def],
+    ['HP', after.maxHp - before.maxHp],
+    ['SP', after.maxSp - before.maxSp],
+    ['HIT', after.hit - before.hit],
+    ['FLEE', after.flee - before.flee],
+    ['ASPD', after.aspd - before.aspd],
+    ['CRIT%', Math.round((after.crit - before.crit) * 1000) / 10],
+  ];
+  return rows.filter(([, d]) => d !== 0).map(([label, delta]) => ({ label, delta }));
+}
+
+/** "ATK +12 · FLEE −3", or "no change". */
+export function formatDeltas(deltas: StatDelta[]): string {
+  if (deltas.length === 0) return 'no change';
+  return deltas.map((d) => `${d.label} ${d.delta > 0 ? '+' : '−'}${Math.abs(d.delta)}`).join(' · ');
+}
+
+/** What raising a stat by one would change (weight capacity included for STR). */
+export function previewStatRaise(p: Player, stat: F.StatName): StatDelta[] {
+  const after: Player = { ...p, stats: { ...p.stats, [stat]: p.stats[stat] + 1 } };
+  const deltas = statDeltas(derivedStats(p), derivedStats(after));
+  const weight = F.maxWeight(effectiveStats(after).str) - F.maxWeight(effectiveStats(p).str);
+  if (weight) deltas.push({ label: 'Weight', delta: weight });
+  return deltas;
+}
+
+/**
+ * What wearing this piece (or a fresh one of this item) would change, compared
+ * with what's worn now. Two-handed weapons take the shield off, and the reverse.
+ */
+export function previewEquip(p: Player, piece: GearPiece): StatDelta[] {
+  const e = piece.item.equip;
+  if (!e) return [];
+  const equipment = { ...p.equipment };
+  const slot = slotFor(p, e);
+  equipment[slot] = piece;
+  if (slot === 'weapon' && e.twoHanded) delete equipment.shield;
+  if (slot === 'shield' && p.equipment.weapon?.item.equip?.twoHanded) delete equipment.weapon;
+  return statDeltas(derivedStats(p), derivedStats({ ...p, equipment }));
 }
