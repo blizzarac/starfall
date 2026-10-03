@@ -165,6 +165,17 @@
         "body": "#f28fb0",
         "hair": "#7a4a2a"
       }
+    },
+    {
+      "id": "tinker_nim",
+      "name": "Tinker Nim",
+      "x": 7,
+      "y": 20,
+      "dialogue": "tinker",
+      "look": {
+        "body": "#5a6a7a",
+        "hair": "#ff9a3a"
+      }
     }
   ],
   "portals": [

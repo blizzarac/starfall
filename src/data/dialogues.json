@@ -1402,5 +1402,87 @@
         ]
       }
     }
+  },
+  {
+    "id": "tinker",
+    "nodes": {
+      "start": {
+        "text": "Nim's Tinkery! Scrap in, wonders out. Got anything that clanks?",
+        "choices": [
+          {
+            "label": "Let's build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "How does tinkering work?",
+            "next": "howto"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "howto": {
+        "text": "Bring me what monsters drop and a little gold, and I'll turn it into tonics, wings or gear. Shells, pelts and shards for the basics; gear cogs, power cells and scrap from the Iron Wastes for the good stuff. The bench shows what you're short of.",
+        "choices": [
+          {
+            "label": "Let's build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "tinker_sunspire",
+    "nodes": {
+      "start": {
+        "text": "Vale's workshop. The desert eats machines, so I rebuild them. What do you need?",
+        "choices": [
+          {
+            "label": "Let's build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "How does tinkering work?",
+            "next": "howto"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "howto": {
+        "text": "Bring me what monsters drop and a little gold, and I'll turn it into tonics, wings or gear. Shells, pelts and shards for the basics; gear cogs, power cells and scrap from the Iron Wastes for the good stuff. The bench shows what you're short of.",
+        "choices": [
+          {
+            "label": "Let's build something",
+            "do": [
+              {
+                "type": "openCraft"
+              }
+            ]
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      }
+    }
   }
 ]

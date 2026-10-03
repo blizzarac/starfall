@@ -150,6 +150,17 @@
         "hair": "#9a6b42"
       },
       "sprite": "board"
+    },
+    {
+      "id": "tinker_vale",
+      "name": "Tinker Vale",
+      "x": 29,
+      "y": 11,
+      "dialogue": "tinker_sunspire",
+      "look": {
+        "body": "#7a5a3a",
+        "hair": "#d8dce6"
+      }
     }
   ],
   "portals": [

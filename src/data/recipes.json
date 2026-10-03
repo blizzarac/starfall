@@ -1,0 +1,22 @@
+[
+  {"id": "orange_tonic", "result": "orange_tonic", "count": 1, "materials": [{"item": "red_tonic", "count": 2}, {"item": "jelly_drop", "count": 3}], "gold": 20},
+  {"id": "yellow_tonic", "result": "yellow_tonic", "count": 1, "materials": [{"item": "orange_tonic", "count": 2}, {"item": "moss_clump", "count": 4}], "gold": 60},
+  {"id": "white_tonic", "result": "white_tonic", "count": 1, "materials": [{"item": "yellow_tonic", "count": 2}, {"item": "sea_glass", "count": 3}], "gold": 150},
+  {"id": "fly_wing", "result": "fly_wing", "count": 2, "materials": [{"item": "bat_wing", "count": 1}, {"item": "gull_feather", "count": 1}], "gold": 10},
+  {"id": "butterfly_wing", "result": "butterfly_wing", "count": 1, "materials": [{"item": "gull_feather", "count": 3}, {"item": "sticky_resin", "count": 1}], "gold": 50},
+  {"id": "panacea", "result": "panacea", "count": 1, "materials": [{"item": "green_herb", "count": 2}, {"item": "puffcap_spore", "count": 3}], "gold": 80},
+  {"id": "leather_cap", "result": "leather_cap", "count": 1, "materials": [{"item": "beetle_shell", "count": 6}], "gold": 80},
+  {"id": "traveler_cloak", "result": "traveler_cloak", "count": 1, "materials": [{"item": "wolf_pelt", "count": 3}, {"item": "moss_clump", "count": 4}], "gold": 100},
+  {"id": "beetle_buckler", "result": "beetle_buckler", "count": 1, "materials": [{"item": "beetle_shell", "count": 10}, {"item": "crab_shell", "count": 2}], "gold": 150},
+  {"id": "tusk_blade", "result": "tusk_blade", "count": 1, "materials": [{"item": "boar_tusk", "count": 12}, {"item": "brightstone", "count": 1}], "gold": 500},
+  {"id": "seafarer_coat", "result": "seafarer_coat", "count": 1, "materials": [{"item": "crab_shell", "count": 8}, {"item": "sea_glass", "count": 6}], "gold": 900},
+  {"id": "crystal_mail", "result": "crystal_mail", "count": 1, "materials": [{"item": "glimmer_shard", "count": 15}, {"item": "brightstone", "count": 2}], "gold": 1500},
+  {"id": "desert_turban", "result": "desert_turban", "count": 1, "materials": [{"item": "linen_strip", "count": 6}, {"item": "sand_ruby", "count": 1}], "gold": 800},
+  {"id": "sunsteel_armor", "result": "sunsteel_armor", "count": 1, "materials": [{"item": "worm_hide", "count": 8}, {"item": "scorpion_tail", "count": 6}, {"item": "sand_ruby", "count": 2}], "gold": 3000},
+  {"id": "gearblade", "result": "gearblade", "count": 1, "materials": [{"item": "gear_cog", "count": 12}, {"item": "power_cell", "count": 4}, {"item": "scrap_metal", "count": 10}], "gold": 3000},
+  {"id": "rail_bow", "result": "rail_bow", "count": 1, "materials": [{"item": "gear_cog", "count": 10}, {"item": "power_cell", "count": 5}, {"item": "scrap_metal", "count": 8}], "gold": 3000},
+  {"id": "tesla_staff", "result": "tesla_staff", "count": 1, "materials": [{"item": "power_cell", "count": 8}, {"item": "gear_cog", "count": 6}, {"item": "glimmer_shard", "count": 4}], "gold": 3000},
+  {"id": "piston_mace", "result": "piston_mace", "count": 1, "materials": [{"item": "gear_cog", "count": 10}, {"item": "scrap_metal", "count": 12}, {"item": "power_cell", "count": 3}], "gold": 3000},
+  {"id": "clockwork_plate", "result": "clockwork_plate", "count": 1, "materials": [{"item": "scrap_metal", "count": 20}, {"item": "gear_cog", "count": 10}, {"item": "power_cell", "count": 6}], "gold": 5000},
+  {"id": "reactor_ring", "result": "reactor_ring", "count": 1, "materials": [{"item": "titan_core", "count": 1}, {"item": "power_cell", "count": 5}], "gold": 8000}
+]

@@ -66,6 +66,7 @@ export function bindWorldAudio(world: World): () => void {
     ev.on('slam', () => audio.play('slam')),
     ev.on('castInterrupted', () => audio.play('error')),
     ev.on('refined', (e) => audio.play(e.success ? 'refineGood' : 'refineBad')),
+    ev.on('crafted', () => audio.play('refineGood')),
     ev.on('questCompleted', () => audio.play('quest')),
     ev.on('petTamed', () => audio.play('tame')),
     ev.on('tameFailed', () => audio.play('error')),

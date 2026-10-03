@@ -26,6 +26,7 @@ import { quality, setQuality } from '../render/quality';
 import { screenCamera, viewSize } from '../render/view';
 import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
 import { RefineWindow } from '../ui/RefineWindow';
+import { CraftWindow } from '../ui/CraftWindow';
 import { SkillWindow } from '../ui/SkillWindow';
 import { isSkillId, SKILLS, skillLevel, type SkillDef } from '../core/skills';
 import { makeButton, type Panel } from '../ui/widgets';
@@ -87,6 +88,7 @@ export class UIScene extends Phaser.Scene {
   private frameMs = 16;
   private inventory!: InventoryWindow;
   private refineWindow!: RefineWindow;
+  private craftWindow!: CraftWindow;
   private questWindow!: QuestWindow;
   private storageWindow!: StorageWindow;
   private petWindow!: PetWindow;
@@ -149,6 +151,7 @@ export class UIScene extends Phaser.Scene {
     this.skillWindow = new SkillWindow(this, this.world);
     this.shop = new ShopWindow(this, this.world);
     this.refineWindow = new RefineWindow(this, this.world);
+    this.craftWindow = new CraftWindow(this, this.world);
     this.questWindow = new QuestWindow(this, this.world);
     this.storageWindow = new StorageWindow(this, this.world);
     this.petWindow = new PetWindow(this, this.world);
@@ -167,6 +170,7 @@ export class UIScene extends Phaser.Scene {
       () => this.refineWindow.open(),
       () => this.questWindow.open(true),
       () => this.storageWindow.open(),
+      () => this.craftWindow.open(),
     );
     this.tracker = this.add.text(12, 0, '', { ...WORLD_TEXT, fontSize: '11px', lineSpacing: 2 });
     this.buildButtons();
@@ -434,7 +438,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel, this.worldMap.panel, this.appearanceWindow.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.craftWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel, this.worldMap.panel, this.appearanceWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -442,6 +446,7 @@ export class UIScene extends Phaser.Scene {
     if (this.inventory.panel.visible) this.inventory.refresh();
     if (this.shop.panel.visible) this.shop.refresh();
     if (this.refineWindow.panel.visible) this.refineWindow.refresh();
+    if (this.craftWindow.panel.visible) this.craftWindow.refresh();
     if (this.questWindow.panel.visible) this.questWindow.refresh();
     if (this.storageWindow.panel.visible) this.storageWindow.refresh();
     if (this.petWindow.panel.visible) this.petWindow.refresh();
@@ -683,6 +688,10 @@ export class UIScene extends Phaser.Scene {
           this.showBanner(`MVP! ${e.name} defeated`, '#ffe27a');
         }
       }),
+      ev.on('crafted', (e) => {
+        const item = this.world.content.items.get(e.itemId);
+        this.addLog(`Crafted ${item?.name ?? e.itemId}${e.count > 1 ? ` ×${e.count}` : ''}!`);
+      }),
       ev.on('refined', (e) => this.addLog(e.success ? `Refined ${e.name} to +${e.level}!` : `${e.name} shattered at +${e.level}.`)),
       ev.on('skillsChanged', () => this.buildSkillButtons()),
       ev.on('hotbarChanged', () => this.buildSkillButtons()),
@@ -706,6 +715,7 @@ export class UIScene extends Phaser.Scene {
         this.dialogue.close();
         this.shop.close();
         this.refineWindow.close();
+        this.craftWindow.close();
         this.storageWindow.close();
         this.minimap.rebuild();
         this.layout();

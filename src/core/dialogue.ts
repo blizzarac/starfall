@@ -37,6 +37,8 @@ export class DialogueRunner {
   openQuests = false;
   /** Set when the last choice opened (and paid for) storage. */
   openStorage = false;
+  /** Set when the last choice opened the crafting bench. */
+  openCraft = false;
 
   constructor(
     private readonly world: World,
@@ -80,6 +82,7 @@ export class DialogueRunner {
       if (result.openRefine) this.openRefine = true;
       if (result.openQuests) this.openQuests = true;
       if (result.openStorage) this.openStorage = true;
+      if (result.openCraft) this.openCraft = true;
     }
     this.nodeId = choice.next ?? null;
     this.resolve();

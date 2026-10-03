@@ -11,6 +11,7 @@ import {
   MonsterSchema,
   ShopSchema,
   QuestSchema,
+  RecipeSchema,
   TERRAIN_CHARS,
   type Condition,
   type DialogueDef,
@@ -19,12 +20,14 @@ import {
   type MonsterDef,
   type ShopDef,
   type QuestDef,
+  type RecipeDef,
 } from './schemas';
 import itemsJson from './items.json';
 import monstersJson from './monsters.json';
 import dialoguesJson from './dialogues.json';
 import shopsJson from './shops.json';
 import questsJson from './quests.json';
+import recipesJson from './recipes.json';
 
 const mapModules = import.meta.glob<{ default: unknown }>('./maps/*.json', { eager: true });
 
@@ -35,6 +38,7 @@ export interface Content {
   dialogues: Map<string, DialogueDef>;
   shops: Map<string, ShopDef>;
   quests: Map<string, QuestDef>;
+  recipes: Map<string, RecipeDef>;
 }
 
 export interface RawContent {
@@ -44,6 +48,7 @@ export interface RawContent {
   dialogues: unknown;
   shops: unknown;
   quests: unknown;
+  recipes?: unknown;
 }
 
 /** The map new characters start on and respawn to by default. */
@@ -73,6 +78,7 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     dialogues: byId(z.array(DialogueSchema).parse(raw.dialogues), 'dialogue'),
     shops: byId(z.array(ShopSchema).parse(raw.shops), 'shop'),
     quests: byId(z.array(QuestSchema).parse(raw.quests), 'quest'),
+    recipes: byId(z.array(RecipeSchema).parse(raw.recipes ?? []), 'recipe'),
   };
   const fail = (msg: string): never => {
     throw new Error(msg);
@@ -88,6 +94,10 @@ export function buildContent(raw: RawContent, knownJobs: ReadonlySet<string> = n
     if (item.tames && !PET_SPECIES[item.tames]) fail(`Lure '${item.id}' tames '${item.tames}', which has no pet entry`);
   }
   for (const shop of content.shops.values()) for (const id of shop.items) needItem(id, `Shop '${shop.id}'`);
+  for (const r of content.recipes.values()) {
+    needItem(r.result, `Recipe '${r.id}' result`);
+    for (const m of r.materials) needItem(m.item, `Recipe '${r.id}' material`);
+  }
   for (const q of content.quests.values()) {
     if (!content.monsters.has(q.target.monster)) fail(`Quest '${q.id}' hunts unknown monster '${q.target.monster}'`);
     for (const it of q.reward.items) needItem(it.id, `Quest '${q.id}' reward`);
@@ -162,6 +172,7 @@ export const RAW_CONTENT: RawContent = {
   dialogues: dialoguesJson,
   shops: shopsJson,
   quests: questsJson,
+  recipes: recipesJson,
 };
 
 export function loadContent(): Content {

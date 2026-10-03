@@ -273,6 +273,8 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('changeJob'), job: z.string() }),
   /** Opens the shared storage for a fee. */
   z.object({ type: z.literal('openStorage'), fee: z.number().int().nonnegative() }),
+  /** Opens the tinkerer's crafting bench. */
+  z.object({ type: z.literal('openCraft') }),
   /** Teleports for a fee. */
   z.object({ type: z.literal('warp'), map: z.string(), x: z.number().int().nonnegative(), y: z.number().int().nonnegative(), cost: z.number().int().nonnegative() }),
 ]);
@@ -324,3 +326,15 @@ export const QuestSchema = z.object({
   }),
 });
 export type QuestDef = z.infer<typeof QuestSchema>;
+
+// ---- Crafting -------------------------------------------------------------
+
+/** A tinkerer's recipe: materials and gold in, `count` of `result` out. */
+export const RecipeSchema = z.object({
+  id: z.string().regex(/^[a-z0-9_]+$/),
+  result: z.string(),
+  count: z.number().int().positive().default(1),
+  materials: z.array(z.object({ item: z.string(), count: z.number().int().positive() })).min(1),
+  gold: z.number().int().nonnegative(),
+});
+export type RecipeDef = z.infer<typeof RecipeSchema>;

@@ -42,6 +42,8 @@ export interface WorldEvents extends Record<string, unknown> {
   /** A monster is winding up an area attack: get out of the circle. */
   telegraph: { monsterId: number; tile: Tile; radius: number; ms: number };
   slam: { monsterId: number; tile: Tile; radius: number };
+  /** Something was made at a tinkerer's bench. */
+  crafted: { itemId: string; count: number };
   /** A boss entered a new phase (1 = the first change). */
   bossPhase: { monsterId: number; phase: number; shout: string };
   statusApplied: { status: St.StatusId };
@@ -1000,6 +1002,34 @@ export class World {
     this.events.emit('inventoryChanged', {});
   }
 
+  // ---- Crafting ------------------------------------------------------------
+
+  /** What's missing to make a recipe: gold and each short material (empty when it can be made). */
+  craftShortfall(recipeId: string): string[] {
+    const r = this.content.recipes.get(recipeId);
+    if (!r) return ['Unknown recipe.'];
+    const missing: string[] = [];
+    if (this.player.gold < r.gold) missing.push(`${r.gold - this.player.gold} more gold`);
+    for (const m of r.materials) {
+      const have = this.itemCount(m.item);
+      if (have < m.count) missing.push(`${m.count - have} more ${this.content.items.get(m.item)?.name ?? m.item}`);
+    }
+    return missing;
+  }
+
+  /** Makes a recipe: takes the materials and gold, gives the result. */
+  craft(recipeId: string): { error: string } | { itemId: string; count: number } {
+    const r = this.content.recipes.get(recipeId);
+    if (!r) return { error: 'Unknown recipe.' };
+    const missing = this.craftShortfall(recipeId);
+    if (missing.length > 0) return { error: `You need ${missing.join(', ')}.` };
+    for (const m of r.materials) this.removeItem(m.item, m.count);
+    this.player.gold -= r.gold;
+    this.addItem(r.result, r.count);
+    this.events.emit('crafted', { itemId: r.result, count: r.count });
+    return { itemId: r.result, count: r.count };
+  }
+
   // ---- Storage -------------------------------------------------------------
 
   /** Stacks plus gear pieces in storage. */
@@ -1060,7 +1090,7 @@ export class World {
   // ---- NPC services ------------------------------------------------------
 
   /** Runs one dialogue action. Returns a shop id when the action opens a shop. */
-  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean; openQuests?: boolean; openStorage?: boolean } {
+  applyAction(action: DialogueAction): { openShop?: string; openRefine?: boolean; openQuests?: boolean; openStorage?: boolean; openCraft?: boolean } {
     const p = this.player;
     switch (action.type) {
       case 'setSavePoint':
@@ -1082,6 +1112,8 @@ export class World {
         return { openRefine: true };
       case 'openQuests':
         return { openQuests: true };
+      case 'openCraft':
+        return { openCraft: true };
       case 'takeItem':
         this.removeItem(action.id, action.count);
         return {};
