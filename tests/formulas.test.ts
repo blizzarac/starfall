@@ -13,7 +13,7 @@ describe('formulas', () => {
   it('clamps hit chance to 5–95%', () => {
     expect(F.hitChance(0, 500)).toBe(0.05);
     expect(F.hitChance(500, 0)).toBe(0.95);
-    expect(F.hitChance(20, 20)).toBeCloseTo(0.8);
+    expect(F.hitChance(20, 20)).toBeCloseTo(0.9);
   });
 
   it('attacks faster with more AGI', () => {
@@ -27,8 +27,15 @@ describe('formulas', () => {
     const rng = () => 0.5; // variance 1.0
     expect(F.damage({ atk: 100, def: 10 }, rng)).toBe(90);
     expect(F.damage({ atk: 100, elementModifier: 1.5, sizeModifier: 0.5, def: 0 }, rng)).toBe(75);
-    expect(F.damage({ atk: 5, def: 50 }, rng)).toBe(1);
+    expect(F.damage({ atk: 1, def: 50 }, rng)).toBe(1);
     expect(F.damage({ atk: 100, elementModifier: 0, def: 0 }, rng)).toBe(0);
+  });
+
+  it('DEF never takes more than 60% of a hit, so armor never makes anyone immune', () => {
+    const rng = () => 0.5;
+    // A Gullwing's 36 against 40 DEF used to do 1.
+    expect(F.damage({ atk: 36, def: 40 }, rng)).toBe(14);
+    expect(F.damage({ atk: 36, def: 10 }, rng)).toBe(26);
   });
 
   it('keeps normal damage within ±10%', () => {

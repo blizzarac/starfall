@@ -102,7 +102,18 @@ export function castTimeMs(baseMs: number, dex: number): number {
 export function magicDamage(matk: number, perHit: number, elementMod: number, def: number, rng: Rng): number {
   if (elementMod === 0) return 0;
   const raw = matk * perHit * elementMod * (0.9 + rng() * 0.2);
-  return Math.max(1, Math.floor(raw - def / 2));
+  return Math.max(1, Math.floor(afterDefense(raw, def / 2)));
+}
+
+/** However high the DEF, at least this share of a hit gets through. */
+export const MIN_DAMAGE_SHARE = 0.4;
+
+/**
+ * DEF is subtracted from a hit, but never takes more than 60% of it: armor
+ * shrugs off weak hits, and nobody becomes immune to anything.
+ */
+export function afterDefense(raw: number, def: number): number {
+  return Math.max(raw * MIN_DAMAGE_SHARE, raw - Math.max(0, def));
 }
 
 /** Soft defense from VIT, subtracted after multipliers. */
@@ -136,7 +147,7 @@ export function attackDelayMs(aspdValue: number): number {
 // ---- Hit and damage ------------------------------------------------------
 
 export function hitChance(attackerHit: number, defenderFlee: number): number {
-  return Math.min(0.95, Math.max(0.05, (80 + attackerHit - defenderFlee) / 100));
+  return Math.min(0.95, Math.max(0.05, (90 + attackerHit - defenderFlee) / 100));
 }
 
 /** Multiplier for an attack of element `atk` landing on a target of element `def`. */
@@ -159,9 +170,9 @@ export function elementModifier(atk: Element, def: Element): number {
 
 const SIZE_TABLE: Record<WeaponType, Record<Size, number>> = {
   fist: { small: 1, medium: 1, large: 1 },
-  dagger: { small: 1, medium: 0.75, large: 0.5 },
-  sword: { small: 0.75, medium: 1, large: 0.75 },
-  bow: { small: 1, medium: 1, large: 0.75 },
+  dagger: { small: 1, medium: 0.85, large: 0.7 },
+  sword: { small: 0.9, medium: 1, large: 0.9 },
+  bow: { small: 1, medium: 1, large: 0.85 },
   staff: { small: 1, medium: 1, large: 1 },
   mace: { small: 1, medium: 1, large: 1 },
 };
@@ -180,7 +191,7 @@ export interface DamageInput {
 }
 
 /**
- * Damage = ATK × skill × element × size (±10% variance), minus defense.
+ * Damage = ATK × skill × element × size (±10% variance), minus DEF (see afterDefense).
  * Crits skip variance (always max roll) and ignore defense.
  * Always at least 1 unless the element modifier is 0.
  */
@@ -189,7 +200,7 @@ export function damage(input: DamageInput, rng: Rng): number {
   if (elem === 0) return 0;
   const variance = input.crit ? 1.1 : 0.9 + rng() * 0.2;
   const raw = input.atk * (input.skillModifier ?? 1) * elem * (input.sizeModifier ?? 1) * variance;
-  const afterDef = input.crit ? raw * 1.4 : raw - input.def;
+  const afterDef = input.crit ? raw * 1.4 : afterDefense(raw, input.def);
   return Math.max(1, Math.floor(afterDef));
 }
 
