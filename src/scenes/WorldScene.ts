@@ -162,6 +162,8 @@ export class WorldScene extends Phaser.Scene {
     this.textPool = [];
     this.decor = [];
     this.npcViews.clear();
+    // The scene restarts on every map change; the old pet sprite went with the old run.
+    this.petView = null;
     this.registry.set('clock', this.clock);
 
     const map = this.world.map;
