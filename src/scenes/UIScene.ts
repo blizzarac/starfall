@@ -43,6 +43,9 @@ const SKILL_R = 22;
 const SKILL_KEYS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'];
 /** Below this width the log moves above the button row. */
 const NARROW = 700;
+/** Size of the status panel in the top-left corner. */
+const STATUS_W = 196;
+const STATUS_H = 70;
 
 interface HudButton {
   root: Phaser.GameObjects.Container;
@@ -57,6 +60,9 @@ export class UIScene extends Phaser.Scene {
   private world!: World;
   private bars!: Phaser.GameObjects.Graphics;
   private statusText!: Phaser.GameObjects.Text;
+  private statusFoot!: Phaser.GameObjects.Text;
+  private hpText!: Phaser.GameObjects.Text;
+  private spText!: Phaser.GameObjects.Text;
   private buttons: HudButton[] = [];
   private logText!: Phaser.GameObjects.Text;
   /** Recent log lines and when they arrived; old ones fade away. */
@@ -107,17 +113,22 @@ export class UIScene extends Phaser.Scene {
     this.statLines.clear();
     this.buttons = [];
 
-    this.swallowTaps(this.add.zone(8, 8, 236, 142).setOrigin(0));
+    // Compact status panel: name line, HP/SP bars with their numbers inside, thin XP bars, gold/weight.
+    this.swallowTaps(this.add.zone(8, 8, STATUS_W, STATUS_H).setOrigin(0));
     this.add
       .graphics()
       .fillStyle(COLORS.ink)
-      .fillRect(13, 13, 236, 142)
+      .fillRect(12, 12, STATUS_W, STATUS_H)
       .fillStyle(COLORS.paper)
-      .fillRect(8, 8, 236, 142)
-      .lineStyle(3, COLORS.ink)
-      .strokeRect(8, 8, 236, 142);
+      .fillRect(8, 8, STATUS_W, STATUS_H)
+      .lineStyle(2.5, COLORS.ink)
+      .strokeRect(8, 8, STATUS_W, STATUS_H);
     this.bars = this.add.graphics();
-    this.statusText = this.add.text(18, 14, '', { ...TEXT, fontSize: '12px', fontStyle: 'bold', lineSpacing: 6 });
+    this.statusText = this.add.text(14, 11, '', { ...TEXT, fontSize: '11px', fontStyle: 'bold' });
+    this.statusFoot = this.add.text(14, 62, '', { ...TEXT, fontSize: '10px', fontStyle: 'bold' });
+    const barLabel = { ...WORLD_TEXT, fontSize: '9px', strokeThickness: 3 };
+    this.hpText = this.add.text(18, 33.5, '', barLabel).setOrigin(0, 0.5);
+    this.spText = this.add.text(18, 46, '', barLabel).setOrigin(0, 0.5);
     this.logText = this.add.text(12, 0, '', { ...WORLD_TEXT, fontSize: '12px', lineSpacing: 2 }).setOrigin(0, 1);
     this.debugText = this.add
       .text(0, 12, '', { ...TEXT, fontFamily: 'Menlo, Consolas, monospace', fontSize: '11px', backgroundColor: '#000000aa', padding: { x: 8, y: 6 } })
@@ -200,7 +211,7 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = viewSize(this);
     const narrow = width < NARROW;
     this.menuButton.setPosition(width - 10, 10);
-    this.minimap.root.setPosition(width - 14 - this.minimap.width, 56);
+    this.minimap.root.setPosition(width - 14 - this.minimap.width, 50);
     this.savedText.setPosition(width - 18 - this.menuButton.width, 18);
     this.menuDim.setSize(width, height);
     this.menuPanel.setPosition(width / 2, height / 2);
@@ -222,9 +233,9 @@ export class UIScene extends Phaser.Scene {
     });
     const skillRow = rows * (SKILL_R * 2 + 10) + (rows > 0 ? 2 : 0);
     this.logText.setPosition(12, narrow ? height - 24 - BUTTON_R * 2 - skillRow : height - 10).setWordWrapWidth(narrow ? width - 24 : Math.min(520, width - 400));
-    this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? 158 : 52);
+    this.debugText.setFontSize(narrow ? 9 : 11).setPosition(width - 6, narrow ? STATUS_H + 18 : 52);
     this.deathText.setPosition(width / 2, height / 2 - 60);
-    this.statWindow.setPosition(8, 158);
+    this.statWindow.setPosition(8, STATUS_H + 16);
     this.mapBanner.setPosition(width / 2, height * 0.28);
     for (const panel of this.panels()) {
       if (panel.layout() && panel.visible) this.refreshPanels();
@@ -237,35 +248,34 @@ export class UIScene extends Phaser.Scene {
     const p = this.world.player;
     const d = derivedStats(p);
     const g = this.bars.clear();
-    const bar = (y: number, frac: number, color: number) => {
-      g.fillStyle(COLORS.barBack).fillRect(128, y, 106, 10);
-      const w = Math.max(0, Math.min(1, frac)) * 106;
-      if (w >= 1) {
-        g.fillStyle(color).fillRect(128, y, w, 10);
-        g.fillStyle(0xffffff, 0.45).fillRect(128, y + 1, w, 3);
+    const bar = (x: number, y: number, w: number, h: number, frac: number, color: number) => {
+      g.fillStyle(COLORS.barBack).fillRect(x, y, w, h);
+      const fw = Math.max(0, Math.min(1, frac)) * w;
+      if (fw >= 1) {
+        g.fillStyle(color).fillRect(x, y, fw, h);
+        g.fillStyle(0xffffff, 0.45).fillRect(x, y + 1, fw, Math.max(1, h * 0.28));
       }
-      g.lineStyle(2, COLORS.ink).strokeRect(128, y, 106, 10);
+      g.lineStyle(1.5, COLORS.ink).strokeRect(x, y, w, h);
     };
     const baseNeed = F.baseXpToNext(p.baseLevel);
     const job = jobOf(p);
     const jobNeed = F.jobXpToNext(p.jobLevel, job.jobXpFactor);
     const jobMax = p.jobLevel >= job.maxJobLevel;
-    bar(38, p.hp / d.maxHp, p.hp / d.maxHp > 0.25 ? COLORS.hpBar : COLORS.hpBarLow);
-    bar(56, p.sp / d.maxSp, COLORS.spBar);
-    bar(74, p.baseXp / baseNeed, COLORS.xpBar);
-    bar(92, jobMax ? 1 : p.jobXp / jobNeed, COLORS.jobXpBar);
+    const inner = STATUS_W - 12;
+    bar(14, 27, inner, 13, p.hp / d.maxHp, p.hp / d.maxHp > 0.25 ? COLORS.hpBar : COLORS.hpBarLow);
+    bar(14, 41, inner, 10, p.sp / d.maxSp, COLORS.spBar);
+    const half = (inner - 4) / 2;
+    bar(14, 54, half, 5, p.baseXp / baseNeed, COLORS.xpBar);
+    bar(18 + half, 54, half, 5, jobMax ? 1 : p.jobXp / jobNeed, COLORS.jobXpBar);
     const ratio = this.world.weightRatio();
 
     const pct = (a: number, b: number) => `${((a / b) * 100).toFixed(1)}%`;
-    this.statusText.setText(
-      [
-        `${p.name}  ·  ${job.name}${p.sitting ? '  (sitting)' : ''}${[...p.buffs.keys()].map((id) => `  · ${isSkillId(id) ? SKILLS[id].short : id}`).join('')}`,
-        `HP ${p.hp}/${d.maxHp}`,
-        `SP ${p.sp}/${d.maxSp}`,
-        `Base Lv ${p.baseLevel}  ${pct(p.baseXp, baseNeed)}`,
-        `Job Lv ${p.jobLevel}  ${jobMax ? 'MAX' : pct(p.jobXp, jobNeed)}`,
-        `Gold ${p.gold}   Wt ${Math.round(ratio * 100)}%${ratio >= 0.9 ? ' (overweight)' : ratio >= 0.5 ? ' (heavy)' : ''}`,
-      ].join('\n'),
+    const buffs = [...p.buffs.keys()].map((id) => (isSkillId(id) ? SKILLS[id].short : id));
+    this.statusText.setText(`${p.name} · ${job.name} · Lv ${p.baseLevel}/${p.jobLevel}${p.sitting ? ' · sit' : ''}${buffs.length ? ` · ${buffs.join(' ')}` : ''}`);
+    this.hpText.setText(`HP ${p.hp}/${d.maxHp}`);
+    this.spText.setText(`SP ${p.sp}/${d.maxSp}`);
+    this.statusFoot.setText(
+      `${pct(p.baseXp, baseNeed)} / ${jobMax ? 'MAX' : pct(p.jobXp, jobNeed)}  ·  ${p.gold}g  ·  Wt ${Math.round(ratio * 100)}%${ratio >= 0.9 ? '!!' : ratio >= 0.5 ? '!' : ''}`,
     );
   }
 
@@ -439,9 +449,9 @@ export class UIScene extends Phaser.Scene {
     const g = this.bossBar.clear();
     const boss = [...this.world.monsters.values()].find((m) => m.def.boss);
     const respawn = this.world.bossRespawnAt();
-    const w = narrow ? 236 : Math.min(320, width - 520);
+    const w = narrow ? STATUS_W : Math.min(320, width - 520);
     const x = narrow ? 8 : (width - w) / 2;
-    const y = narrow ? 152 : 14;
+    const y = narrow ? STATUS_H + 14 : 14;
     if (boss) {
       const frac = Math.max(0, boss.hp / boss.def.hp);
       g.fillStyle(COLORS.ink).fillRect(x + 4, y + 4, w, 32);
@@ -472,8 +482,8 @@ export class UIScene extends Phaser.Scene {
     const lines = [`★ ${nextGoal(w)}`, ...quests];
     this.tracker
       .setText(lines.join('\n'))
-      .setPosition(12, bossShown ? 188 : 150)
-      .setWordWrapWidth(Math.min(360, viewSize(this).width - 24))
+      .setPosition(12, STATUS_H + (bossShown ? 52 : 14))
+      .setWordWrapWidth(Math.min(360, viewSize(this).width - 40 - this.minimap.width))
       .setVisible(!this.statWindow.visible);
   }
 

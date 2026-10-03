@@ -5,7 +5,7 @@ import { COLORS } from '../render/palette';
 import { quality } from '../render/quality';
 
 /** Width (px) of the map diamond inside the frame. */
-const SIZE = 110;
+const SIZE = 84;
 const PAD = 6;
 /** Redraw the moving dots this often (ms). */
 const REFRESH_MS = 120;
