@@ -132,6 +132,22 @@ describe('Knight', () => {
     w.learnSkill('riding');
     expect(w.player.moveMs).toBe(Math.round(F.PLAYER_MOVE_MS * S.RIDING_MOVE));
   });
+
+  it('Two-Hand Mastery adds ATK and crit with a two-handed sword only', () => {
+    const w = promoted('swordsman', 'knight');
+    w.addItem('short_sword', 1);
+    expect(w.equip('short_sword')).toBeNull();
+    const oneHand = derivedStats(w.player);
+    for (let i = 0; i < 10; i++) expect(w.learnSkill('two_hand_mastery')).toBeNull();
+    expect(derivedStats(w.player).atk).toBe(oneHand.atk);
+    w.addItem('claymore', 1);
+    expect(w.equip('claymore')).toBeNull();
+    const before = { ...derivedStats(w.player) };
+    w.player.skills.delete('two_hand_mastery');
+    const without = derivedStats(w.player);
+    expect(before.atk - without.atk).toBe(10 * S.TWO_HAND_MASTERY_ATK);
+    expect(before.crit - without.crit).toBeCloseTo(0.1);
+  });
 });
 
 describe('Wizard', () => {

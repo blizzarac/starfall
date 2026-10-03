@@ -369,7 +369,7 @@ export const BUILDS: Record<string, Build> = {
   knight: {
     path: ['swordsman', 'knight'],
     stats: { str: 5, vit: 3, agi: 3, dex: 1 },
-    skills: [...Array(5).fill('bash'), ...Array(10).fill('sword_mastery'), ...Array(5).fill('hp_recovery'), ...Array(3).fill('endure'), ...Array(10).fill('magnum_break'), ...Array(5).fill('bash'), 'riding', ...Array(10).fill('pierce'), ...Array(10).fill('bowling_bash'), ...Array(10).fill('two_hand_quicken')],
+    skills: [...Array(5).fill('bash'), ...Array(10).fill('sword_mastery'), ...Array(5).fill('hp_recovery'), ...Array(3).fill('endure'), ...Array(10).fill('magnum_break'), ...Array(5).fill('bash'), 'riding', ...Array(5).fill('two_hand_mastery'), ...Array(10).fill('pierce'), ...Array(10).fill('bowling_bash'), ...Array(10).fill('two_hand_quicken')],
     attacks: ['bowling_bash', 'pierce', 'bash'],
     buffs: ['two_hand_quicken'],
   },

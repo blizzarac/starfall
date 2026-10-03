@@ -28,6 +28,7 @@ export type SkillId =
   | 'bowling_bash'
   | 'two_hand_quicken'
   | 'riding'
+  | 'two_hand_mastery'
   | 'sight_rasher'
   | 'thunderstorm'
   | 'meteor_storm'
@@ -380,6 +381,18 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     describe: () => 'Ride a trusty mount: move 20% faster.',
     short: 'Ride',
   },
+  two_hand_mastery: {
+    id: 'two_hand_mastery',
+    name: 'Two-Hand Mastery',
+    job: 'knight',
+    maxLevel: 10,
+    kind: 'passive',
+    requires: [],
+    spCost: () => 0,
+    cooldownMs: 0,
+    describe: (lv) => `+${TWO_HAND_MASTERY_ATK * lv} ATK and +${lv}% critical chance with a two-handed sword.`,
+    short: '2H Mastery',
+  },
 
   // ---- Wizard ----
   sight_rasher: {
@@ -643,6 +656,8 @@ export const BOWLING_RADIUS = 1;
 export const QUICKEN_DELAY = 0.7;
 /** Riding multiplies step time by this. */
 export const RIDING_MOVE = 0.8;
+/** ATK per level of Two-Hand Mastery, with a two-handed sword. */
+export const TWO_HAND_MASTERY_ATK = 5;
 
 export function blitzDamage(dex: number, int: number, steelCrow: number): number {
   return 40 + dex + Math.floor(int / 2) + 6 * steelCrow;

@@ -3,7 +3,7 @@ import type { StatName } from './combat/formulas';
 import { createMover, type Player } from './entities';
 import type { Tile } from './grid';
 import { JOBS, jobOf, NOVICE_JOB_CHANGE, SECOND_JOB_LEVEL, type JobId } from './jobs';
-import { impositioAtk, learnBlocker, QUICKEN_DELAY, skillLevel, skillStatBonus, type SkillId } from './skills';
+import { impositioAtk, learnBlocker, QUICKEN_DELAY, skillLevel, skillStatBonus, TWO_HAND_MASTERY_ATK, type SkillId } from './skills';
 import { gearBonus, slotFor, weaponOf, type GearPiece } from './equipment';
 import { petBonus } from './pets';
 import { DEFAULT_APPEARANCE } from './appearance';
@@ -43,7 +43,9 @@ export function derivedStats(p: Player): DerivedStats {
   const job = jobOf(p);
   const weapon = weaponOf(p);
   const aspd = F.aspd(s.agi, s.dex, weapon.type);
-  const mastery = weapon.type === 'dagger' || weapon.type === 'sword' ? 4 * skillLevel(p, 'sword_mastery') : 0;
+  const twoHandSword = weapon.type === 'sword' && !!p.equipment.weapon?.item.equip?.twoHanded;
+  const twoHand = twoHandSword ? skillLevel(p, 'two_hand_mastery') : 0;
+  const mastery = (weapon.type === 'dagger' || weapon.type === 'sword' ? 4 * skillLevel(p, 'sword_mastery') : 0) + TWO_HAND_MASTERY_ATK * twoHand;
   return {
     maxHp: Math.floor(F.maxHp(p.baseLevel, s.vit) * job.hpFactor * (1 + 0.02 * skillLevel(p, 'basic_training'))) + gear.hp,
     maxSp: Math.floor(F.maxSp(p.baseLevel, s.int) * job.spFactor) + gear.sp,
@@ -52,7 +54,7 @@ export function derivedStats(p: Player): DerivedStats {
     hit: Math.floor((F.hit(p.baseLevel, s.dex) + gear.hit + skillLevel(p, 'vultures_eye')) * blind),
     flee: Math.floor((F.flee(p.baseLevel, s.agi) + gear.flee) * blind),
     def: F.softDef(s.vit) + gear.def,
-    crit: F.critChance(s.luk),
+    crit: F.critChance(s.luk) + twoHand / 100,
     aspd,
     // Two-Hand Quicken only works while a two-handed weapon is held.
     attackDelayMs: Math.round(F.attackDelayMs(aspd) * (p.buffs.has('two_hand_quicken') && p.equipment.weapon?.item.equip?.twoHanded ? QUICKEN_DELAY : 1)),
