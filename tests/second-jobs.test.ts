@@ -18,14 +18,14 @@ function run(world: World, ms: number, until?: () => boolean): void {
   }
 }
 
-/** A character of the given first job at job level 30. */
+/** A character of the given first job at job level 25. */
 function veteran(first: JobId): World {
   const w = new World(content, town, { seed: 5 });
   gainXp(w.player, 0, 100_000);
   for (let i = 0; i < 9; i++) w.learnSkill('basic_training');
   w.applyAction({ type: 'changeJob', job: first });
   gainXp(w.player, 0, 50_000_000);
-  expect(w.player.jobLevel).toBeGreaterThanOrEqual(30);
+  expect(w.player.jobLevel).toBeGreaterThanOrEqual(25);
   return w;
 }
 
@@ -52,7 +52,7 @@ function duel(w: World, monsterId = 'sandworm') {
 }
 
 describe('second job change', () => {
-  it('needs job level 30 in the first job, and the trial item', () => {
+  it('needs job level 25 in the first job, and the trial item', () => {
     const young = new World(content, town, { seed: 1 });
     gainXp(young.player, 0, 100_000);
     for (let i = 0; i < 9; i++) young.learnSkill('basic_training');
@@ -61,10 +61,10 @@ describe('second job change', () => {
     young.events.on('notice', (e) => notices.push(e.text));
     young.applyAction({ type: 'changeJob', job: 'knight' });
     expect(young.player.jobId).toBe('swordsman');
-    expect(notices.at(-1)).toMatch(/job level 30/);
-    young.player.jobLevel = 29;
-    expect(jobChangeBlocker(young.player, 'knight')).toMatch(/job level 30/);
-    young.player.jobLevel = 30;
+    expect(notices.at(-1)).toMatch(/job level 25/);
+    young.player.jobLevel = 24;
+    expect(jobChangeBlocker(young.player, 'knight')).toMatch(/job level 25/);
+    young.player.jobLevel = 25;
     expect(jobChangeBlocker(young.player, 'knight')).toBeNull();
 
     const sunspire = content.maps.get('sunspire')!;
