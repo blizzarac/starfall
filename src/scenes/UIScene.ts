@@ -161,7 +161,7 @@ export class UIScene extends Phaser.Scene {
     this.worldMap = new WorldMapWindow(this, this.world);
     this.appearanceWindow = new AppearanceWindow(this, this.world);
     this.minimap = new Minimap(this, this.world, () => this.worldMap.toggle());
-    const openPet = () => this.petWindow.open();
+    const openPet = (index?: number) => this.petWindow.open(index);
     this.game.events.on('openPet', openPet);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off('openPet', openPet));
     this.dialogue = new DialogueBox(

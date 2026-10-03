@@ -1,16 +1,18 @@
 import type Phaser from 'phaser';
 import { describeBonus } from '../core/equipment';
-import { appetite, bonusFactor, describePetGear, fondness, MAX_INTIMACY, MAX_PET_LEVEL, PET_ATTACK_MS, PET_FOOD, PET_SPECIES, petAttackDamage, petBonus, petXpToNext } from '../core/pets';
+import { appetite, bonusFactor, describePetGear, fondness, MAX_INTIMACY, MAX_PETS, MAX_PET_LEVEL, PET_ATTACK_MS, PET_FOOD, PET_SPECIES, petAttackDamage, petBonus, petXpToNext } from '../core/pets';
 import type { World } from '../core/world';
 import { COLORS, TEXT, TONE } from '../render/palette';
 import { centered, makeButton, Panel } from './widgets';
 
-/** Your pet: how it feels, what it gives you, feed / rename / release. */
+/** Your pets (up to three): how each feels, what it gives you, feed / rename / release. */
 export class PetWindow {
   readonly panel: Panel;
   private message = '';
   private messageColor = TONE.good;
   private confirmRelease = false;
+  /** Which of your pets is shown. */
+  private selected = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -21,7 +23,8 @@ export class PetWindow {
     for (const e of ['petFed', 'petChanged', 'petTamed', 'petRanAway', 'petLevelUp', 'inventoryChanged'] as const) world.events.on(e, refresh);
   }
 
-  open(): void {
+  open(index?: number): void {
+    if (index !== undefined) this.selected = index;
     this.message = '';
     this.confirmRelease = false;
     this.panel.setVisible(true);
@@ -40,7 +43,9 @@ export class PetWindow {
   refresh(): void {
     const w = this.world;
     const p = this.panel;
-    const pet = w.player.pet;
+    const pets = w.player.pets;
+    this.selected = Math.max(0, Math.min(this.selected, pets.length - 1));
+    const pet = pets[this.selected];
     p.layout();
     p.clear();
     const text = (x: number, y: number, s: string, size: number, color: string = TONE.ink, bold = false) =>
@@ -48,13 +53,29 @@ export class PetWindow {
     if (!pet) {
       p.setTitle('Pet');
       text(12, 46, "You don't have a pet yet.", 15, TONE.ink, true);
-      text(12, 74, 'Mabel in Brightmoor sells lures. Use one from your bag near the right monster (wear it down first) to tame it.', 13, TONE.muted);
+      text(12, 74, `Mabel in Brightmoor sells lures. Use one from your bag near the right monster (wear it down first) to tame it. Up to ${MAX_PETS} pets can follow you.`, 13, TONE.muted);
       return;
     }
     const species = PET_SPECIES[pet.species]!;
     const def = w.content.monsters.get(pet.species);
     p.setTitle(`${pet.name} · Lv ${pet.level}`);
-    text(12, 42, `${def?.name ?? pet.species} · ${species.blurb}`, 12, TONE.muted);
+    // One tab per pet when you have more than one.
+    let top = 0;
+    if (pets.length > 1) {
+      const tw = (p.w - 24 - 6 * (MAX_PETS - 1)) / MAX_PETS;
+      pets.forEach((other, i) => {
+        p.add(
+          makeButton(this.scene, 12 + i * (tw + 6), 40, tw, 28, other.name, () => {
+            this.selected = i;
+            this.message = '';
+            this.confirmRelease = false;
+            this.refresh();
+          }, i === this.selected ? 0xffd84a : 0xffffff).root,
+        );
+      });
+      top = 34;
+    }
+    text(12, 42 + top, `${def?.name ?? pet.species} · ${species.blurb} · Pets ${pets.length}/${MAX_PETS}`, 12, TONE.muted);
 
     const bar = (y: number, label: string, value: string, frac: number, color: number) => {
       text(12, y, label, 13, TONE.ink, true);
@@ -67,10 +88,10 @@ export class PetWindow {
     };
     const maxed = pet.level >= MAX_PET_LEVEL;
     const need = petXpToNext(pet.level);
-    bar(64, 'Level', maxed ? `Lv ${pet.level} (max)` : `Lv ${pet.level} · ${Math.floor((pet.xp / need) * 100)}%`, maxed ? 1 : pet.xp / need, 0xa98bff);
-    bar(102, 'Friendship', fondness(pet.intimacy), pet.intimacy / MAX_INTIMACY, 0xff8fb8);
-    bar(140, 'Fullness', appetite(pet.hunger), pet.hunger / 100, 0xffb52e);
-    let y = 176;
+    bar(64 + top, 'Level', maxed ? `Lv ${pet.level} (max)` : `Lv ${pet.level} · ${Math.floor((pet.xp / need) * 100)}%`, maxed ? 1 : pet.xp / need, 0xa98bff);
+    bar(102 + top, 'Friendship', fondness(pet.intimacy), pet.intimacy / MAX_INTIMACY, 0xff8fb8);
+    bar(140 + top, 'Fullness', appetite(pet.hunger), pet.hunger / 100, 0xffb52e);
+    let y = 176 + top;
     const line = (s: string, size: number, color: string) => {
       const t = text(12, y, s, size, color);
       y += t.height + 5;
@@ -89,7 +110,7 @@ export class PetWindow {
     text(12, y + 2, gear ? `Wears: ${gear.name}` : 'Wears: nothing', 13, TONE.ink, true);
     if (gear) {
       p.add(makeButton(this.scene, p.w - 12 - 84, y - 2, 84, 26, 'Take off', () => {
-        w.unequipPetGear();
+        w.unequipPetGear(pet);
         this.message = `${gear.name} is back in your bag.`;
         this.messageColor = TONE.muted;
       }).root);
@@ -100,7 +121,7 @@ export class PetWindow {
     for (const it of spare.slice(0, 3)) {
       p.add(
         makeButton(this.scene, 12, y, gw, 30, `Wear ${it.name}: ${describePetGear(it.petGear!)}`, () => {
-          const err = w.equipPetGear(it.id);
+          const err = w.equipPetGear(it.id, pet);
           this.message = err ?? `${pet.name} now wears the ${it.name}.`;
           this.messageColor = err ? TONE.bad : TONE.good;
         }, 0xc8f0ff).root,
@@ -114,7 +135,7 @@ export class PetWindow {
     y = Math.max(y + 6, p.h - 150);
     p.add(
       makeButton(this.scene, 12, y, bw, 38, `Feed a Pet Treat (${treats} left)`, () => {
-        const err = w.feedPet();
+        const err = w.feedPet(pet);
         this.message = err ?? 'Munch munch!';
         this.messageColor = err ? TONE.bad : TONE.good;
         this.refresh();
@@ -125,7 +146,7 @@ export class PetWindow {
     p.add(
       makeButton(this.scene, 12, y, half, 38, 'Rename', () => {
         const name = window.prompt('New name for your pet:', pet.name);
-        if (name) w.renamePet(name);
+        if (name) w.renamePet(name, pet);
       }).root,
     );
     p.add(
@@ -135,7 +156,7 @@ export class PetWindow {
           this.refresh();
           return;
         }
-        w.releasePet();
+        w.releasePet(pet);
         this.message = `${pet.name} wandered off happily.`;
         this.messageColor = TONE.muted;
         this.confirmRelease = false;

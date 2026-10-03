@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { Monster } from '../core/entities';
+import type { Pet } from '../core/pets';
 import type { Tile } from '../core/grid';
 import { weaponOf } from '../core/equipment';
 import { jobOf } from '../core/jobs';
@@ -38,6 +39,19 @@ interface MonsterView {
   rage?: number;
   /** HP the bar was last drawn for; it's only redrawn when this changes. */
   lastHp: number;
+}
+
+/** A pet on screen. */
+interface PetView {
+  root: Phaser.GameObjects.Container;
+  body: Phaser.GameObjects.Sprite;
+  label: Phaser.GameObjects.Text;
+  key: string;
+  sheet: string;
+  anim: string;
+  lastX: number;
+  /** Scene time until which the bite animation plays. */
+  biteUntil: number;
 }
 
 /** Each aura's ground glow: color, and its size relative to the reach. */
@@ -117,17 +131,8 @@ export class WorldScene extends Phaser.Scene {
   private trees: Array<{ img: Phaser.GameObjects.Image; tile: Tile }> = [];
   private npcViews = new Map<string, Phaser.GameObjects.Container>();
   /** The pet following the player, and which species/name it was drawn for. */
-  private petView: {
-    root: Phaser.GameObjects.Container;
-    body: Phaser.GameObjects.Sprite;
-    label: Phaser.GameObjects.Text;
-    key: string;
-    sheet: string;
-    anim: string;
-    lastX: number;
-    /** Scene time until which the bite animation plays. */
-    biteUntil: number;
-  } | null = null;
+  /** Each pet out with you, drawn. */
+  private petViews = new Map<Pet, PetView>();
   private hover!: Phaser.GameObjects.Image;
   /** The knight's auras, drawn on the ground around the player to show their reach. */
   private auras = new Map<SkillId, { shape: Phaser.GameObjects.Polygon; radius: number }>();
@@ -175,7 +180,7 @@ export class WorldScene extends Phaser.Scene {
     this.npcViews.clear();
     this.night = mapLight(this.world.map.kind === 'dungeon').night;
     // The scene restarts on every map change; the old pet sprite went with the old run.
-    this.petView = null;
+    this.petViews.clear();
     this.registry.set('clock', this.clock);
 
     const map = this.world.map;
@@ -234,7 +239,7 @@ export class WorldScene extends Phaser.Scene {
     this.fadeOccluders();
     this.syncMonsters();
     this.syncDrops();
-    this.syncPet();
+    this.syncPets();
     this.updateHold(delta);
     this.updateHover();
     this.drawDebug();
@@ -598,40 +603,49 @@ export class WorldScene extends Phaser.Scene {
     return view;
   }
 
-  private syncPet(): void {
-    const pet = this.world.player.pet;
-    const mover = this.world.petMover;
-    const key = pet ? `${pet.species}:${pet.name}` : '';
-    if (this.petView && (!pet || !mover || this.petView.key !== key)) {
-      this.petView.root.destroy();
-      this.petView = null;
+  private syncPets(): void {
+    const movers = this.world.petMovers();
+    const out = new Set(movers.map((m) => m.pet));
+    for (const [pet, view] of this.petViews) {
+      if (out.has(pet) && view.key === `${pet.species}:${pet.name}`) continue;
+      view.root.destroy();
+      this.petViews.delete(pet);
     }
-    if (!pet || !mover) return;
-    if (!this.petView) {
-      const def = this.world.content.monsters.get(pet.species)!;
-      const sheet = ensureMonster(this, def.look.shape, hexColor(def.look.color));
-      // Pets are drawn smaller than their wild cousins.
-      const body = this.add.sprite(0, 0, sheet).setOrigin(0.5, MON_ORIGIN_Y).setScale(WORLD_PX * 0.62);
-      const label = this.add.text(0, -34, pet.name, { ...WORLD_TEXT, fontSize: '10px', color: '#ffb8d8' }).setOrigin(0.5, 1);
-      const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.6), body, label]);
-      this.petView = { root, body, label, key, sheet, anim: '', lastX: 0, biteUntil: 0 };
-    }
-    const view = this.petView;
-    const pos = renderPosition(mover, this.alpha);
-    const w = tileToWorld(pos.x, pos.y);
-    view.root.setPosition(w.x, w.y).setDepth(depthFor(w.y) + 0.2);
-    if (Math.abs(w.x - view.lastX) > 0.5) view.body.setFlipX(w.x < view.lastX);
-    view.lastX = w.x;
-    const anim = monsterAnimKey(view.sheet, mover.next ? 'move' : 'idle');
-    if (anim !== view.anim && this.time.now >= view.biteUntil) {
-      view.anim = anim;
-      view.body.play(anim);
+    for (const { pet, mover } of movers) {
+      let view = this.petViews.get(pet);
+      if (!view) {
+        const def = this.world.content.monsters.get(pet.species)!;
+        const sheet = ensureMonster(this, def.look.shape, hexColor(def.look.color));
+        // Pets are drawn smaller than their wild cousins.
+        const body = this.add.sprite(0, 0, sheet).setOrigin(0.5, MON_ORIGIN_Y).setScale(WORLD_PX * 0.62);
+        const label = this.add.text(0, -34, pet.name, { ...WORLD_TEXT, fontSize: '10px', color: '#ffb8d8' }).setOrigin(0.5, 1);
+        const root = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(0.6), body, label]);
+        view = { root, body, label, key: `${pet.species}:${pet.name}`, sheet, anim: '', lastX: 0, biteUntil: 0 };
+        this.petViews.set(pet, view);
+      }
+      const pos = renderPosition(mover, this.alpha);
+      const w = tileToWorld(pos.x, pos.y);
+      view.root.setPosition(w.x, w.y).setDepth(depthFor(w.y) + 0.2);
+      if (Math.abs(w.x - view.lastX) > 0.5) view.body.setFlipX(w.x < view.lastX);
+      view.lastX = w.x;
+      const anim = monsterAnimKey(view.sheet, mover.next ? 'move' : 'idle');
+      if (anim !== view.anim && this.time.now >= view.biteUntil) {
+        view.anim = anim;
+        view.body.play(anim);
+      }
     }
   }
 
-  /** Little hearts rising from the pet (or the player if there is none on screen). */
-  private hearts(count: number): void {
-    const at = this.petView ? { x: this.petView.root.x, y: this.petView.root.y - 30 } : { x: this.player.x, y: this.player.y - 60 };
+  /** The drawn pet at this index in the player's pets, if it's on screen. */
+  private petViewAt(index: number | undefined): PetView | undefined {
+    const pet = index === undefined ? undefined : this.world.player.pets[index];
+    return pet ? this.petViews.get(pet) : undefined;
+  }
+
+  /** Little hearts rising from a pet (or the player if it isn't on screen). */
+  private hearts(count: number, pet?: number): void {
+    const view = this.petViewAt(pet ?? 0);
+    const at = view ? { x: view.root.x, y: view.root.y - 30 } : { x: this.player.x, y: this.player.y - 60 };
     for (let i = 0; i < count; i++) {
       const heart = this.add
         .text(at.x + Phaser.Math.Between(-14, 14), at.y, '♥', { fontFamily: IMPACT_FONT, fontSize: '20px', color: '#ff5a8a', stroke: '#16131c', strokeThickness: 4 })
@@ -684,10 +698,11 @@ export class WorldScene extends Phaser.Scene {
       this.world.attack(monster.id);
       return;
     }
-    const pet = this.petView;
-    if (pet && Phaser.Math.Distance.Between(ptr.worldX, ptr.worldY, pet.root.x, pet.root.y - 12) < this.pickRadius()) {
-      this.game.events.emit('openPet');
-      return;
+    for (const [pet, view] of this.petViews) {
+      if (Phaser.Math.Distance.Between(ptr.worldX, ptr.worldY, view.root.x, view.root.y - 12) < this.pickRadius()) {
+        this.game.events.emit('openPet', this.world.player.pets.indexOf(pet));
+        return;
+      }
     }
     const npcId = this.npcAt(ptr.worldX, ptr.worldY);
     if (npcId) {
@@ -828,7 +843,7 @@ export class WorldScene extends Phaser.Scene {
         this.damageNumber(e.targetId, String(e.amount), '#ffb8d8', 20);
         this.hitSpark(e.targetId, false);
         this.flashHit(e.targetId);
-        const pet = this.petView;
+        const pet = this.petViewAt(e.pet);
         const target = this.monsterViews.get(e.targetId);
         if (!pet || !target) return;
         pet.body.setFlipX(target.root.x < pet.root.x);
@@ -850,14 +865,15 @@ export class WorldScene extends Phaser.Scene {
       }),
       ev.on('weakened', (e) => this.floatText(e.targetId, 'DEF↓', '#fff2a8', 13, 900)),
       ev.on('petLevelUp', (e) => {
-        if (!this.petView) return;
-        const at = { x: this.petView.root.x, y: this.petView.root.y - 40 };
+        const view = this.petViewAt(e.pet);
+        if (!view) return;
+        const at = { x: view.root.x, y: view.root.y - 40 };
         const label = this.add.text(at.x, at.y, `Lv ${e.level}!`, { fontFamily: IMPACT_FONT, fontSize: '22px', color: '#c8b4ff', stroke: '#16131c', strokeThickness: 6 }).setOrigin(0.5).setDepth(6000);
         this.tweens.add({ targets: label, y: at.y - 46, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => label.destroy() });
-        this.ring({ x: this.petView.root.x, y: this.petView.root.y }, 0xa98bff, 3);
-        this.hearts(2);
+        this.ring({ x: view.root.x, y: view.root.y }, 0xa98bff, 3);
+        this.hearts(2, e.pet);
       }),
-      ev.on('petFed', (e) => (e.delta > 0 ? this.hearts(e.delta >= 40 ? 3 : 1) : this.floatText('player', 'Too full!', '#ffb8d8', 14))),
+      ev.on('petFed', (e) => (e.delta > 0 ? this.hearts(e.delta >= 40 ? 3 : 1, e.pet) : this.floatText('player', 'Too full!', '#ffb8d8', 14))),
       ev.on('telegraph', (e) => this.telegraph(e.tile, e.radius, e.ms)),
       ev.on('slam', (e) => {
         const at = tileToWorld(e.tile.x, e.tile.y);

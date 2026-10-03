@@ -141,10 +141,12 @@ export class InventoryWindow {
         }, onBar ? 0xffd84a : 0xffffff).root,
       );
     }
-    else if (item.petGear && w.player.pet)
+    else if (item.petGear && w.player.pets.length > 0)
       this.button('Pet', pw, y, () => {
-        const err = w.equipPetGear(item.id);
-        this.message = err ?? `${w.player.pet?.name} now wears the ${item.name}.`;
+        // The first pet without gear gets it (pick a pet in its own window to choose).
+        const pet = w.player.pets.find((x) => !x.gear) ?? w.player.pets[0]!;
+        const err = w.equipPetGear(item.id, pet);
+        this.message = err ?? `${pet.name} now wears the ${item.name}.`;
         this.refresh();
       });
     else if (item.card)

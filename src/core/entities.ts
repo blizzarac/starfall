@@ -72,7 +72,8 @@ export interface Player extends Mover {
   bounty: number;
   savePoint: Place;
   /** The tamed monster following the player, if any. */
-  pet: Pet | null;
+  /** Pets out with you, up to MAX_PETS. */
+  pets: Pet[];
   /** Hair, eyes and skin. Cosmetic. */
   appearance: Appearance;
   /** Quick-use bar: skill ids and consumable item ids, in order, at most HOTBAR_SIZE. */

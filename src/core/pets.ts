@@ -36,6 +36,8 @@ export const PET_SPECIES: Record<string, PetSpecies> = {
   gullwing: { bonus: { dex: 2, flee: 4 }, loots: true, blurb: 'Swoops on shiny loot and keeps your aim keen.' },
 };
 
+/** How many pets can be out with you at once. */
+export const MAX_PETS = 3;
 export const PET_FOOD = 'pet_treat';
 export const START_INTIMACY = 100;
 export const START_HUNGER = 80;

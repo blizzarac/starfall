@@ -22,6 +22,15 @@ import { createRng, randInt, type Rng } from './rng';
 
 export type EntityId = 'player' | number;
 
+/** A pet's live state while it's out (not saved). */
+interface PetState {
+  mover: Mover | null;
+  hungerMs: number;
+  attackMs: number;
+  /** Drops it couldn't pick up (too heavy), so it doesn't keep trying. */
+  skips: Set<number>;
+}
+
 export interface WorldEvents extends Record<string, unknown> {
   damage: { sourceId: EntityId; targetId: EntityId; amount: number; crit: boolean };
   miss: { sourceId: EntityId; targetId: EntityId };
@@ -64,12 +73,12 @@ export interface WorldEvents extends Record<string, unknown> {
   autoChanged: { on: boolean };
   petTamed: { name: string };
   tameFailed: { name: string };
-  petFed: { delta: number };
+  petFed: { delta: number; pet: number };
   petRanAway: { name: string };
   /** The pet was renamed, released, replaced or changed gear. */
   petChanged: Record<string, never>;
   /** The pet bit a monster. */
-  petAttack: { targetId: number; amount: number };
+  petAttack: { targetId: number; amount: number; /** Which pet (index in player.pets). */ pet: number };
   /** Battle Aura (or Holy Aura, `holy`) burned a monster. */
   auraHit: { targetId: number; amount: number; holy?: boolean };
   bountyCollected: { gold: number };
@@ -81,7 +90,7 @@ export interface WorldEvents extends Record<string, unknown> {
   storyEnded: { ending: Ending; title: string };
   /** Holy Aura just weakened a monster's DEF. */
   weakened: { targetId: number };
-  petLevelUp: { name: string; level: number };
+  petLevelUp: { name: string; level: number; pet: number };
   notice: { text: string };
 }
 
@@ -137,9 +146,10 @@ export class World {
   /** After a manual move, Auto waits this long (ms) before taking over again. */
   private autoPauseMs = 0;
   /** Where the pet stands; null without a pet. Not saved: it reappears next to the player. */
-  petMover: Mover | null = null;
-  private petHungerMs = 0;
-  private petAttackMs = 0;
+  /** Each pet's live state (position, hunger and bite timers), by pet. */
+  private petStates = new Map<Pets.Pet, PetState>();
+  /** Which pet is biting right now (for the petAttack event). */
+  private biter = 0;
   private auraMs = 0;
   /** Whether the bag was over the slow-recovery weight last tick (for a one-time notice). */
   private wasHeavy = false;
@@ -147,7 +157,7 @@ export class World {
   private storyLinesShown = new Set<string>();
   private holyAuraMs = 0;
   /** Drops the pet couldn't pick up (too heavy), so it doesn't keep trying. */
-  private petSkips = new Set<number>();
+
 
   /** The shared stash; the save manager loads and saves it alongside the slot. */
   readonly storage: Storage = { items: new Map(), gear: [] };
@@ -458,13 +468,31 @@ export class World {
 
   // ---- Pets ------------------------------------------------------------------
 
+  /** Live state of one pet (not saved: pets reappear next to the player). */
+  private petState(pet: Pets.Pet): PetState {
+    let st = this.petStates.get(pet);
+    if (!st) {
+      st = { mover: null, hungerMs: 0, attackMs: 0, skips: new Set() };
+      this.petStates.set(pet, st);
+    }
+    return st;
+  }
+
+  /** Every pet out with you and where it stands, for drawing. */
+  petMovers(): Array<{ pet: Pets.Pet; mover: Mover }> {
+    return this.player.pets.flatMap((pet) => {
+      const mover = this.petState(pet).mover;
+      return mover ? [{ pet, mover }] : [];
+    });
+  }
+
   /** Throws a lure at the nearest monster it works on. Fails without using it if none is near. */
   private tame(lure: ItemDef): void {
     const p = this.player;
     const notice = (text: string) => this.events.emit('notice', { text });
     const def = this.content.monsters.get(lure.tames ?? '');
     if (!def) return;
-    if (p.pet) return notice('You already have a pet. Release it first (tap your pet).');
+    if (p.pets.length >= Pets.MAX_PETS) return notice(`You already have ${Pets.MAX_PETS} pets. Release one first (tap a pet).`);
     let target: Monster | null = null;
     for (const m of this.monsters.values()) {
       if (m.def.id !== def.id || tileDistance(m.tile, p.tile) > 6) continue;
@@ -482,16 +510,21 @@ export class World {
     this.monsters.delete(target.id);
     this.respawns.push({ spawnIndex: target.spawnIndex, at: this.time + this.map.spawns[target.spawnIndex]!.respawnMs });
     this.events.emit('monsterDied', { monsterId: target.id, tile: { ...target.tile } });
-    p.pet = Pets.newPet(def.id, def.name);
-    this.petMover = createMover(target.tile, F.PLAYER_MOVE_MS);
-    this.petHungerMs = 0;
+    const pet = Pets.newPet(def.id, def.name);
+    p.pets.push(pet);
+    this.petState(pet).mover = createMover(target.tile, F.PLAYER_MOVE_MS);
     this.refreshStats();
     this.events.emit('petTamed', { name: def.name });
   }
 
-  /** Feeds the pet a treat. Returns why not, or null. */
-  feedPet(): string | null {
-    const pet = this.player.pet;
+  /** The pet an action is for: the one given, else the first. */
+  private petOf(pet?: Pets.Pet): Pets.Pet | undefined {
+    return pet && this.player.pets.includes(pet) ? pet : this.player.pets[0];
+  }
+
+  /** Feeds a pet a treat. Returns why not, or null. */
+  feedPet(which?: Pets.Pet): string | null {
+    const pet = this.petOf(which);
     if (!pet) return "You don't have a pet.";
     if (!this.hasItem(Pets.PET_FOOD, 1)) return `You need a ${this.content.items.get(Pets.PET_FOOD)?.name ?? 'treat'}.`;
     this.removeItem(Pets.PET_FOOD, 1);
@@ -499,36 +532,36 @@ export class World {
     // A friendship charm makes treats count for more too.
     if (delta > 0) pet.intimacy = Math.min(Pets.MAX_INTIMACY, pet.intimacy + Math.round(delta * (Pets.petGear(pet).friendship ?? 0)));
     this.refreshStats();
-    this.events.emit('petFed', { delta });
+    this.events.emit('petFed', { delta, pet: this.player.pets.indexOf(pet) });
     return null;
   }
 
-  /** Raises (or lowers) friendship; gains grow with a friendship charm. */
-  private addIntimacy(amount: number): void {
-    const pet = this.player.pet;
-    if (!pet || amount === 0) return;
+  /** Raises (or lowers) a pet's friendship; gains grow with a friendship charm. */
+  private addIntimacy(pet: Pets.Pet, amount: number): void {
+    if (amount === 0) return;
     const gain = amount > 0 ? amount * (1 + (Pets.petGear(pet).friendship ?? 0)) : amount;
     const before = Pets.bonusFactor(pet.intimacy);
     pet.intimacy = Math.max(0, Math.min(Pets.MAX_INTIMACY, Math.round(pet.intimacy + gain)));
     if (Pets.bonusFactor(pet.intimacy) !== before) this.refreshStats();
   }
 
-  /** A monster fell with the pet out: it learns from the fight and grows fonder of you. */
+  /** A monster fell with the pets out: each learns from the fight and grows fonder of you. */
   private rewardPet(baseXp: number): void {
-    const pet = this.player.pet;
-    if (!pet || !this.petMover) return;
-    const levels = Pets.gainPetXp(pet, baseXp * (1 + (Pets.petGear(pet).xp ?? 0)));
-    if (Pets.appetite(pet.hunger) !== 'Starving') this.addIntimacy(Pets.KILL_INTIMACY);
-    if (levels > 0) {
-      this.addIntimacy(Pets.LEVEL_INTIMACY * levels);
-      this.refreshStats();
-      this.events.emit('petLevelUp', { name: pet.name, level: pet.level });
+    for (const pet of this.player.pets) {
+      if (!this.petState(pet).mover) continue;
+      const levels = Pets.gainPetXp(pet, baseXp * (1 + (Pets.petGear(pet).xp ?? 0)));
+      if (Pets.appetite(pet.hunger) !== 'Starving') this.addIntimacy(pet, Pets.KILL_INTIMACY);
+      if (levels > 0) {
+        this.addIntimacy(pet, Pets.LEVEL_INTIMACY * levels);
+        this.refreshStats();
+        this.events.emit('petLevelUp', { name: pet.name, level: pet.level, pet: this.player.pets.indexOf(pet) });
+      }
     }
   }
 
-  /** Puts a collar or charm from the bag on the pet; whatever it wore goes back in the bag. */
-  equipPetGear(itemId: string): string | null {
-    const pet = this.player.pet;
+  /** Puts a collar or charm from the bag on a pet; whatever it wore goes back in the bag. */
+  equipPetGear(itemId: string, which?: Pets.Pet): string | null {
+    const pet = this.petOf(which);
     const item = this.content.items.get(itemId);
     if (!pet) return "You don't have a pet.";
     if (!item?.petGear || !this.hasItem(itemId, 1)) return "You don't have that.";
@@ -540,9 +573,9 @@ export class World {
     return null;
   }
 
-  /** Takes the pet's collar or charm back into the bag. */
-  unequipPetGear(): void {
-    const pet = this.player.pet;
+  /** Takes a pet's collar or charm back into the bag. */
+  unequipPetGear(which?: Pets.Pet): void {
+    const pet = this.petOf(which);
     if (!pet?.gear) return;
     this.addItem(pet.gear.id, 1);
     pet.gear = null;
@@ -550,74 +583,78 @@ export class World {
     this.events.emit('petChanged', {});
   }
 
-  renamePet(name: string): void {
-    const pet = this.player.pet;
+  renamePet(name: string, which?: Pets.Pet): void {
+    const pet = this.petOf(which);
     const clean = name.trim().slice(0, 16);
     if (!pet || !clean) return;
     pet.name = clean;
     this.events.emit('petChanged', {});
   }
 
-  /** Lets the pet go for good. */
-  releasePet(): void {
-    if (!this.player.pet) return;
+  /** Lets a pet go for good. */
+  releasePet(which?: Pets.Pet): void {
+    const pet = this.petOf(which);
+    if (!pet) return;
     // It leaves its collar behind.
-    if (this.player.pet.gear) this.addItem(this.player.pet.gear.id, 1);
-    this.player.pet = null;
-    this.petMover = null;
+    if (pet.gear) this.addItem(pet.gear.id, 1);
+    this.player.pets = this.player.pets.filter((x) => x !== pet);
+    this.petStates.delete(pet);
     this.refreshStats();
     this.events.emit('petChanged', {});
   }
 
-  /** Puts the pet next to the player (after loading, teleporting or changing maps). */
-  private placePet(): void {
-    if (!this.player.pet) {
-      this.petMover = null;
-      return;
-    }
+  /** Puts the pets next to the player (after loading, teleporting or changing maps). */
+  private placePet(only?: Pets.Pet): void {
     const p = this.player.tile;
-    const spot = this.dropSpots(p).find((t) => !sameTile(t, p)) ?? p;
-    this.petMover = createMover(spot, F.PLAYER_MOVE_MS);
-    this.petSkips.clear();
+    const spots = this.dropSpots(p).filter((t) => !sameTile(t, p));
+    this.player.pets.forEach((pet, i) => {
+      if (only && pet !== only) return;
+      const st = this.petState(pet);
+      st.mover = createMover(spots[i % Math.max(1, spots.length)] ?? p, F.PLAYER_MOVE_MS);
+      st.skips.clear();
+    });
   }
 
   private updatePet(dt: number): void {
-    const p = this.player;
-    const pet = p.pet;
-    if (!pet) return;
-    if (!this.petMover) this.placePet();
-    const mover = this.petMover!;
+    for (const pet of [...this.player.pets]) this.updateOnePet(pet, dt);
+  }
 
-    this.petHungerMs += dt * (1 - (Pets.petGear(pet).appetite ?? 0));
-    while (this.petHungerMs >= Pets.HUNGER_TICK_MS) {
-      this.petHungerMs -= Pets.HUNGER_TICK_MS;
+  private updateOnePet(pet: Pets.Pet, dt: number): void {
+    const p = this.player;
+    const st = this.petState(pet);
+    if (!st.mover) this.placePet(pet);
+    const mover = st.mover!;
+
+    st.hungerMs += dt * (1 - (Pets.petGear(pet).appetite ?? 0));
+    while (st.hungerMs >= Pets.HUNGER_TICK_MS) {
+      st.hungerMs -= Pets.HUNGER_TICK_MS;
       pet.hunger = Math.max(0, pet.hunger - 1);
-      if (Pets.appetite(pet.hunger) === 'Starving') this.addIntimacy(-Pets.STARVING_LOSS);
+      if (Pets.appetite(pet.hunger) === 'Starving') this.addIntimacy(pet, -Pets.STARVING_LOSS);
       if (pet.hunger === 25) this.events.emit('notice', { text: `${pet.name} is hungry. Feed it a Pet Treat.` });
       if (pet.intimacy === 0) {
         const name = pet.name;
-        this.releasePet();
+        this.releasePet(pet);
         this.events.emit('petRanAway', { name });
         return;
       }
     }
-    this.petBite(dt);
+    this.petBite(pet, st, dt);
 
     // Looters fetch nearby drops; everyone else (and looters with nothing to do) follows.
     const species = Pets.PET_SPECIES[pet.species];
     if (species?.loots && !p.dead && !mover.next) {
       let best: GroundDrop | null = null;
       for (const d of this.drops.values()) {
-        if (this.petSkips.has(d.id) || tileDistance(d.tile, p.tile) > Pets.PET_LOOT_RANGE + (Pets.petGear(pet).lootRange ?? 0)) continue;
+        if (st.skips.has(d.id) || tileDistance(d.tile, p.tile) > Pets.PET_LOOT_RANGE + (Pets.petGear(pet).lootRange ?? 0)) continue;
         if (!best || tileDistance(d.tile, mover.tile) < tileDistance(best.tile, mover.tile)) best = d;
       }
       if (best) {
         if (sameTile(mover.tile, best.tile)) {
           const item = this.content.items.get(best.itemId)!;
-          if (this.weight() + item.weight > this.maxWeight()) this.petSkips.add(best.id);
+          if (this.weight() + item.weight > this.maxWeight()) st.skips.add(best.id);
           else this.collect(best);
         } else if (!mover.goal || !sameTile(mover.goal, best.tile)) {
-          if (!this.setPath(mover, best.tile, 300)) this.petSkips.add(best.id);
+          if (!this.setPath(mover, best.tile, 300)) st.skips.add(best.id);
         }
         advance(mover, dt, () => false);
         return;
@@ -625,7 +662,7 @@ export class World {
     }
     const dist = tileDistance(mover.tile, p.tile);
     if (dist > 12) {
-      this.placePet();
+      this.placePet(pet);
       return;
     }
     const target = p.next ?? p.tile;
@@ -678,13 +715,12 @@ export class World {
     return Math.round(m.def.def * (1 - cut));
   }
 
-  /** The pet joins the fight: it bites what you're attacking, or whatever is attacking you. */
-  private petBite(dt: number): void {
+  /** A pet joins the fight: it bites what you're attacking, or whatever is attacking you. */
+  private petBite(pet: Pets.Pet, st: PetState, dt: number): void {
     const p = this.player;
-    const pet = p.pet!;
-    const mover = this.petMover!;
-    this.petAttackMs -= dt;
-    if (this.petAttackMs > 0 || p.dead || Pets.appetite(pet.hunger) === 'Starving') return;
+    const mover = st.mover!;
+    st.attackMs -= dt;
+    if (st.attackMs > 0 || p.dead || Pets.appetite(pet.hunger) === 'Starving') return;
     let target = p.intent.kind === 'attack' ? this.monsters.get(p.intent.targetId) : undefined;
     if (!target) {
       for (const m of this.monsters.values()) {
@@ -693,10 +729,12 @@ export class World {
       }
     }
     if (!target || tileDistance(target.tile, mover.tile) > Pets.PET_ATTACK_RANGE) return;
-    this.petAttackMs = Pets.PET_ATTACK_MS;
+    st.attackMs = Pets.PET_ATTACK_MS;
     const amount = Math.max(1, Math.round(Pets.petAttackDamage(pet) * (0.85 + this.rng() * 0.3)));
+    this.biter = this.player.pets.indexOf(pet);
     this.hurtMonster(target, amount, false, 'pet');
   }
+
 
   // ---- Status effects ----------------------------------------------------
 
@@ -1766,7 +1804,7 @@ export class World {
   private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' | 'aura' | 'holy' = 'player'): void {
     target.hp -= amount;
     target.hostile = true;
-    if (source === 'pet') this.events.emit('petAttack', { targetId: target.id, amount });
+    if (source === 'pet') this.events.emit('petAttack', { targetId: target.id, amount, pet: this.biter });
     else if (source === 'aura' || source === 'holy') this.events.emit('auraHit', { targetId: target.id, amount, holy: source === 'holy' });
     else this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
     if (target.hp <= 0) this.killMonster(target);

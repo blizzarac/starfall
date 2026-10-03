@@ -99,10 +99,11 @@ export class CraftWindow {
     const below = y + 20 + (line + 1) * 15;
     if (verdict) {
       this.panel.add(this.scene.add.text(12, below, verdict.text, { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: verdict.color, wordWrap: { width: pw - 108 }, maxLines: 2 }));
-    } else if (item.petGear && w.player.pet) {
-      const worn = w.player.pet.gear;
+    } else if (item.petGear && w.player.pets.length > 0) {
+      const bare = w.player.pets.filter((pet) => !pet.gear);
+      const text = bare.length > 0 ? `${bare.map((pet) => pet.name).join(', ')} wear${bare.length === 1 ? 's' : ''} nothing yet` : `Your pets wear: ${w.player.pets.map((pet) => pet.gear!.name).join(', ')}`;
       this.panel.add(
-        this.scene.add.text(12, below, worn ? `Your pet wears: ${worn.name}` : 'Your pet wears nothing yet', { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: worn ? TONE.ink : TONE.good, wordWrap: { width: pw - 108 } }),
+        this.scene.add.text(12, below, text, { ...TEXT, fontSize: '11px', fontStyle: 'bold', color: bare.length > 0 ? TONE.good : TONE.ink, wordWrap: { width: pw - 108 } }),
       );
     }
     this.panel.add(

@@ -32,8 +32,8 @@ function readyToTame(seed = 1) {
 function tamed(): World {
   for (let seed = 1; seed < 50; seed++) {
     const { w } = readyToTame(seed);
-    for (let i = 0; i < 10 && !w.player.pet; i++) w.useItem('wobbly_pudding');
-    if (w.player.pet) return w;
+    for (let i = 0; i < 10 && w.player.pets.length === 0; i++) w.useItem('wobbly_pudding');
+    if (w.player.pets.length) return w;
   }
   throw new Error('never tamed');
 }
@@ -91,15 +91,11 @@ describe('taming and caring', () => {
 
   it('a tamed Jellop follows the player and leaves the map as a wild monster', () => {
     const w = tamed();
-    expect(w.player.pet!.species).toBe('jellop');
-    expect(w.petMover).not.toBeNull();
+    expect(w.player.pets[0]!.species).toBe('jellop');
+    expect(w.petMovers()[0]?.mover).not.toBeNull();
     w.moveTo({ x: w.player.tile.x + 6, y: w.player.tile.y });
     run(w, 6000);
-    expect(tileDistance(w.petMover!.tile, w.player.tile)).toBeLessThanOrEqual(2);
-    const notices: string[] = [];
-    w.events.on('notice', (e) => notices.push(e.text));
-    w.useItem('wobbly_pudding');
-    expect(notices.at(-1)).toMatch(/already have a pet/);
+    expect(tileDistance(w.petMovers()[0]!.mover!.tile, w.player.tile)).toBeLessThanOrEqual(2);
   });
 
   it('feeding with treats makes it Neutral, which raises its bonus from half to full', () => {
@@ -107,12 +103,12 @@ describe('taming and caring', () => {
     const luk = effectiveStats(w.player).luk;
     const hp = derivedStats(w.player).maxHp;
     w.addItem('pet_treat', 5);
-    w.player.pet!.hunger = 20;
+    w.player.pets[0]!.hunger = 20;
     for (let i = 0; i < 4; i++) {
-      w.player.pet!.hunger = 20;
+      w.player.pets[0]!.hunger = 20;
       expect(w.feedPet()).toBeNull();
     }
-    expect(Pets.fondness(w.player.pet!.intimacy)).toBe('Neutral');
+    expect(Pets.fondness(w.player.pets[0]!.intimacy)).toBe('Neutral');
     // A Shy jellop gave LUK +1 (half of 2); Neutral gives all of it.
     expect(effectiveStats(w.player).luk).toBe(luk + 1);
     expect(derivedStats(w.player).maxHp).toBeGreaterThan(hp);
@@ -131,13 +127,13 @@ describe('taming and caring', () => {
 
   it('a starving pet loses friendship and eventually runs away', () => {
     const w = tamed();
-    w.player.pet!.hunger = 0;
-    w.player.pet!.intimacy = 20;
+    w.player.pets[0]!.hunger = 0;
+    w.player.pets[0]!.intimacy = 20;
     let ran = false;
     w.events.on('petRanAway', () => (ran = true));
     run(w, Pets.HUNGER_TICK_MS + 100);
     expect(ran).toBe(true);
-    expect(w.player.pet).toBeNull();
+    expect(w.player.pets).toHaveLength(0);
   });
 
   it('the pet is saved and loaded, and old saves load without one', () => {
@@ -146,7 +142,7 @@ describe('taming and caring', () => {
     const doc = JSON.parse(JSON.stringify(toSaveDoc(w, 0)));
     const fresh = new World(content, meadow, { seed: 2 });
     applySaveDoc(fresh, migrate(doc));
-    expect(fresh.player.pet).toMatchObject({ species: 'jellop', name: 'Wobbles' });
+    expect(fresh.player.pets[0]).toMatchObject({ species: 'jellop', name: 'Wobbles' });
     const { pet: _pet, ...v6 } = { ...doc, schemaVersion: 6 };
     expect(migrate(v6).pet).toBeNull();
   });
@@ -173,7 +169,7 @@ describe('pet levels, bites and gear', () => {
 
   it('defeating monsters together gives the pet XP and friendship', () => {
     const w = tamed();
-    const pet = w.player.pet!;
+    const pet = w.player.pets[0]!;
     pet.hunger = 80;
     const levels: number[] = [];
     w.events.on('petLevelUp', (e) => levels.push(e.level));
@@ -203,7 +199,7 @@ describe('pet levels, bites and gear', () => {
 
   it('wears one collar or charm, swapping through the bag', () => {
     const w = tamed();
-    const pet = w.player.pet!;
+    const pet = w.player.pets[0]!;
     pet.intimacy = 300;
     const bite = Pets.petAttackDamage(pet);
     expect(w.equipPetGear('leather_collar')).toMatch(/don't have/);
@@ -229,16 +225,16 @@ describe('pet levels, bites and gear', () => {
     const bagged = tamed();
     bagged.addItem('feed_bag', 1);
     bagged.equipPetGear('feed_bag');
-    plain.player.pet!.hunger = bagged.player.pet!.hunger = 80;
+    plain.player.pets[0]!.hunger = bagged.player.pets[0]!.hunger = 80;
     plain.player.hp = bagged.player.hp = 1e6;
     run(plain, 200_000);
     run(bagged, 200_000);
-    expect(80 - bagged.player.pet!.hunger).toBeLessThan(80 - plain.player.pet!.hunger);
+    expect(80 - bagged.player.pets[0]!.hunger).toBeLessThan(80 - plain.player.pets[0]!.hunger);
   });
 
   it('level, XP and gear are saved; older pets load as level 1', () => {
     const w = tamed();
-    const pet = w.player.pet!;
+    const pet = w.player.pets[0]!;
     pet.level = 12;
     pet.xp = 34;
     w.addItem('jingle_bell', 1);
@@ -246,9 +242,44 @@ describe('pet levels, bites and gear', () => {
     const doc = migrate(JSON.parse(JSON.stringify(toSaveDoc(w, 0))));
     const fresh = new World(content, meadow, { seed: 9 });
     applySaveDoc(fresh, doc);
-    expect(fresh.player.pet).toMatchObject({ level: 12, xp: 34, gear: { id: 'jingle_bell' } });
-    const old = { ...doc, pet: { species: 'jellop', name: 'Old', intimacy: 300, hunger: 50 } };
+    expect(fresh.player.pets[0]).toMatchObject({ level: 12, xp: 34, gear: { id: 'jingle_bell' } });
+    const old = { ...doc, pets: undefined, pet: { species: 'jellop', name: 'Old', intimacy: 300, hunger: 50 } };
     applySaveDoc(fresh, migrate(old));
-    expect(fresh.player.pet).toMatchObject({ level: 1, xp: 0, gear: null });
+    expect(fresh.player.pets[0]).toMatchObject({ level: 1, xp: 0, gear: null });
+  });
+});
+
+describe('several pets', () => {
+  it('up to three follow you, each fights, and their bonuses add up', () => {
+    const w = tamed();
+    w.player.pets[0]!.intimacy = 500;
+    const hpWithOne = derivedStats(w.player).maxHp;
+    w.player.pets.push({ ...Pets.newPet('jellop', 'Two'), intimacy: w.player.pets[0]!.intimacy }, { ...Pets.newPet('jellop', 'Three'), intimacy: w.player.pets[0]!.intimacy });
+    w.changeMap(w.map.id, w.player.tile);
+    expect(w.petMovers().filter((m) => m.mover)).toHaveLength(3);
+    expect(derivedStats(w.player).maxHp).toBeGreaterThan(hpWithOne);
+    // A fourth lure does nothing: the bag keeps it.
+    const lures = w.itemCount('wobbly_pudding');
+    w.addItem('wobbly_pudding', 1);
+    const notices: string[] = [];
+    w.events.on('notice', (e) => notices.push(e.text));
+    w.useItem('wobbly_pudding');
+    expect(notices.at(-1)).toMatch(/already have 3 pets/);
+    expect(w.player.pets).toHaveLength(Pets.MAX_PETS);
+    expect(w.itemCount('wobbly_pudding')).toBe(lures + 1);
+    // Feeding and releasing touch only the chosen pet.
+    w.addItem(Pets.PET_FOOD, 1);
+    const hunger = w.player.pets[0]!.hunger;
+    w.player.pets[2]!.hunger = 10;
+    expect(w.feedPet(w.player.pets[2])).toBeNull();
+    expect(w.player.pets[0]!.hunger).toBe(hunger);
+    expect(w.player.pets[2]!.hunger).toBeGreaterThan(10);
+    w.releasePet(w.player.pets[1]);
+    expect(w.player.pets.map((p) => p.name)).not.toContain('Two');
+    expect(w.petMovers()).toHaveLength(2);
+    const doc = migrate(JSON.parse(JSON.stringify(toSaveDoc(w, 0))));
+    const fresh = new World(content, meadow, { seed: 4 });
+    applySaveDoc(fresh, doc);
+    expect(fresh.player.pets.map((p) => p.name)).toEqual(w.player.pets.map((p) => p.name));
   });
 });

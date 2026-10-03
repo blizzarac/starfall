@@ -123,7 +123,7 @@ export class Minimap {
     }
     for (const npc of w.npcs) dot(npc.x, npc.y, 0xffd84a, 1.8);
     for (const m of w.monsters.values()) dot(m.tile.x, m.tile.y, m.def.boss ? 0xb46cf0 : 0xff4a3a, m.def.boss ? 3 : 1.4);
-    if (w.petMover) dot(w.petMover.tile.x, w.petMover.tile.y, 0xff8fb8, 1.6);
+    for (const { mover } of w.petMovers()) dot(mover.tile.x, mover.tile.y, 0xff8fb8, 1.6);
     const p = w.player.next ?? w.player.tile;
     dot(p.x, p.y, 0xffffff, 2.6);
   }

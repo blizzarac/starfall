@@ -18,6 +18,18 @@ const PieceSchema = z.object({
 export type SavedPiece = z.infer<typeof PieceSchema>;
 
 /** One slot's full player state. Monsters and ground loot are not saved; they respawn on load. */
+/** One saved pet. */
+const PetSaveSchema = z.object({
+  species: z.string(),
+  name: z.string().min(1).max(24),
+  intimacy: z.number().int().min(0).max(1000),
+  hunger: z.number().int().min(0).max(100),
+  /** Pet level, XP and gear. Absent in older saves: a level 1 pet with no gear. */
+  level: z.number().int().min(1).optional(),
+  xp: z.number().int().min(0).optional(),
+  gear: z.string().nullable().optional(),
+});
+
 export const SaveDocSchema = z.object({
   schemaVersion: z.literal(SAVE_SCHEMA_VERSION),
   savedAt: z.number(),
@@ -62,19 +74,10 @@ export const SaveDocSchema = z.object({
     .optional(),
   /** Quick bar (skill and item ids). Absent in older saves; rebuilt from learned skills. */
   hotbar: z.array(z.string()).max(8).optional(),
-  /** The tamed pet, if any. */
-  pet: z
-    .object({
-      species: z.string(),
-      name: z.string().min(1).max(24),
-      intimacy: z.number().int().min(0).max(1000),
-      hunger: z.number().int().min(0).max(100),
-      /** Pet level, XP and gear. Absent in older saves: a level 1 pet with no gear. */
-      level: z.number().int().min(1).optional(),
-      xp: z.number().int().min(0).optional(),
-      gear: z.string().nullable().optional(),
-    })
-    .nullable(),
+  /** Pets out with you (up to three). Older saves kept a single `pet` instead. */
+  pets: z.array(PetSaveSchema).max(3).optional(),
+  /** The tamed pet, in saves from before you could keep several. */
+  pet: PetSaveSchema.nullable().optional(),
 });
 export type SaveDoc = z.infer<typeof SaveDocSchema>;
 
