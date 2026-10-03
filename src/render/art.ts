@@ -2,14 +2,12 @@ import Phaser from 'phaser';
 import { DPR } from './view';
 
 /**
- * High-resolution world art. Generated textures (trees, houses, monsters, the
- * ground) are drawn ART_RES times bigger than their size in the world, so they
+ * High-resolution world art. Generated textures (trees, houses, monsters,
+ * effects) are drawn ART_RES times bigger than their size in the world, so they
  * stay sharp on high-DPI screens. Images of those textures compensate
  * automatically: game code keeps using world-size scales (1 = natural size).
  */
-export const ART_RES = Math.max(1, Math.min(3, Math.ceil(DPR)));
-/** The ground is a big texture per map, so it gets less supersampling. */
-export const GROUND_RES = Math.min(2, ART_RES);
+export const ART_RES = Math.max(1, Math.min(2, Math.ceil(DPR)));
 
 const resByKey = new Map<string, number>();
 
