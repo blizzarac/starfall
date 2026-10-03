@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { STAT_NAMES } from '../core/combat/formulas';
 import { EQUIP_SLOTS } from '../core/equipment';
 import { JOBS, type JobId } from '../core/jobs';
+import { cleanAppearance, type Appearance } from '../core/appearance';
 
 export const SAVE_SCHEMA_VERSION = 7;
 
@@ -52,6 +53,11 @@ export const SaveDocSchema = z.object({
   flags: z.record(z.string(), z.union([z.boolean(), z.number(), z.string()])),
   position: Place,
   savePoint: Place,
+  /** Hair style and color indices. Absent in older saves (default look). */
+  appearance: z
+    .object({ hairStyle: z.string(), hairColor: z.number().int(), eyeColor: z.number().int(), skinTone: z.number().int() })
+    .partial()
+    .optional(),
   /** Quick bar (skill and item ids). Absent in older saves; rebuilt from learned skills. */
   hotbar: z.array(z.string()).max(8).optional(),
   /** The tamed pet, if any. */
@@ -82,6 +88,8 @@ export interface SlotMeta {
   jobLevel: number;
   playtimeMs: number;
   savedAt: number;
+  /** For drawing the character on the title screen. */
+  appearance?: Appearance;
 }
 
 export function slotMetaFrom(id: number, doc: SaveDoc): SlotMeta {
@@ -94,5 +102,6 @@ export function slotMetaFrom(id: number, doc: SaveDoc): SlotMeta {
     jobLevel: c.jobLevel,
     playtimeMs: doc.playtimeMs,
     savedAt: doc.savedAt,
+    appearance: cleanAppearance(doc.appearance as Partial<Appearance> | undefined),
   };
 }

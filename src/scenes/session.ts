@@ -23,6 +23,7 @@ export async function startSession(scene: Phaser.Scene, slot: number, doc: SaveD
   if (!doc) await saves.save();
 
   scene.registry.set('world', world);
+  scene.registry.set('newCharacter', !doc);
   scene.registry.set('saves', saves);
   scene.registry.set('unbindAudio', bindWorldAudio(world));
   scene.scene.start('World');

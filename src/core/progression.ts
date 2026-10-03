@@ -6,6 +6,7 @@ import { JOBS, jobOf, NOVICE_JOB_CHANGE, SECOND_JOB_LEVEL, type JobId } from './
 import { impositioAtk, learnBlocker, QUICKEN_DELAY, skillLevel, skillStatBonus, type SkillId } from './skills';
 import { gearBonus, slotFor, weaponOf, type GearPiece } from './equipment';
 import { petBonus } from './pets';
+import { DEFAULT_APPEARANCE } from './appearance';
 import { BLIND_FACTOR } from './status';
 
 export interface DerivedStats {
@@ -100,6 +101,7 @@ export function createPlayer(name: string, start: Tile): Player {
     savePoint: { map: '', ...start },
     pet: null,
     hotbar: [],
+    appearance: { ...DEFAULT_APPEARANCE },
   };
   const d = derivedStats(p);
   p.hp = d.maxHp;

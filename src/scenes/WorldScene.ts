@@ -8,7 +8,8 @@ import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
-import { chibiOrigin, ensureChibi, hexColor } from '../render/chibi';
+import { chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
+import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
 import { quality } from '../render/quality';
@@ -314,7 +315,7 @@ export class WorldScene extends Phaser.Scene {
   /** The player's look follows their job. */
   private playerTexture(): string {
     const job = jobOf(this.world.player);
-    return ensureChibi(this, `job-${job.id}`, job.look.body, COLORS.playerHair, job.look.extra);
+    return playerChibi(this, job, this.world.player.appearance);
   }
 
   private placePortals(): void {
@@ -336,7 +337,7 @@ export class WorldScene extends Phaser.Scene {
         npc.sprite === 'board'
           ? this.add.image(0, 0, 'board').setOrigin(0.5, feetOrigin(this, 'board', 54))
           : this.add
-              .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), hexColor(npc.look.hair)))
+              .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), npcAppearance(npc.id, hexColor(npc.look.hair))))
               .setOrigin(0.5, chibiOrigin(this, `npc-${npc.id}`))
               .setFlipX(hash(npc.x, npc.y) % 2 === 0);
       const label = this.add
@@ -669,6 +670,10 @@ export class WorldScene extends Phaser.Scene {
       }),
       ev.on('heal', (e) => {
         if (e.hp > 0) this.floatText('player', `+${e.hp}`, '#7dff9a', 15);
+      }),
+      ev.on('appearanceChanged', () => {
+        const key = this.playerTexture();
+        this.playerBody.setTexture(key).setOrigin(0.5, chibiOrigin(this, key));
       }),
       ev.on('jobChanged', () => {
         this.playerBody.setTexture(this.playerTexture());

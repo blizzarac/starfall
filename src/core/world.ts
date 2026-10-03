@@ -13,6 +13,7 @@ import { applyDeathPenalty, changeJob, createPlayer, derivedStats, effectiveStat
 import * as S from './skills';
 import * as St from './status';
 import * as Pets from './pets';
+import { cleanAppearance, type Appearance } from './appearance';
 import { MAX_ACTIVE_QUESTS, questState } from './quests';
 import type { Element } from './combat/formulas';
 import { createRng, randInt, type Rng } from './rng';
@@ -53,6 +54,7 @@ export interface WorldEvents extends Record<string, unknown> {
   mapChanged: { mapId: string };
   storageChanged: Record<string, never>;
   hotbarChanged: Record<string, never>;
+  appearanceChanged: Record<string, never>;
   autoChanged: { on: boolean };
   petTamed: { name: string };
   tameFailed: { name: string };
@@ -250,6 +252,12 @@ export class World {
   }
 
   // ---- Quick bar, potions and Auto ------------------------------------------
+
+  /** Changes how the character looks (free, any time). */
+  setAppearance(a: Appearance): void {
+    this.player.appearance = cleanAppearance(a);
+    this.events.emit('appearanceChanged', {});
+  }
 
   /** Adds or removes a skill or consumable on the quick bar. Returns why not, or null. */
   toggleHotbar(id: string): string | null {

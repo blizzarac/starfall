@@ -4,7 +4,6 @@ import { SaveDb } from '../save/db';
 import { audio } from '../audio/engine';
 import { loadAudioSettings } from '../audio/settings';
 import { loadQuality } from '../render/quality';
-import { ensureChibi } from '../render/chibi';
 import { inkify, makeBurstTexture } from '../render/ink';
 import { COLORS } from '../render/palette';
 
@@ -27,7 +26,6 @@ export class BootScene extends Phaser.Scene {
     void loadQuality(db, this.game);
 
     this.makeTextures();
-    ensureChibi(this, 'job-novice', COLORS.playerBody, COLORS.playerHair);
     this.scene.start('Title');
   }
 

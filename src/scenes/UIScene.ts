@@ -18,6 +18,7 @@ import { PetWindow } from '../ui/PetWindow';
 import { HotbarWindow } from '../ui/HotbarWindow';
 import { Minimap } from '../ui/Minimap';
 import { WorldMapWindow } from '../ui/WorldMapWindow';
+import { AppearanceWindow } from '../ui/AppearanceWindow';
 import { nextGoal } from '../core/goals';
 import { audio } from '../audio/engine';
 import type { SaveDb } from '../save/db';
@@ -80,6 +81,7 @@ export class UIScene extends Phaser.Scene {
   private petWindow!: PetWindow;
   private hotbarWindow!: HotbarWindow;
   private worldMap!: WorldMapWindow;
+  private appearanceWindow!: AppearanceWindow;
   private minimap!: Minimap;
   /** Active hunts under the status panel. */
   private tracker!: Phaser.GameObjects.Text;
@@ -140,6 +142,7 @@ export class UIScene extends Phaser.Scene {
     this.petWindow = new PetWindow(this, this.world);
     this.hotbarWindow = new HotbarWindow(this, this.world);
     this.worldMap = new WorldMapWindow(this, this.world);
+    this.appearanceWindow = new AppearanceWindow(this, this.world);
     this.minimap = new Minimap(this, this.world, () => this.worldMap.toggle());
     const openPet = () => this.petWindow.open();
     this.game.events.on('openPet', openPet);
@@ -162,6 +165,11 @@ export class UIScene extends Phaser.Scene {
     this.bindKeys();
     this.bindEvents();
     this.showMapName();
+    // A brand-new character picks a look first.
+    if (this.registry.get('newCharacter')) {
+      this.registry.set('newCharacter', false);
+      this.appearanceWindow.open();
+    }
     if (this.world.player.baseLevel === 1 && this.world.player.baseXp === 0) {
       this.addLog(`Welcome to ${this.world.map.name}. ${this.isTouch() ? 'Tap' : 'Click'} Pell for tips, or head south to the meadow.`);
     }
@@ -405,7 +413,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private panels(): Panel[] {
-    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel, this.worldMap.panel];
+    return [this.inventory.panel, this.shop.panel, this.dialogue.panel, this.skillWindow.panel, this.refineWindow.panel, this.questWindow.panel, this.storageWindow.panel, this.petWindow.panel, this.hotbarWindow.panel, this.worldMap.panel, this.appearanceWindow.panel];
   }
 
   private refreshPanels(): void {
@@ -418,6 +426,7 @@ export class UIScene extends Phaser.Scene {
     if (this.petWindow.panel.visible) this.petWindow.refresh();
     if (this.hotbarWindow.panel.visible) this.hotbarWindow.refresh();
     if (this.worldMap.panel.visible) this.worldMap.refresh();
+    if (this.appearanceWindow.panel.visible) this.appearanceWindow.refresh();
     if (this.dialogue.panel.visible) this.dialogue.refresh();
   }
 
@@ -597,6 +606,7 @@ export class UIScene extends Phaser.Scene {
       ['Quest log', () => (this.toggleMenu(), this.questWindow.open(false))],
       ['Pet', () => (this.toggleMenu(), this.petWindow.open())],
       ['World map', () => (this.toggleMenu(), this.worldMap.open())],
+      ['Appearance', () => (this.toggleMenu(), this.appearanceWindow.open())],
       ['Edit quick bar', () => (this.toggleMenu(), this.hotbarWindow.open())],
       ['Toggle debug overlay', () => (this.toggleDebug(), this.toggleMenu())],
       ['Save and quit to title', () => void endSession(this)],

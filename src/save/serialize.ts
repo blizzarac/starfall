@@ -4,6 +4,7 @@ import type { ItemDef } from '../data/schemas';
 import { JOBS } from '../core/jobs';
 import { isSkillId, SKILLS } from '../core/skills';
 import { PET_SPECIES } from '../core/pets';
+import { cleanAppearance, type Appearance } from '../core/appearance';
 import { buildGrid, START_MAP } from '../data/content';
 import { derivedStats } from '../core/progression';
 import type { World } from '../core/world';
@@ -45,6 +46,7 @@ export function toSaveDoc(world: World, playtimeMs: number, now = Date.now()): S
     savePoint: { ...p.savePoint },
     pet: p.pet ? { ...p.pet } : null,
     hotbar: [...p.hotbar],
+    appearance: { ...p.appearance },
   };
 }
 
@@ -88,6 +90,7 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
   };
   world.restoreFlags(doc.flags);
   p.skills = new Map(Object.entries(c.skills).filter(([id]) => isSkillId(id)));
+  p.appearance = cleanAppearance(doc.appearance as Partial<Appearance> | undefined);
   // The quick bar keeps only skills still known and items that still exist.
   const usable = (id: string) => (isSkillId(id) ? SKILLS[id].kind !== 'passive' && p.skills.has(id) : world.content.items.get(id)?.type === 'consumable');
   p.hotbar = doc.hotbar
