@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { EYE_COLORS, HAIR_COLORS, HAIR_STYLE_NAMES, HAIR_STYLES, SKIN_TONES, type Appearance } from '../core/appearance';
 import { jobOf } from '../core/jobs';
 import type { World } from '../core/world';
-import { chibiOrigin, playerChibi } from '../render/chibi';
+import { CHAR_SCALE, chibiOrigin, playerChibi } from '../render/chibi';
 import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton, Panel } from './widgets';
 
@@ -49,13 +49,13 @@ export class AppearanceWindow {
       this.refresh();
     };
 
-    // Big preview on a manga "spotlight".
+    // Big full-height preview in a manga panel.
     const cx = p.w / 2;
-    p.add(this.scene.add.ellipse(cx, 196, 150, 34, COLORS.ink, 0.18));
-    p.add(this.scene.add.circle(cx, 130, 76, 0xffe9a8).setStrokeStyle(3, COLORS.ink));
-    // A 3x drawing, so the big preview stays sharp.
-    const key = playerChibi(this.scene, jobOf(w.player), a, 3);
-    p.add(this.scene.add.image(cx, 196, key).setOrigin(0.5, chibiOrigin(this.scene, key)).setScale(2.6 / 3));
+    p.add(this.scene.add.rectangle(cx, 120, 150, 182, 0xffe9a8).setStrokeStyle(3, COLORS.ink));
+    p.add(this.scene.add.ellipse(cx, 202, 90, 16, COLORS.ink, 0.15));
+    // The sprite is drawn at 3x, so it stays sharp at this size.
+    const key = playerChibi(this.scene, jobOf(w.player), a);
+    p.add(this.scene.add.image(cx, 204, key).setOrigin(0.5, chibiOrigin(this.scene, key)).setScale(CHAR_SCALE * 1.6));
 
     let y = 222;
     const heading = (label: string) => {

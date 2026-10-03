@@ -13,7 +13,7 @@ export const HAIR_STYLES = ['spiky', 'bob', 'long', 'ponytail', 'twintails', 'sh
 export type HairStyle = (typeof HAIR_STYLES)[number];
 
 export const HAIR_STYLE_NAMES: Record<HairStyle, string> = {
-  spiky: 'Spiky',
+  spiky: 'Messy',
   bob: 'Bob',
   long: 'Long',
   ponytail: 'Ponytail',

@@ -3,10 +3,11 @@ import { SLOT_IDS, type SaveDb } from '../save/db';
 import { downloadSave, getLastSlot, parseSaveFile, pickFile } from '../save/manager';
 import type { SlotMeta } from '../save/schema';
 import { JOBS } from '../core/jobs';
-import { chibiOrigin, playerChibi } from '../render/chibi';
+import { CHAR_SCALE, chibiOrigin, playerChibi } from '../render/chibi';
 import { DEFAULT_APPEARANCE } from '../core/appearance';
 import { COLORS, IMPACT_FONT, TEXT, TONE } from '../render/palette';
 import { makeButton } from '../ui/widgets';
+import { screenCamera, viewSize } from '../render/view';
 import { startSession } from './session';
 import { audio } from '../audio/engine';
 import { updateAudioSettings } from '../audio/settings';
@@ -31,6 +32,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    screenCamera(this);
     this.db = this.registry.get('db') as SaveDb;
     this.cards = [];
     this.busy = false;
@@ -79,8 +81,8 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private layout(): void {
-    const { width, height } = this.scale;
-    const top = Math.max(24, this.scale.height / 2 - (3 * (CARD_H + CARD_GAP) + 140) / 2);
+    const { width, height } = viewSize(this);
+    const top = Math.max(24, viewSize(this).height / 2 - (3 * (CARD_H + CARD_GAP) + 140) / 2);
     this.heading.setPosition(width / 2, top - 6);
     this.soundToggle.setPosition(width - 10, 10);
     this.sub.setPosition(width / 2, top + 66);
@@ -91,7 +93,7 @@ export class TitleScene extends Phaser.Scene {
 
   private buildCards(): void {
     this.cards.forEach((c) => c.destroy());
-    const w = Math.min(380, this.scale.width - 32);
+    const w = Math.min(380, viewSize(this).width - 32);
     const last = getLastSlot();
     this.cards = SLOT_IDS.map((id) => {
       const meta = this.slots.get(id);
@@ -117,7 +119,7 @@ export class TitleScene extends Phaser.Scene {
       }
       if (job) {
         const key = playerChibi(this, job, meta?.appearance ?? DEFAULT_APPEARANCE);
-        children.push(this.add.image(-w / 2 + 34, 98, key).setOrigin(0.5, chibiOrigin(this, key)).setScale(1.1));
+        children.push(this.add.image(-w / 2 + 34, 108, key).setOrigin(0.5, chibiOrigin(this, key)).setScale(CHAR_SCALE * 0.95));
       }
       if (meta) {
         children.push(

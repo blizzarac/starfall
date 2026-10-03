@@ -8,11 +8,12 @@ import type { MonsterDef } from '../data/schemas';
 import { SimClock } from '../core/sim';
 import type { SaveManager } from '../save/manager';
 import { renderPosition, type EntityId, type World } from '../core/world';
-import { chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
+import { CHAR_SCALE, chibiOrigin, ensureChibi, hexColor, playerChibi } from '../render/chibi';
 import { npcAppearance } from '../core/appearance';
 import { BURST_RADIUS, feetOrigin, speedLines } from '../render/ink';
 import { COLORS, IMPACT_FONT, WORLD_TEXT } from '../render/palette';
 import { quality } from '../render/quality';
+import { DPR, viewSize } from '../render/view';
 import { depthFor, TILE_H, TILE_W, tileToWorld, worldToTile } from '../render/iso';
 
 interface MonsterView {
@@ -140,9 +141,9 @@ export class WorldScene extends Phaser.Scene {
     this.debugGfx = this.add.graphics().setDepth(5000);
 
     const playerKey = this.playerTexture();
-    this.playerBody = this.add.image(0, 0, playerKey).setOrigin(0.5, chibiOrigin(this, playerKey));
+    this.playerBody = this.add.image(0, 0, playerKey).setOrigin(0.5, chibiOrigin(this, playerKey)).setScale(CHAR_SCALE);
     this.castBar = this.add.graphics();
-    this.statusLabel = this.add.text(0, -66, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
+    this.statusLabel = this.add.text(0, -112, '', { ...WORLD_TEXT, fontSize: '11px' }).setOrigin(0.5, 1);
     this.player = this.add.container(0, 0, [this.add.image(0, 0, 'shadow'), this.playerBody, this.castBar, this.statusLabel]);
 
     const cam = this.cameras.main;
@@ -153,7 +154,7 @@ export class WorldScene extends Phaser.Scene {
     cam.setBounds(left, -TILE_H * 3, right - left, bottom + TILE_H * 3);
     cam.startFollow(this.player, true, 0.15, 0.15);
     // Phones in portrait need to see more of the map; big screens get a closer view.
-    cam.setZoom(this.scale.width < 500 ? 0.9 : window.devicePixelRatio > 1 ? 1.25 : 1);
+    cam.setZoom((viewSize(this).width < 500 ? 0.9 : 1) * DPR);
 
     this.bindInput();
     this.bindEvents();
@@ -339,12 +340,14 @@ export class WorldScene extends Phaser.Scene {
           : this.add
               .image(0, 0, ensureChibi(this, `npc-${npc.id}`, hexColor(npc.look.body), npcAppearance(npc.id, hexColor(npc.look.hair))))
               .setOrigin(0.5, chibiOrigin(this, `npc-${npc.id}`))
+              .setScale(CHAR_SCALE)
               .setFlipX(hash(npc.x, npc.y) % 2 === 0);
       const label = this.add
-        .text(0, -66, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
+        .text(0, npc.sprite === 'board' ? -66 : -110, npc.name, { ...WORLD_TEXT, fontSize: '12px', color: '#ffe27a' })
         .setOrigin(0.5, 1);
       const view = this.add.container(p.x, p.y, [this.add.image(0, 0, 'shadow'), body, label]).setDepth(depthFor(p.y));
-      this.tweens.add({ targets: body, scaleY: { from: 1, to: 0.97 }, yoyo: true, repeat: -1, duration: 1200 + (hash(npc.x, npc.y) % 400) });
+      const s = body.scaleY;
+      this.tweens.add({ targets: body, scaleY: { from: s, to: s * 0.985 }, yoyo: true, repeat: -1, duration: 1200 + (hash(npc.x, npc.y) % 400) });
       this.npcViews.set(npc.id, view);
     }
   }
@@ -383,7 +386,7 @@ export class WorldScene extends Phaser.Scene {
     const moving = p.next !== null;
     const bob = moving ? Math.abs(Math.sin(now / 70)) * 2 : 0;
     this.playerBody.setY(-bob);
-    this.playerBody.setScale(1, p.sitting ? 0.72 : 1);
+    this.playerBody.setScale(CHAR_SCALE, CHAR_SCALE * (p.sitting ? 0.72 : 1));
     this.player.setAlpha(p.dead ? 0.35 : 1);
     // Fainted players lie down; stunned ones wobble.
     this.playerBody.setAngle(p.dead ? 90 : p.statuses.has('stun') ? Math.sin(this.time.now / 60) * 6 : 0);
@@ -610,7 +613,7 @@ export class WorldScene extends Phaser.Scene {
 
   private npcAt(wx: number, wy: number): string | null {
     for (const [id, view] of this.npcViews) {
-      if (Phaser.Math.Distance.Between(wx, wy, view.x, view.y - 24) < this.pickRadius() * 1.2) return id;
+      if (Phaser.Math.Distance.Between(wx, wy, view.x, view.y - 44) < this.pickRadius() * 1.4) return id;
     }
     return null;
   }
@@ -942,7 +945,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private anchorOf(id: EntityId): { x: number; y: number } | null {
-    if (id === 'player') return { x: this.player.x, y: this.player.y - 56 };
+    if (id === 'player') return { x: this.player.x, y: this.player.y - 100 };
     const view = this.monsterViews.get(id);
     return view ? { x: view.root.x, y: view.root.y - 40 } : null;
   }
@@ -950,7 +953,7 @@ export class WorldScene extends Phaser.Scene {
   /** Pooled text objects: creating a Text allocates a canvas and a texture, so combat text is reused. */
   private takeText(text: string, style: Phaser.Types.GameObjects.Text.TextStyle): Phaser.GameObjects.Text {
     const t = this.textPool.pop() ?? this.add.text(0, 0, '');
-    return t.setStyle(style).setText(text).setOrigin(0.5).setActive(true).setVisible(true).setAlpha(1).setScale(1).setAngle(0);
+    return t.setStyle({ resolution: DPR, ...style }).setText(text).setOrigin(0.5).setActive(true).setVisible(true).setAlpha(1).setScale(1).setAngle(0);
   }
 
   private releaseText(t: Phaser.GameObjects.Text): void {

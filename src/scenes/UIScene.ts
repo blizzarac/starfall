@@ -23,6 +23,7 @@ import { nextGoal } from '../core/goals';
 import { audio } from '../audio/engine';
 import type { SaveDb } from '../save/db';
 import { quality, setQuality } from '../render/quality';
+import { screenCamera, viewSize } from '../render/view';
 import { nextVolume, updateAudioSettings, volumeLabel } from '../audio/settings';
 import { RefineWindow } from '../ui/RefineWindow';
 import { SkillWindow } from '../ui/SkillWindow';
@@ -100,6 +101,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
+    screenCamera(this);
     this.world = this.registry.get('world') as World;
     this.log = [];
     this.statLines.clear();
@@ -195,7 +197,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private layout(): void {
-    const { width, height } = this.scale;
+    const { width, height } = viewSize(this);
     const narrow = width < NARROW;
     this.menuButton.setPosition(width - 10, 10);
     this.minimap.root.setPosition(width - 14 - this.minimap.width, 56);
@@ -432,7 +434,7 @@ export class UIScene extends Phaser.Scene {
 
   /** HP bar for an area boss on the current map, or the time until it returns. */
   private drawBossBar(): void {
-    const { width } = this.scale;
+    const { width } = viewSize(this);
     const narrow = width < NARROW;
     const g = this.bossBar.clear();
     const boss = [...this.world.monsters.values()].find((m) => m.def.boss);
@@ -464,14 +466,14 @@ export class UIScene extends Phaser.Scene {
       const name = w.content.monsters.get(q.target.monster)?.name ?? q.target.monster;
       return n >= q.target.count ? `✓ ${q.name}: return to the board` : `${name} ${n}/${q.target.count}`;
     });
-    const narrow = this.scale.width < NARROW;
+    const narrow = viewSize(this).width < NARROW;
     const bossShown = this.bossText.visible && narrow;
     // The goal only changes on level-ups and map changes; recomputing it every frame is cheap enough.
     const lines = [`★ ${nextGoal(w)}`, ...quests];
     this.tracker
       .setText(lines.join('\n'))
       .setPosition(12, bossShown ? 188 : 150)
-      .setWordWrapWidth(Math.min(360, this.scale.width - 24))
+      .setWordWrapWidth(Math.min(360, viewSize(this).width - 24))
       .setVisible(!this.statWindow.visible);
   }
 

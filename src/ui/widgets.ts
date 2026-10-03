@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio/engine';
+import { viewSize } from '../render/view';
 import { COLORS, IMPACT_FONT, TEXT } from '../render/palette';
 
 /** Fill while a button is held down. */
@@ -109,7 +110,7 @@ export class Panel {
 
   /** Repositions for the current screen size. Returns true if the size changed. */
   layout(): boolean {
-    const { width, height } = this.scene.scale;
+    const { width, height } = viewSize(this.scene);
     const s = this.size(width, height);
     const changed = s.w !== this.w || s.h !== this.h;
     this.w = s.w;
