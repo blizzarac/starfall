@@ -20,11 +20,12 @@ describe('progression', () => {
     expect(p.hp).toBe(derivedStats(p).maxHp);
   });
 
-  it('stops job levels at the job cap', () => {
+  it('has no level caps: base and job levels keep rising, a skill point per job level', () => {
     const p = createPlayer('t', { x: 0, y: 0 });
-    gainXp(p, 0, 1_000_000);
-    expect(p.jobLevel).toBe(10);
-    expect(p.skillPoints).toBe(9);
+    gainXp(p, 1e9, 1_000_000);
+    expect(p.jobLevel).toBeGreaterThan(50);
+    expect(p.skillPoints).toBe(p.jobLevel - 1);
+    expect(p.baseLevel).toBeGreaterThan(99);
   });
 
   it('spends stat points by the raise cost', () => {

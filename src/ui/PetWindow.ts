@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { describeBonus } from '../core/equipment';
-import { appetite, bonusFactor, describePetGear, fondness, MAX_INTIMACY, MAX_PETS, MAX_PET_LEVEL, PET_ATTACK_MS, PET_FOOD, PET_SPECIES, petAttackDamage, petBonus, petXpToNext } from '../core/pets';
+import { appetite, bonusFactor, describePetGear, fondness, MAX_INTIMACY, MAX_PETS, PET_ATTACK_MS, PET_FOOD, PET_SPECIES, petAttackDamage, petBonus, petXpToNext } from '../core/pets';
 import type { World } from '../core/world';
 import { COLORS, TEXT, TONE } from '../render/palette';
 import { centered, makeButton, Panel } from './widgets';
@@ -86,9 +86,8 @@ export class PetWindow {
       g.lineStyle(2, COLORS.ink).strokeRect(12, y + 19, p.w - 24, 10);
       p.add(g);
     };
-    const maxed = pet.level >= MAX_PET_LEVEL;
     const need = petXpToNext(pet.level);
-    bar(64 + top, 'Level', maxed ? `Lv ${pet.level} (max)` : `Lv ${pet.level} · ${Math.floor((pet.xp / need) * 100)}%`, maxed ? 1 : pet.xp / need, 0xa98bff);
+    bar(64 + top, 'Level', `Lv ${pet.level} · ${Math.floor((pet.xp / need) * 100)}%`, pet.xp / need, 0xa98bff);
     bar(102 + top, 'Friendship', fondness(pet.intimacy), pet.intimacy / MAX_INTIMACY, 0xff8fb8);
     bar(140 + top, 'Fullness', appetite(pet.hunger), pet.hunger / 100, 0xffb52e);
     let y = 176 + top;

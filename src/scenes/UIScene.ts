@@ -265,13 +265,12 @@ export class UIScene extends Phaser.Scene {
     const baseNeed = F.baseXpToNext(p.baseLevel);
     const job = jobOf(p);
     const jobNeed = F.jobXpToNext(p.jobLevel, job.jobXpFactor);
-    const jobMax = p.jobLevel >= job.maxJobLevel;
     const inner = STATUS_W - 12;
     bar(14, 27, inner, 13, p.hp / d.maxHp, p.hp / d.maxHp > 0.25 ? COLORS.hpBar : COLORS.hpBarLow);
     bar(14, 41, inner, 10, p.sp / d.maxSp, COLORS.spBar);
     const half = (inner - 4) / 2;
     bar(14, 54, half, 5, p.baseXp / baseNeed, COLORS.xpBar);
-    bar(18 + half, 54, half, 5, jobMax ? 1 : p.jobXp / jobNeed, COLORS.jobXpBar);
+    bar(18 + half, 54, half, 5, p.jobXp / jobNeed, COLORS.jobXpBar);
     const ratio = this.world.weightRatio();
 
     const pct = (a: number, b: number) => `${((a / b) * 100).toFixed(1)}%`;
@@ -280,7 +279,7 @@ export class UIScene extends Phaser.Scene {
     this.hpText.setText(`HP ${p.hp}/${d.maxHp}`);
     this.spText.setText(`SP ${p.sp}/${d.maxSp}`);
     this.statusFoot.setText(
-      `${pct(p.baseXp, baseNeed)} / ${jobMax ? 'MAX' : pct(p.jobXp, jobNeed)}  ·  ${p.gold}g  ·  Wt ${Math.round(ratio * 100)}%${ratio >= 0.9 ? '!!' : ratio >= 0.5 ? '!' : ''}`,
+      `${pct(p.baseXp, baseNeed)} / ${pct(p.jobXp, jobNeed)}  ·  ${p.gold}g  ·  Wt ${Math.round(ratio * 100)}%${ratio >= 0.9 ? '!!' : ratio >= 0.5 ? '!' : ''}`,
     );
   }
 

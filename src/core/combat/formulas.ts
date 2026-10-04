@@ -5,8 +5,6 @@
 import type { Rng } from '../rng';
 
 export const TICK_MS = 50;
-export const MAX_BASE_LEVEL = 99;
-export const MAX_STAT = 99;
 
 export type StatName = 'str' | 'agi' | 'vit' | 'int' | 'dex' | 'luk';
 export const STAT_NAMES: readonly StatName[] = ['str', 'agi', 'vit', 'int', 'dex', 'luk'];

@@ -24,10 +24,10 @@
 
 | Path | Kills/min | Deaths/hour | Potions/hour | Gold earned/hour | Final level |
 |---|---:|---:|---:|---:|---|
-| knight | 15.6 | 2.5 | 31 | 28025 | 99 / knight 50 |
-| wizard | 16.3 | 3.9 | 29 | 26947 | 99 / wizard 50 |
-| hunter | 16.5 | 2.6 | 16 | 34386 | 99 / hunter 50 |
-| priest | 16.2 | 0.0 | 0 | 40724 | 99 / priest 50 |
+| knight | 16.3 | 2.6 | 32 | 32599 | 99 / knight 78 |
+| wizard | 16.2 | 3.9 | 29 | 26705 | 99 / wizard 78 |
+| hunter | 16.4 | 2.5 | 16 | 34127 | 99 / hunter 78 |
+| priest | 16.2 | 0.0 | 0 | 40724 | 99 / priest 78 |
 
 ## Per area
 
@@ -39,8 +39,8 @@
 | knight | Whisperwood | 15 | 7.4 | 1184 | 4.1 |
 | knight | Saltmere Coast | 11 | 6.6 | 2000 | 0.0 |
 | knight | Glimmer Caves | 52 | 13.5 | 3638 | 0.0 |
-| knight | Sunscorch Dunes | 68 | 17.0 | 12141 | 2.7 |
-| knight | Sunken Ruins | 70 | 19.3 | 30931 | 5.1 |
+| knight | Sunscorch Dunes | 68 | 17.1 | 12254 | 2.7 |
+| knight | Sunken Ruins | 62 | 22.0 | 34704 | 5.8 |
 | wizard | Southern Meadow | 8 | 6.1 | 86 | 0.0 |
 | wizard | Thornfield | 18 | 9.3 | 204 | 0.0 |
 | wizard | Mossy Hollow | 11 | 11.8 | 837 | 0.0 |
@@ -48,7 +48,7 @@
 | wizard | Saltmere Coast | 7 | 1.5 | 540 | 24.3 |
 | wizard | Glimmer Caves | 14 | 25.7 | 7046 | 0.0 |
 | wizard | Sunscorch Dunes | 88 | 18.6 | 12655 | 2.7 |
-| wizard | Sunken Ruins | 83 | 17.0 | 23789 | 6.5 |
+| wizard | Sunken Ruins | 85 | 16.6 | 23190 | 6.3 |
 | hunter | Southern Meadow | 4 | 12.9 | 180 | 0.0 |
 | hunter | Thornfield | 6 | 32.5 | 645 | 0.0 |
 | hunter | Mossy Hollow | 33 | 8.6 | 645 | 1.8 |
@@ -56,7 +56,7 @@
 | hunter | Saltmere Coast | 18 | 4.1 | 1192 | 0.0 |
 | hunter | Glimmer Caves | 21 | 13.9 | 3805 | 0.0 |
 | hunter | Sunscorch Dunes | 50 | 12.7 | 8495 | 2.4 |
-| hunter | Sunken Ruins | 74 | 26.3 | 36471 | 2.4 |
+| hunter | Sunken Ruins | 75 | 26.0 | 35956 | 2.4 |
 | priest | Southern Meadow | 2 | 22.6 | 316 | 0.0 |
 | priest | Thornfield | 13 | 11.9 | 282 | 0.0 |
 | priest | Mossy Hollow | 20 | 5.8 | 459 | 0.0 |

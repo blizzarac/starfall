@@ -60,7 +60,7 @@ export function applySaveDoc(world: World, doc: SaveDoc): void {
     name: c.name,
     jobId: c.jobId,
     baseLevel: c.baseLevel,
-    jobLevel: Math.min(c.jobLevel, JOBS[c.jobId].maxJobLevel),
+    jobLevel: c.jobLevel,
     baseXp: c.baseXp,
     jobXp: c.jobXp,
     stats: { ...c.stats },

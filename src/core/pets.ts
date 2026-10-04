@@ -10,7 +10,7 @@ export interface Pet {
   intimacy: number;
   /** Fullness, 0–100. Drops over time; feed with a Pet Treat. */
   hunger: number;
-  /** Grows from the monsters you defeat together, 1–MAX_PET_LEVEL. */
+  /** Grows from the monsters you defeat together, from 1 with no cap. */
   level: number;
   /** XP toward the next level. */
   xp: number;
@@ -52,7 +52,6 @@ export const HUNGER_TICK_MS = 20_000;
 export const STARVING_LOSS = 20;
 /** How far (tiles) from the player a looting pet goes for drops. */
 export const PET_LOOT_RANGE = 5;
-export const MAX_PET_LEVEL = 50;
 /** Friendship for each monster defeated together (while the pet isn't starving). */
 export const KILL_INTIMACY = 2;
 /** Friendship on each pet level up. */
@@ -79,12 +78,11 @@ export function petGear(pet: Pet | null): PetGearDef {
 export function gainPetXp(pet: Pet, xp: number): number {
   let gained = 0;
   pet.xp += Math.max(0, Math.round(xp));
-  while (pet.level < MAX_PET_LEVEL && pet.xp >= petXpToNext(pet.level)) {
+  while (pet.xp >= petXpToNext(pet.level)) {
     pet.xp -= petXpToNext(pet.level);
     pet.level += 1;
     gained += 1;
   }
-  if (pet.level >= MAX_PET_LEVEL) pet.xp = 0;
   return gained;
 }
 

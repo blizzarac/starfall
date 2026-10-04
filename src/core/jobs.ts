@@ -10,7 +10,6 @@ export interface JobDef {
   name: string;
   /** 0 = Novice, 1 = first job, 2 = second job. */
   tier: number;
-  maxJobLevel: number;
   hpFactor: number;
   spFactor: number;
   /** Job XP needed per level is multiplied by this. */
@@ -27,7 +26,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'novice',
     name: 'Novice',
     tier: 0,
-    maxJobLevel: 10,
     hpFactor: 1,
     spFactor: 1,
     jobXpFactor: 1,
@@ -38,7 +36,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'swordsman',
     name: 'Swordsman',
     tier: 1,
-    maxJobLevel: 50,
     hpFactor: 1.6,
     spFactor: 1.1,
     jobXpFactor: 2.5,
@@ -50,7 +47,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'mage',
     name: 'Mage',
     tier: 1,
-    maxJobLevel: 50,
     hpFactor: 0.9,
     spFactor: 2.2,
     jobXpFactor: 2.5,
@@ -62,7 +58,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'archer',
     name: 'Archer',
     tier: 1,
-    maxJobLevel: 50,
     hpFactor: 1.15,
     spFactor: 1.4,
     jobXpFactor: 2.5,
@@ -74,7 +69,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'acolyte',
     name: 'Acolyte',
     tier: 1,
-    maxJobLevel: 50,
     hpFactor: 1.25,
     spFactor: 1.8,
     jobXpFactor: 2.5,
@@ -86,7 +80,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'knight',
     name: 'Knight',
     tier: 2,
-    maxJobLevel: 50,
     hpFactor: 2.2,
     spFactor: 1.3,
     jobXpFactor: 4,
@@ -97,7 +90,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'wizard',
     name: 'Wizard',
     tier: 2,
-    maxJobLevel: 50,
     hpFactor: 1.1,
     spFactor: 2.8,
     jobXpFactor: 4,
@@ -108,7 +100,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'hunter',
     name: 'Hunter',
     tier: 2,
-    maxJobLevel: 50,
     hpFactor: 1.5,
     spFactor: 1.7,
     jobXpFactor: 4,
@@ -119,7 +110,6 @@ export const JOBS: Record<JobId, JobDef> = {
     id: 'priest',
     name: 'Priest',
     tier: 2,
-    maxJobLevel: 50,
     hpFactor: 1.6,
     spFactor: 2.4,
     jobXpFactor: 4,

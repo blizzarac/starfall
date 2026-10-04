@@ -11,7 +11,7 @@ type Migration = (prev: Record<string, unknown>) => Record<string, unknown>;
 export const MIGRATIONS: Record<number, Migration> = {
   // v2: gold and shops arrive.
   2: (d) => ({ ...d, gold: 0 }),
-  // v3: jobs and skills. The job is stored by id; job caps come from the job table.
+  // v3: jobs and skills. The job is stored by id; (job level caps were later removed).
   3: (d) => {
     const { jobName, maxJobLevel: _cap, ...character } = d.character as Record<string, unknown>;
     return { ...d, character: { ...character, jobId: String(jobName).toLowerCase(), skills: {} } };

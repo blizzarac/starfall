@@ -207,13 +207,13 @@ describe('taming and caring', () => {
 });
 
 describe('pet levels, bites and gear', () => {
-  it('levels up from XP, keeps the leftover, and stops at the cap', () => {
+  it('levels up from XP, keeps the leftover, and has no level cap', () => {
     const pet = Pets.newPet('jellop', 'Jelly');
     expect(Pets.gainPetXp(pet, Pets.petXpToNext(1) + 5)).toBe(1);
     expect(pet).toMatchObject({ level: 2, xp: 5 });
-    pet.level = Pets.MAX_PET_LEVEL - 1;
-    expect(Pets.gainPetXp(pet, 1e9)).toBe(1);
-    expect(pet).toMatchObject({ level: Pets.MAX_PET_LEVEL, xp: 0 });
+    pet.level = 50;
+    expect(Pets.gainPetXp(pet, Pets.petXpToNext(50) + Pets.petXpToNext(51))).toBe(2);
+    expect(pet.level).toBe(52);
   });
 
   it('higher levels give bigger bonuses and bites', () => {

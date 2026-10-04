@@ -123,24 +123,23 @@ export function gainXp(p: Player, baseXp: number, jobXp: number): LevelUps {
   const ups: LevelUps = { base: [], job: [] };
 
   p.baseXp += baseXp;
-  while (p.baseLevel < F.MAX_BASE_LEVEL && p.baseXp >= F.baseXpToNext(p.baseLevel)) {
+  // No level caps: base and job levels keep going as long as XP comes in.
+  while (p.baseXp >= F.baseXpToNext(p.baseLevel)) {
     p.baseXp -= F.baseXpToNext(p.baseLevel);
     p.baseLevel += 1;
     p.statPoints += F.statPointsForLevel(p.baseLevel);
     ups.base.push(p.baseLevel);
   }
-  if (p.baseLevel >= F.MAX_BASE_LEVEL) p.baseXp = 0;
 
   const job = jobOf(p);
   const jobNeed = () => F.jobXpToNext(p.jobLevel, job.jobXpFactor);
   p.jobXp += jobXp;
-  while (p.jobLevel < job.maxJobLevel && p.jobXp >= jobNeed()) {
+  while (p.jobXp >= jobNeed()) {
     p.jobXp -= jobNeed();
     p.jobLevel += 1;
     p.skillPoints += 1;
     ups.job.push(p.jobLevel);
   }
-  if (p.jobLevel >= job.maxJobLevel) p.jobXp = Math.min(p.jobXp, jobNeed() - 1);
 
   if (ups.base.length > 0) {
     const d = derivedStats(p);
@@ -154,7 +153,7 @@ export function gainXp(p: Player, baseXp: number, jobXp: number): LevelUps {
 export function raiseStat(p: Player, stat: StatName): boolean {
   const current = p.stats[stat];
   const cost = F.statRaiseCost(current);
-  if (current >= F.MAX_STAT || p.statPoints < cost) return false;
+  if (p.statPoints < cost) return false;
   p.statPoints -= cost;
   p.stats[stat] = current + 1;
   const d = derivedStats(p);

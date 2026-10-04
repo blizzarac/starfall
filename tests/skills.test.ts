@@ -69,10 +69,10 @@ describe('first job', () => {
 });
 
 describe('skill points', () => {
-  it('a Novice earns exactly enough points for Basic Training 9', () => {
+  it('a Novice earns enough points for Basic Training 9, and keeps any extra', () => {
     const w = readyNovice();
-    expect(w.player.jobLevel).toBe(10);
-    expect(w.player.skillPoints).toBe(0);
+    expect(w.player.jobLevel).toBeGreaterThanOrEqual(10);
+    expect(w.player.skillPoints).toBe(w.player.jobLevel - 10);
     expect(w.skillLevel('basic_training')).toBe(9);
     expect(learnBlocker(w.player, 'basic_training')).toMatch(/mastered/);
   });
@@ -125,13 +125,13 @@ describe('job change', () => {
     expect(derivedStats(w.player).maxHp).toBe(w.player.hp);
   });
 
-  it('a Swordsman has more HP and a higher job level cap', () => {
+  it('a Swordsman has more HP, and job levels have no cap', () => {
     const n = readyNovice();
     const novHp = derivedStats(n.player).maxHp;
     const s = swordsman();
     expect(derivedStats(s.player).maxHp).toBeGreaterThan(novHp);
     gainXp(s.player, 0, 10_000_000);
-    expect(s.player.jobLevel).toBe(50);
+    expect(s.player.jobLevel).toBeGreaterThan(50);
   });
 
   it('the guild hides the join option from Swordsmen', () => {

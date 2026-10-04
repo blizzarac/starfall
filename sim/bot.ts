@@ -271,7 +271,7 @@ export class Bot {
       let gap = -Infinity;
       for (const [stat, wgt] of Object.entries(weights) as Array<[StatName, number]>) {
         const g = (wgt / total) * sum - p.stats[stat];
-        if (g > gap && p.stats[stat] < F.MAX_STAT) {
+        if (g > gap) {
           gap = g;
           pick = stat;
         }
