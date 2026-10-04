@@ -1293,5 +1293,515 @@
         }
       }
     ]
+  },
+  {
+    "id": "glass_crawler",
+    "name": "Glass Crawler",
+    "level": 62,
+    "hp": 9500,
+    "atk": [
+      110,
+      130
+    ],
+    "def": 70,
+    "hit": 140,
+    "flee": 60,
+    "element": "earth",
+    "size": "small",
+    "attackDelayMs": 1400,
+    "attackRange": 1,
+    "moveMs": 380,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 4
+    },
+    "baseXp": 2300,
+    "jobXp": 1600,
+    "drops": [
+      {
+        "item": "star_shard",
+        "chance": 0.5
+      },
+      {
+        "item": "crater_stone",
+        "chance": 0.2
+      },
+      {
+        "item": "star_tonic",
+        "chance": 0.03
+      },
+      {
+        "item": "comet_boots",
+        "chance": 0.004
+      },
+      {
+        "item": "glass_crawler_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#9fe3e6",
+      "scale": 1.1,
+      "shape": "beetle"
+    }
+  },
+  {
+    "id": "shard_wolf",
+    "name": "Shard Wolf",
+    "level": 66,
+    "hp": 10500,
+    "atk": [
+      118,
+      142
+    ],
+    "def": 50,
+    "hit": 150,
+    "flee": 85,
+    "element": "wind",
+    "size": "medium",
+    "attackDelayMs": 1200,
+    "attackRange": 1,
+    "moveMs": 290,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 12,
+      "wanderRadius": 4
+    },
+    "baseXp": 2600,
+    "jobXp": 1800,
+    "drops": [
+      {
+        "item": "star_shard",
+        "chance": 0.4
+      },
+      {
+        "item": "prism_dust",
+        "chance": 0.15
+      },
+      {
+        "item": "star_saber",
+        "chance": 0.004
+      },
+      {
+        "item": "shard_wolf_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#b8c8ff",
+      "scale": 1.1,
+      "shape": "wolf"
+    }
+  },
+  {
+    "id": "prism_wisp",
+    "name": "Prism Wisp",
+    "level": 70,
+    "hp": 9000,
+    "atk": [
+      122,
+      148
+    ],
+    "def": 40,
+    "hit": 160,
+    "flee": 110,
+    "element": "holy",
+    "size": "small",
+    "attackDelayMs": 1300,
+    "attackRange": 3,
+    "moveMs": 300,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 5
+    },
+    "baseXp": 2900,
+    "jobXp": 2000,
+    "drops": [
+      {
+        "item": "prism_dust",
+        "chance": 0.4
+      },
+      {
+        "item": "prism_draught",
+        "chance": 0.05
+      },
+      {
+        "item": "prism_staff",
+        "chance": 0.004
+      },
+      {
+        "item": "prism_wisp_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#fff3b0",
+      "scale": 1.0,
+      "shape": "bird"
+    },
+    "inflict": {
+      "status": "blind",
+      "chance": 0.08,
+      "durationMs": 4000
+    }
+  },
+  {
+    "id": "hollow_sentinel",
+    "name": "Hollow Sentinel",
+    "level": 76,
+    "hp": 16000,
+    "atk": [
+      148,
+      178
+    ],
+    "def": 90,
+    "hit": 170,
+    "flee": 60,
+    "element": "shadow",
+    "size": "medium",
+    "attackDelayMs": 1500,
+    "attackRange": 1,
+    "moveMs": 380,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 12,
+      "wanderRadius": 3
+    },
+    "baseXp": 3300,
+    "jobXp": 2300,
+    "drops": [
+      {
+        "item": "void_essence",
+        "chance": 0.3
+      },
+      {
+        "item": "star_shard",
+        "chance": 0.4
+      },
+      {
+        "item": "void_edge",
+        "chance": 0.003
+      },
+      {
+        "item": "hollow_sentinel_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#5a4f7a",
+      "scale": 1.15,
+      "shape": "automaton"
+    },
+    "inflict": {
+      "status": "stun",
+      "chance": 0.05,
+      "durationMs": 2000
+    }
+  },
+  {
+    "id": "void_bat",
+    "name": "Void Bat",
+    "level": 78,
+    "hp": 11000,
+    "atk": [
+      140,
+      170
+    ],
+    "def": 35,
+    "hit": 185,
+    "flee": 140,
+    "element": "shadow",
+    "size": "small",
+    "attackDelayMs": 1000,
+    "attackRange": 1,
+    "moveMs": 260,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 12,
+      "wanderRadius": 5
+    },
+    "baseXp": 3200,
+    "jobXp": 2250,
+    "drops": [
+      {
+        "item": "void_essence",
+        "chance": 0.35
+      },
+      {
+        "item": "prism_draught",
+        "chance": 0.04
+      },
+      {
+        "item": "voidstring_bow",
+        "chance": 0.003
+      },
+      {
+        "item": "void_bat_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#4a3a7a",
+      "scale": 1.05,
+      "shape": "bat"
+    },
+    "inflict": {
+      "status": "blind",
+      "chance": 0.1,
+      "durationMs": 4000
+    }
+  },
+  {
+    "id": "crater_golem",
+    "name": "Crater Golem",
+    "level": 82,
+    "hp": 26000,
+    "atk": [
+      165,
+      200
+    ],
+    "def": 120,
+    "hit": 165,
+    "flee": 40,
+    "element": "earth",
+    "size": "large",
+    "attackDelayMs": 1800,
+    "attackRange": 1,
+    "moveMs": 420,
+    "ai": {
+      "aggressive": false,
+      "aggroRange": 0,
+      "chaseRange": 10,
+      "wanderRadius": 3
+    },
+    "baseXp": 4200,
+    "jobXp": 2900,
+    "drops": [
+      {
+        "item": "crater_stone",
+        "chance": 0.6
+      },
+      {
+        "item": "rift_crystal",
+        "chance": 0.08
+      },
+      {
+        "item": "void_plate",
+        "chance": 0.003
+      },
+      {
+        "item": "crater_golem_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#6a5a8a",
+      "scale": 1.3,
+      "shape": "golem"
+    }
+  },
+  {
+    "id": "rift_wraith",
+    "name": "Rift Wraith",
+    "level": 88,
+    "hp": 24000,
+    "atk": [
+      170,
+      205
+    ],
+    "def": 70,
+    "hit": 200,
+    "flee": 120,
+    "element": "undead",
+    "size": "medium",
+    "attackDelayMs": 1300,
+    "attackRange": 1,
+    "moveMs": 320,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 6,
+      "chaseRange": 14,
+      "wanderRadius": 4
+    },
+    "baseXp": 4400,
+    "jobXp": 3100,
+    "drops": [
+      {
+        "item": "rift_crystal",
+        "chance": 0.2
+      },
+      {
+        "item": "void_essence",
+        "chance": 0.3
+      },
+      {
+        "item": "rift_staff",
+        "chance": 0.003
+      },
+      {
+        "item": "rift_wraith_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#a0c8ff",
+      "scale": 1.05,
+      "shape": "skeleton"
+    },
+    "inflict": {
+      "status": "poison",
+      "chance": 0.08,
+      "durationMs": 5000
+    }
+  },
+  {
+    "id": "star_eater",
+    "name": "Star Eater",
+    "level": 92,
+    "hp": 36000,
+    "atk": [
+      190,
+      230
+    ],
+    "def": 95,
+    "hit": 210,
+    "flee": 80,
+    "element": "shadow",
+    "size": "large",
+    "attackDelayMs": 1600,
+    "attackRange": 1,
+    "moveMs": 360,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 5,
+      "chaseRange": 12,
+      "wanderRadius": 3
+    },
+    "baseXp": 5200,
+    "jobXp": 3600,
+    "drops": [
+      {
+        "item": "rift_crystal",
+        "chance": 0.3
+      },
+      {
+        "item": "star_shard",
+        "chance": 0.5
+      },
+      {
+        "item": "eclipse_mace",
+        "chance": 0.003
+      },
+      {
+        "item": "star_eater_card",
+        "chance": 0.01
+      }
+    ],
+    "look": {
+      "color": "#3a2a6a",
+      "scale": 1.3,
+      "shape": "worm"
+    }
+  },
+  {
+    "id": "starfall_colossus",
+    "name": "Starfall Colossus",
+    "level": 100,
+    "hp": 600000,
+    "atk": [
+      330,
+      410
+    ],
+    "def": 110,
+    "hit": 240,
+    "flee": 90,
+    "element": "shadow",
+    "size": "large",
+    "attackDelayMs": 1700,
+    "attackRange": 1,
+    "moveMs": 360,
+    "ai": {
+      "aggressive": true,
+      "aggroRange": 7,
+      "chaseRange": 18,
+      "wanderRadius": 2
+    },
+    "baseXp": 200000,
+    "jobXp": 140000,
+    "drops": [
+      {
+        "item": "hollow_core",
+        "chance": 1
+      },
+      {
+        "item": "rift_crystal",
+        "chance": 1
+      },
+      {
+        "item": "star_shard",
+        "chance": 1
+      },
+      {
+        "item": "star_core_ring",
+        "chance": 0.25
+      },
+      {
+        "item": "colossus_crown",
+        "chance": 0.2
+      },
+      {
+        "item": "starfall_colossus_card",
+        "chance": 0.25
+      }
+    ],
+    "look": {
+      "color": "#4a3a9a",
+      "scale": 2.4,
+      "shape": "golem"
+    },
+    "boss": true,
+    "special": {
+      "kind": "slam",
+      "everyMs": 6500,
+      "windupMs": 1800,
+      "radius": 2,
+      "modifier": 2.4,
+      "inflict": {
+        "status": "blind",
+        "chance": 0.4,
+        "durationMs": 3000
+      }
+    },
+    "phases": [
+      {
+        "belowHp": 0.6,
+        "shout": "THE SKY REMEMBERS!",
+        "atkMul": 1.15,
+        "delayMul": 0.8,
+        "summon": {
+          "monster": "rift_wraith",
+          "count": 2
+        }
+      },
+      {
+        "belowHp": 0.25,
+        "shout": "FALL WITH ME!",
+        "atkMul": 1.3,
+        "delayMul": 0.8,
+        "slamRadius": 3,
+        "slamEveryMs": 4500,
+        "summon": {
+          "monster": "star_eater",
+          "count": 1
+        }
+      }
+    ]
   }
 ]

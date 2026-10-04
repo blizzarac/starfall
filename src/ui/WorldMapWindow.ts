@@ -8,25 +8,36 @@ import { Panel } from './widgets';
  * Where each map sits on the world map, as fractions of the drawing area.
  * A schematic, not geography: it only has to show what connects to what.
  */
+const ROWS = 8;
+/** Column (0, 0.5, 1) and row (0 = top) of a box. */
+const cell = (x: number, row: number) => ({ x, y: row / (ROWS - 1) });
 export const WORLD_LAYOUT: Record<string, { x: number; y: number }> = {
-  town: { x: 0, y: 0.06 },
-  'meadow-1': { x: 0.5, y: 0.06 },
-  'meadow-2': { x: 0.5, y: 0.22 },
-  'meadow-3': { x: 0.5, y: 0.38 },
-  whisperwood: { x: 0.5, y: 0.54 },
-  'caves-1': { x: 0.5, y: 0.7 },
-  'caves-2': { x: 0.5, y: 0.86 },
-  'saltmere-coast': { x: 1, y: 0.54 },
-  saltmere: { x: 1, y: 0.38 },
-  sunspire: { x: 0, y: 0.54 },
-  'sunscorch-dunes': { x: 0, y: 0.7 },
-  'sunken-ruins': { x: 0, y: 0.86 },
-  'iron-wastes': { x: 0, y: 0.38 },
-  'clockwork-citadel': { x: 0, y: 0.22 },
+  town: cell(0, 0),
+  'meadow-1': cell(0.5, 0),
+  'meadow-2': cell(0.5, 1),
+  'meadow-3': cell(0.5, 2),
+  whisperwood: cell(0.5, 3),
+  'caves-1': cell(0.5, 4),
+  'caves-2': cell(0.5, 5),
+  saltmere: cell(1, 2),
+  'saltmere-coast': cell(1, 3),
+  'clockwork-citadel': cell(0, 1),
+  'iron-wastes': cell(0, 2),
+  sunspire: cell(0, 3),
+  'sunscorch-dunes': cell(0, 4),
+  'sunken-ruins': cell(0, 5),
+  // The Shattered Reach, by ship from Sunspire.
+  lastlight: cell(1, 4),
+  'glassfall-plains': cell(1, 5),
+  'starfall-crater': cell(1, 6),
+  'the-rift': cell(1, 7),
 };
 
 /** Ship routes (drawn dashed): they come from NPC dialogue, not portals. */
-const SEA_ROUTES: Array<[string, string]> = [['saltmere', 'sunspire']];
+const SEA_ROUTES: Array<[string, string]> = [
+  ['saltmere', 'sunspire'],
+  ['sunspire', 'lastlight'],
+];
 
 /** Three columns of boxes; they shrink to fit narrow phones. */
 const MAX_BOX_W = 116;

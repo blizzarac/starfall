@@ -41,12 +41,17 @@ export const AREAS: Array<{ map: string; minLevel: number; label: string }> = [
   { map: 'caves-1', minLevel: 25, label: 'Glimmer Caves' },
   { map: 'sunscorch-dunes', minLevel: 34, label: 'Sunscorch Dunes' },
   { map: 'sunken-ruins', minLevel: 44, label: 'Sunken Ruins' },
+  { map: 'iron-wastes', minLevel: 50, label: 'Iron Wastes' },
+  { map: 'clockwork-citadel', minLevel: 56, label: 'Clockwork Citadel' },
+  { map: 'glassfall-plains', minLevel: 63, label: 'Glassfall Plains' },
+  { map: 'starfall-crater', minLevel: 77, label: 'Starfall Crater' },
+  { map: 'the-rift', minLevel: 89, label: 'The Rift' },
 ];
 
 /** Shops a player can reach; the bot buys the best gear it can wear and afford. */
-const GEAR_SHOPS = ['blacksmith', 'port_market', 'desert_bazaar'];
+const GEAR_SHOPS = ['blacksmith', 'port_market', 'desert_bazaar', 'lastlight_outfitter'];
 /** HP potions, weakest first; the bot carries the best one that fits its max HP. */
-const POTIONS = ['red_tonic', 'orange_tonic', 'yellow_tonic', 'white_tonic'];
+const POTIONS = ['red_tonic', 'orange_tonic', 'yellow_tonic', 'white_tonic', 'star_tonic'];
 const SP_POTION = 'blue_tonic';
 
 export interface Sample {
@@ -125,7 +130,7 @@ export class Bot {
   }
 
   /** Plays for `minutes` of game time (or until base level `untilLevel`). */
-  run(minutes: number, untilLevel = 99): void {
+  run(minutes: number, untilLevel = Infinity): void {
     const end = this.world.time + minutes * 60_000;
     let nextSample = 0;
     while (this.world.time < end && this.world.player.baseLevel < untilLevel) {
@@ -328,10 +333,12 @@ export class Bot {
       const n = Math.min(want - w.itemCount(id), Math.floor((p.gold * 0.4) / item.price));
       if (n > 0 && !w.buy(shopOf(w.content, id), id, n)) this.stats.goldSpent += item.price * n;
     };
-    // The cheapest potion that heals at least a fifth of max HP, else the biggest one.
+    // The cheapest potion that heals at least a fifth of max HP, else the biggest one;
+    // when that's out of reach, the best one it can still afford a stack of.
     const maxHp = derivedStats(p).maxHp;
     const pot = POTIONS.find((id) => w.content.items.get(id)!.heal!.hp >= maxHp / 5) ?? POTIONS[POTIONS.length - 1]!;
-    spend(pot, 20);
+    const affordable = [...POTIONS].reverse().find((id) => w.content.items.get(id)!.price * 5 <= p.gold * 0.4);
+    spend(w.content.items.get(pot)!.price * 5 <= p.gold * 0.4 || !affordable ? pot : affordable, 20);
     spend('fly_wing', 5);
     if (this.needsSp() && p.baseLevel >= 20) spend(SP_POTION, 5);
   }
@@ -353,6 +360,9 @@ export class Bot {
       // A bow or staff-only build skips weapons that don't fit its skills.
       if (it.equip!.slot === 'weapon' && this.build.attacks.some((s) => SKILLS[s].needsWeapon && SKILLS[s].needsWeapon !== it.equip!.weaponType)) continue;
       if (it.equip!.slot === 'shield' && p.equipment.weapon?.item.equip?.twoHanded) continue;
+      // A build whose skills need a two-handed weapon keeps one.
+      const twoHandBuild = [...this.build.attacks, ...this.build.buffs].some((s) => SKILLS[s].needsTwoHanded);
+      if (it.equip!.slot === 'weapon' && twoHandBuild && !it.equip!.twoHanded) continue;
       if (it.price > p.gold * 0.8) continue;
       if (!w.buy(shopOf(w.content, it.id), it.id, 1)) {
         this.stats.goldSpent += it.price;

@@ -274,5 +274,152 @@
         }
       ]
     }
+  },
+  {
+    "id": "glass_harvest",
+    "name": "Glass Harvest",
+    "description": "Glass Crawlers chew through the Plains. Thin them out before they reach the camp.",
+    "minLevel": 58,
+    "target": {
+      "monster": "glass_crawler",
+      "count": 25
+    },
+    "reward": {
+      "gold": 12000,
+      "baseXp": 50000,
+      "jobXp": 35000,
+      "items": [
+        {
+          "id": "star_tonic",
+          "count": 3
+        }
+      ]
+    }
+  },
+  {
+    "id": "wolves_of_glass",
+    "name": "Wolves of Glass",
+    "description": "Shard Wolves hunt in packs on the Plains. Break a few packs.",
+    "minLevel": 62,
+    "target": {
+      "monster": "shard_wolf",
+      "count": 25
+    },
+    "reward": {
+      "gold": 14000,
+      "baseXp": 60000,
+      "jobXp": 42000,
+      "items": [
+        {
+          "id": "star_tonic",
+          "count": 3
+        }
+      ]
+    }
+  },
+  {
+    "id": "wisp_light",
+    "name": "Too Much Light",
+    "description": "Prism Wisps blind the scouts. Snuff them out.",
+    "minLevel": 66,
+    "target": {
+      "monster": "prism_wisp",
+      "count": 20
+    },
+    "reward": {
+      "gold": 15000,
+      "baseXp": 66000,
+      "jobXp": 46000,
+      "items": [
+        {
+          "id": "prism_draught",
+          "count": 4
+        }
+      ]
+    }
+  },
+  {
+    "id": "sentinel_watch",
+    "name": "Who Watches",
+    "description": "Hollow Sentinels guard the crater rim. Nobody knows for whom.",
+    "minLevel": 72,
+    "target": {
+      "monster": "hollow_sentinel",
+      "count": 20
+    },
+    "reward": {
+      "gold": 18000,
+      "baseXp": 80000,
+      "jobXp": 56000,
+      "items": [
+        {
+          "id": "brightstone",
+          "count": 3
+        }
+      ]
+    }
+  },
+  {
+    "id": "crater_clear",
+    "name": "Clear the Crater",
+    "description": "Crater Golems block the way down. Move them, any way you can.",
+    "minLevel": 78,
+    "target": {
+      "monster": "crater_golem",
+      "count": 12
+    },
+    "reward": {
+      "gold": 22000,
+      "baseXp": 95000,
+      "jobXp": 66000,
+      "items": [
+        {
+          "id": "rift_crystal",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "rift_mend",
+    "name": "Mend the Rift",
+    "description": "Rift Wraiths pour out of the deep. Send them back.",
+    "minLevel": 84,
+    "target": {
+      "monster": "rift_wraith",
+      "count": 20
+    },
+    "reward": {
+      "gold": 26000,
+      "baseXp": 120000,
+      "jobXp": 84000,
+      "items": [
+        {
+          "id": "star_tonic",
+          "count": 5
+        }
+      ]
+    }
+  },
+  {
+    "id": "star_eaters",
+    "name": "Star Eaters",
+    "description": "Something down there eats the light. Feed it your blade instead.",
+    "minLevel": 88,
+    "target": {
+      "monster": "star_eater",
+      "count": 15
+    },
+    "reward": {
+      "gold": 30000,
+      "baseXp": 140000,
+      "jobXp": 98000,
+      "items": [
+        {
+          "id": "rift_crystal",
+          "count": 2
+        }
+      ]
+    }
   }
 ]

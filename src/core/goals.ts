@@ -44,6 +44,9 @@ export function nextGoal(world: World): string {
   if (p.baseLevel >= 45 && !been('iron-wastes')) return 'Pass through the east gate of Sunspire into the Iron Wastes.';
   if (p.baseLevel >= 50 && !world.flags.has(bossFlag('dust_pharaoh'))) return 'Face the Dust Pharaoh in the heart of the Sunken Ruins (Lv 55 boss).';
   if (p.baseLevel >= 58 && !world.flags.has(bossFlag('clockwork_titan'))) return 'Bring down the Clockwork Titan atop the Clockwork Citadel (Lv 65 boss).';
+  // The Shattered Reach, after the Citadel.
+  if (p.baseLevel >= 60 && !been('lastlight')) return 'Dax sails from Sunspire to Lastlight, on the Reach where the star came down (Lv 60+).';
+  if (p.baseLevel >= 90 && been('lastlight') && !world.flags.has(bossFlag('starfall_colossus'))) return 'The Starfall Colossus waits at the bottom of the Rift (Lv 100 boss).';
   const map = recommendedMap(world);
   const range = map ? mapLevelRange(world, map) : null;
   return map && range ? `Train in ${map.name} (monsters Lv ${range[0]}–${range[1]}).` : 'Explore!';

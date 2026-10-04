@@ -30,7 +30,7 @@ function report(results: Array<{ name: string; bot: Bot }>): string {
   const lines: string[] = [];
   lines.push(`# Balance report`, '', `${HOURS} simulated hours per job path (\`npm run balance\`). Travel is instant; times are fighting, resting and shopping.`, '');
   lines.push('## Minutes to reach base level', '');
-  const marks = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
+  const marks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   lines.push(`| Path | ${marks.join(' | ')} |`, `|---|${marks.map(() => '---:').join('|')}|`);
   for (const { name, bot } of results) lines.push(`| ${name} | ${marks.map((m) => (bot.stats.levelAt[m] !== undefined ? Math.round(bot.stats.levelAt[m]!) : '–')).join(' | ')} |`);
   lines.push('', '## Job changes (minute)', '', '| Path | First job | Second job |', '|---|---:|---:|');

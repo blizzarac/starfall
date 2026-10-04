@@ -33,6 +33,22 @@ describe('next goal', () => {
     expect(nextGoal(w)).toMatch(/trial/);
   });
 
+  it('after the Citadel, points to Lastlight and then the Starfall Colossus', () => {
+    const w = new World(content, town, { seed: 1 });
+    gainXp(w.player, 0, 100_000);
+    w.player.jobId = 'knight';
+    w.player.jobLevel = 40;
+    w.player.baseLevel = 60;
+    for (const id of ['saltmere', 'sunspire', 'iron-wastes']) w.flags.set(visitedFlag(id), true);
+    for (const boss of ['crystal_golem', 'dust_pharaoh', 'clockwork_titan']) w.flags.set(`boss:${boss}`, 1);
+    w.flags.set('story:ending', 'silence');
+    expect(nextGoal(w)).toMatch(/Lastlight/);
+    w.flags.set(visitedFlag('lastlight'), true);
+    expect(nextGoal(w)).toMatch(/Glassfall Plains/);
+    w.player.baseLevel = 90;
+    expect(nextGoal(w)).toMatch(/Starfall Colossus/);
+  });
+
   it('recommends harder hunting grounds as you level, never a boss lair', () => {
     const w = new World(content, town, { seed: 1 });
     expect(recommendedMap(w)!.id).toBe('meadow-1');
@@ -43,8 +59,15 @@ describe('next goal', () => {
     expect(recommendedMap(w)!.id).toBe('sunken-ruins');
     w.player.baseLevel = 48;
     expect(recommendedMap(w)!.id).toBe('iron-wastes');
-    w.player.baseLevel = 60;
+    w.player.baseLevel = 56;
     expect(recommendedMap(w)!.id).toBe('clockwork-citadel');
+    // The Shattered Reach takes over from 60.
+    w.player.baseLevel = 60;
+    expect(recommendedMap(w)!.id).toBe('glassfall-plains');
+    w.player.baseLevel = 75;
+    expect(recommendedMap(w)!.id).toBe('starfall-crater');
+    w.player.baseLevel = 100;
+    expect(recommendedMap(w)!.id).toBe('the-rift');
     for (let lv = 1; lv <= 60; lv++) {
       w.player.baseLevel = lv;
       expect(recommendedMap(w)!.id).not.toBe('caves-2');

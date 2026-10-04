@@ -1577,7 +1577,7 @@
     "id": "sunspire_sailor",
     "nodes": {
       "start": {
-        "text": "Dax, first mate of the Gull. We sail back to Saltmere whenever you like.",
+        "text": "Dax, first mate of the Gull. We sail back to Saltmere whenever you like, and out to Lastlight on the Reach, where the star came down. Rough waters out there, and rougher land.",
         "choices": [
           {
             "label": "Sail to Saltmere (500 gold)",
@@ -1588,6 +1588,18 @@
                 "x": 22,
                 "y": 12,
                 "cost": 500
+              }
+            ]
+          },
+          {
+            "label": "Sail to Lastlight (1500 gold)",
+            "do": [
+              {
+                "type": "warp",
+                "map": "lastlight",
+                "x": 15,
+                "y": 5,
+                "cost": 1500
               }
             ]
           },
@@ -1765,6 +1777,22 @@
                 "cost": 0
               }
             ]
+          },
+          {
+            "label": "Lastlight",
+            "do": [
+              {
+                "type": "warp",
+                "map": "lastlight",
+                "x": 15,
+                "y": 5,
+                "cost": 0
+              }
+            ],
+            "if": {
+              "visited": "lastlight",
+              "notMap": "lastlight"
+            }
           },
           {
             "label": "Never mind"
@@ -3098,6 +3126,122 @@
       },
       "end_gap": {
         "text": "Pell was right. It’s a door. You are what stands in it.",
+        "choices": []
+      }
+    }
+  },
+  {
+    "id": "lastlight_ferry",
+    "nodes": {
+      "start": {
+        "text": "Dax again. The Gull waits at the dock whenever you're done with this place.",
+        "choices": [
+          {
+            "label": "Sail to Sunspire (500 gold)",
+            "do": [
+              {
+                "type": "warp",
+                "map": "sunspire",
+                "x": 16,
+                "y": 6,
+                "cost": 500
+              }
+            ]
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "lastlight_outfitter",
+    "nodes": {
+      "start": {
+        "text": "Ulla. I forge with what fell from the sky. It cuts better than anything you brought.",
+        "choices": [
+          {
+            "label": "Show me your gear",
+            "do": [
+              {
+                "type": "openShop",
+                "shop": "lastlight_outfitter"
+              }
+            ]
+          },
+          {
+            "label": "Refine my gear",
+            "next": "refine"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "refine": {
+        "text": "Same as Greta does it: one Brightstone and some gold a try. Starglass takes a refine well.",
+        "choices": [
+          {
+            "label": "Let's refine",
+            "do": [
+              {
+                "type": "openRefine"
+              }
+            ]
+          },
+          {
+            "label": "Maybe later"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "lastlight_warden",
+    "nodes": {
+      "start": {
+        "text": "Warden Ilka. This camp sits on the rim of where the star came down. It didn't all come down.",
+        "choices": [
+          {
+            "label": "What's out there?",
+            "next": "out"
+          },
+          {
+            "label": "What's at the bottom?",
+            "next": "bottom"
+          },
+          {
+            "label": "Goodbye"
+          }
+        ]
+      },
+      "out": {
+        "text": "The Glassfall Plains first: crawlers, wolves made of shards, wisps that blind you. Past them, the Crater. Then the Rift.",
+        "choices": [
+          {
+            "label": "And the bottom?",
+            "next": "bottom"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "bottom": {
+        "text": "Something big, still glowing. We call it the Colossus. Nobody who went to look came back to tell us more than that.",
+        "choices": [
+          {
+            "label": "I'll look",
+            "next": "look"
+          },
+          {
+            "label": "Thanks"
+          }
+        ]
+      },
+      "look": {
+        "text": "Then go heavy. Ulla's starglass, Star Tonics, and every friend you have.",
         "choices": []
       }
     }

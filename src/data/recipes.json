@@ -21,5 +21,13 @@
   {"id": "reactor_ring", "result": "reactor_ring", "count": 1, "materials": [{"item": "titan_core", "count": 1}, {"item": "power_cell", "count": 5}], "gold": 4550},
   {"id": "spiked_collar", "result": "spiked_collar", "count": 1, "materials": [{"item": "boar_tusk", "count": 4}, {"item": "wolf_pelt", "count": 3}], "gold": 1000},
   {"id": "treasure_sniffer", "result": "treasure_sniffer", "count": 1, "materials": [{"item": "sea_glass", "count": 4}, {"item": "gull_feather", "count": 3}, {"item": "sand_ruby", "count": 1}], "gold": 800},
-  {"id": "clockwork_harness", "result": "clockwork_harness", "count": 1, "materials": [{"item": "scrap_metal", "count": 10}, {"item": "gear_cog", "count": 6}, {"item": "power_cell", "count": 4}], "gold": 4400}
+  {"id": "clockwork_harness", "result": "clockwork_harness", "count": 1, "materials": [{"item": "scrap_metal", "count": 10}, {"item": "gear_cog", "count": 6}, {"item": "power_cell", "count": 4}], "gold": 4400},
+  {"id": "star_tonic", "result": "star_tonic", "count": 1, "materials": [{"item": "white_tonic", "count": 1}, {"item": "star_shard", "count": 3}], "gold": 200},
+  {"id": "void_edge", "result": "void_edge", "count": 1, "materials": [{"item": "void_essence", "count": 10}, {"item": "star_shard", "count": 12}, {"item": "rift_crystal", "count": 2}], "gold": 9000},
+  {"id": "void_claymore", "result": "void_claymore", "count": 1, "materials": [{"item": "void_essence", "count": 12}, {"item": "crater_stone", "count": 10}, {"item": "rift_crystal", "count": 3}], "gold": 11000},
+  {"id": "rift_staff", "result": "rift_staff", "count": 1, "materials": [{"item": "prism_dust", "count": 10}, {"item": "void_essence", "count": 6}, {"item": "rift_crystal", "count": 3}], "gold": 9000},
+  {"id": "voidstring_bow", "result": "voidstring_bow", "count": 1, "materials": [{"item": "void_essence", "count": 10}, {"item": "prism_dust", "count": 8}, {"item": "rift_crystal", "count": 2}], "gold": 9000},
+  {"id": "eclipse_mace", "result": "eclipse_mace", "count": 1, "materials": [{"item": "crater_stone", "count": 12}, {"item": "void_essence", "count": 8}, {"item": "rift_crystal", "count": 2}], "gold": 8500},
+  {"id": "void_plate", "result": "void_plate", "count": 1, "materials": [{"item": "crater_stone", "count": 20}, {"item": "void_essence", "count": 10}, {"item": "rift_crystal", "count": 3}], "gold": 8000},
+  {"id": "star_core_ring", "result": "star_core_ring", "count": 1, "materials": [{"item": "hollow_core", "count": 1}, {"item": "rift_crystal", "count": 5}], "gold": 15000}
 ]

@@ -124,7 +124,38 @@
       "power_cell",
       "scrap_metal",
       "sand_pelt",
-      "old_bone"
+      "old_bone",
+      "star_shard",
+      "prism_dust",
+      "void_essence",
+      "crater_stone",
+      "rift_crystal"
+    ]
+  },
+  {
+    "id": "lastlight_outfitter",
+    "name": "Lastlight Outfitter",
+    "items": [
+      "white_tonic",
+      "star_tonic",
+      "blue_tonic",
+      "prism_draught",
+      "green_herb",
+      "panacea",
+      "fly_wing",
+      "butterfly_wing",
+      "brightstone",
+      "pet_treat",
+      "star_saber",
+      "star_claymore",
+      "prism_staff",
+      "comet_bow",
+      "halo_mace",
+      "starweave_robe",
+      "shard_helm",
+      "comet_boots",
+      "nebula_cloak",
+      "prism_shield"
     ]
   }
 ]
