@@ -82,7 +82,9 @@ export interface WorldEvents extends Record<string, unknown> {
   /** The pet bit a monster. */
   petAttack: { targetId: number; amount: number; /** Which pet (index in player.pets). */ pet: number };
   /** Battle Aura (or Holy Aura, `holy`) burned a monster. */
-  auraHit: { targetId: number; amount: number; holy?: boolean };
+  auraHit: { targetId: number; amount: number; holy?: boolean; mana?: boolean };
+  /** Mana Aura took part of a hit onto SP. */
+  manaShield: { absorbed: number };
   bountyCollected: { gold: number };
   /** A line of story shown over the world for a few seconds. */
   storyLine: { text: string };
@@ -927,6 +929,13 @@ export class World {
     const lv = S.skillLevel(p, id);
     if (lv === 0 || skill.kind === 'passive') return;
     const notice = (text: string) => this.events.emit('notice', { text });
+    if (skill.toggle && p.buffs.has(id)) {
+      // Switching off is free and always works.
+      p.buffs.delete(id);
+      this.events.emit('notice', { text: `${skill.name} off.` });
+      this.events.emit('skillUsed', { skillId: id, targets: [] });
+      return;
+    }
     if (this.weightRatio() >= F.WEIGHT_NO_ATTACK) return notice("You're carrying too much to fight.");
     if (skill.needsWeapon && weaponOf(p).type !== skill.needsWeapon) return notice(`${skill.name} needs a ${skill.needsWeapon} equipped.`);
     if (skill.needsTwoHanded && !p.equipment.weapon?.item.equip?.twoHanded) return notice(`${skill.name} needs a two-handed weapon.`);
@@ -1053,6 +1062,9 @@ export class World {
       p.hp += hp;
       this.events.emit('skillUsed', { skillId: id, targets: [] });
       this.events.emit('heal', { hp, sp: 0 });
+    } else if (skill.toggle) {
+      p.buffs.set(id, { level: lv, remainingMs: Infinity });
+      this.events.emit('skillUsed', { skillId: id, targets: [] });
     } else if (skill.buffMs) {
       p.buffs.set(id, { level: lv, remainingMs: skill.buffMs(lv) });
       this.refreshStats();
@@ -1852,11 +1864,11 @@ export class World {
     return 1 + (fx.vsElement[target.def.element] ?? 0) + (fx.vsSize[target.def.size] ?? 0);
   }
 
-  private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' | 'aura' | 'holy' = 'player'): void {
+  private hurtMonster(target: Monster, amount: number, crit: boolean, source: 'player' | 'pet' | 'aura' | 'holy' | 'mana' = 'player'): void {
     target.hp -= amount;
     target.hostile = true;
     if (source === 'pet') this.events.emit('petAttack', { targetId: target.id, amount, pet: this.biter });
-    else if (source === 'aura' || source === 'holy') this.events.emit('auraHit', { targetId: target.id, amount, holy: source === 'holy' });
+    else if (source === 'aura' || source === 'holy' || source === 'mana') this.events.emit('auraHit', { targetId: target.id, amount, holy: source === 'holy', mana: source === 'mana' });
     else this.events.emit('damage', { sourceId: 'player', targetId: target.id, amount, crit });
     if (target.hp <= target.def.hp * Pets.TAME_HP && this.lureTarget() === target.def.id && !target.summoned && this.player.pets.length < Pets.MAX_PETS) this.tame(target);
     else if (target.hp <= 0) this.killMonster(target);
@@ -2050,6 +2062,22 @@ export class World {
       if (kyrie.value <= 0) {
         p.buffs.delete('kyrie_eleison');
         this.events.emit('notice', { text: 'Kyrie Eleison broke!' });
+      }
+    }
+    // Mana Aura: part of the hit is paid from SP, and the attacker gets a jolt back.
+    const mana = p.buffs.get('mana_aura');
+    if (mana && amount > 0) {
+      const ratio = S.manaShieldRatio(mana.level);
+      const wanted = Math.round(amount * S.manaShieldShare(mana.level));
+      const absorbed = Math.min(wanted, Math.floor(p.sp * ratio));
+      if (absorbed > 0) {
+        p.sp = Math.max(0, p.sp - Math.ceil(absorbed / ratio));
+        amount -= absorbed;
+        this.events.emit('manaShield', { absorbed });
+      }
+      if (this.monsters.has(m.id)) {
+        const back = F.magicDamage(derivedStats(p).matk, S.manaThornsPercent(mana.level) / 100, 1, this.monsterDef(m), this.rng);
+        if (back > 0) this.hurtMonster(m, back, false, 'mana');
       }
     }
     p.hp -= amount;

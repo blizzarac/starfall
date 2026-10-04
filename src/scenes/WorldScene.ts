@@ -58,6 +58,7 @@ interface PetView {
 const AURA_LOOKS: Array<[SkillId, number, number]> = [
   ['battle_aura', 0x4fe6ff, 1],
   ['holy_aura', 0xfffbe8, 0.9],
+  ['mana_aura', 0xb98cff, 0.8],
 ];
 /** How red an enraged boss glows in each phase. */
 const RAGE_TINT = [0xffffff, 0xffc8b0, 0xff8a7a];
@@ -847,10 +848,10 @@ export class WorldScene extends Phaser.Scene {
         pet.biteUntil = this.time.now + 400;
       }),
       ev.on('auraHit', (e) => {
-        this.damageNumber(e.targetId, String(e.amount), e.holy ? '#fff2a8' : '#8ff4ff', e.holy ? 16 : 18);
+        this.damageNumber(e.targetId, String(e.amount), e.mana ? '#d6b8ff' : e.holy ? '#fff2a8' : '#8ff4ff', e.holy ? 16 : 18);
         this.hitSpark(e.targetId, false);
         this.flashHit(e.targetId);
-        const skill = e.holy ? 'holy_aura' : 'battle_aura';
+        const skill = e.mana ? 'mana_aura' : e.holy ? 'holy_aura' : 'battle_aura';
         const aura = this.auras.get(skill);
         if (aura) {
           const base = AURA_LOOKS.find(([s]) => s === skill)![2];
@@ -858,6 +859,7 @@ export class WorldScene extends Phaser.Scene {
           this.tweens.add({ targets: aura.shape, scale: base, duration: 250 });
         }
       }),
+      ev.on('manaShield', (e) => this.floatText('player', `SP shield ${e.absorbed}`, '#9fc8ff', 13, 700)),
       ev.on('weakened', (e) => this.floatText(e.targetId, 'DEF↓', '#fff2a8', 13, 900)),
       ev.on('petLevelUp', (e) => {
         const view = this.petViewAt(e.pet);
@@ -928,7 +930,8 @@ export class WorldScene extends Phaser.Scene {
   private syncAura(): void {
     for (const [skill, color, scale] of AURA_LOOKS) {
       const lv = skillLevel(this.world.player, skill);
-      const radius = lv > 0 ? auraRadius(lv) : 0;
+      // Mana Aura only shows while switched on; it reaches 1 tile.
+      const radius = skill === 'mana_aura' ? (this.world.player.buffs.has(skill) ? 1 : 0) : lv > 0 ? auraRadius(lv) : 0;
       let aura = this.auras.get(skill);
       if (aura && aura.radius !== radius) {
         this.tweens.killTweensOf(aura.shape);

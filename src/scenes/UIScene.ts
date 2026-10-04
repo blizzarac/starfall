@@ -429,8 +429,9 @@ export class UIScene extends Phaser.Scene {
       const cdMs = p.cooldowns.get(b.skill.id) ?? 0;
       const buff = p.buffs.get(b.skill.id);
       b.badge.setText(`${cost}`);
-      b.cd.setText(cdMs > 0 ? `${Math.ceil(cdMs / 1000)}s` : buff ? `${Math.ceil(buff.remainingMs / 1000)}s` : '');
-      b.root.setAlpha(p.sp >= cost && cdMs === 0 && !p.dead ? 1 : 0.45);
+      b.cd.setText(cdMs > 0 ? `${Math.ceil(cdMs / 1000)}s` : buff ? (Number.isFinite(buff.remainingMs) ? `${Math.ceil(buff.remainingMs / 1000)}s` : 'ON') : '');
+      // A switched-on toggle can always be switched off.
+      b.root.setAlpha(!p.dead && ((p.sp >= cost && cdMs === 0) || (buff && b.skill.toggle)) ? 1 : 0.45);
       b.ring.setVisible(!!buff);
     }
   }

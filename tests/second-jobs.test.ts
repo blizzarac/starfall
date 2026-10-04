@@ -155,6 +155,48 @@ describe('Knight', () => {
     expect(Math.min(...hits)).toBeGreaterThan(0);
   });
 
+  it('Mana Aura switches on and off, pays part of each hit from SP, and shocks attackers', () => {
+    const w = promoted('mage', 'wizard');
+    const m = duel(w, 'sandworm');
+    for (let i = 0; i < 10; i++) expect(w.learnSkill('mana_aura')).toBeNull();
+    const p = w.player;
+    p.hp = 5000;
+    p.sp = 1000;
+    const hurt = (amount: number) => (w as unknown as { hurtPlayer: (m: unknown, raw: number) => void }).hurtPlayer(m, amount);
+    // Off: a hit is all HP, nothing comes back.
+    const thorns: Array<{ amount: number; mana?: boolean }> = [];
+    w.events.on('auraHit', (e) => thorns.push(e));
+    hurt(100);
+    expect(p.hp).toBe(4900);
+    expect(p.sp).toBe(1000);
+    expect(thorns).toEqual([]);
+    // Switched on: costs SP once and stays on.
+    w.useSkill('mana_aura');
+    expect(p.buffs.has('mana_aura')).toBe(true);
+    expect(p.sp).toBe(1000 - S.MANA_AURA_COST);
+    run(w, 60_000, () => !p.buffs.has('mana_aura'));
+    expect(p.buffs.has('mana_aura')).toBe(true);
+    // 80% of the hit goes to SP at 2 damage per SP; the attacker takes MATK back.
+    p.sp = 500;
+    const hp = p.hp;
+    const before = m.hp;
+    hurt(100);
+    expect(p.hp).toBe(hp - 20);
+    expect(p.sp).toBe(500 - 40);
+    expect(m.hp).toBeLessThan(before);
+    expect(thorns.at(-1)?.mana).toBe(true);
+    // Out of SP: the hit lands on HP in full, the thorns still bite.
+    p.sp = 0;
+    hurt(100);
+    expect(p.hp).toBe(hp - 120);
+    expect(thorns.length).toBe(2);
+    // Tapping it again switches it off for free.
+    p.sp = 100;
+    w.useSkill('mana_aura');
+    expect(p.buffs.has('mana_aura')).toBe(false);
+    expect(p.sp).toBe(100);
+  });
+
   it('Holy Aura deals a little holy damage and weakens DEF while monsters attack you', () => {
     const w = promoted('swordsman', 'knight');
     const m = duel(w, 'sandworm');

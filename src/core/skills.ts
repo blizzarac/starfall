@@ -31,6 +31,7 @@ export type SkillId =
   | 'two_hand_mastery'
   | 'battle_aura'
   | 'holy_aura'
+  | 'mana_aura'
   | 'sight_rasher'
   | 'thunderstorm'
   | 'meteor_storm'
@@ -71,6 +72,8 @@ export interface SkillDef {
   weaponRange?: boolean;
   /** Only usable with this weapon type equipped. */
   needsWeapon?: WeaponType;
+  /** Switched on and off: using it again turns it off (for free). Stays on until then, or until you fall. */
+  toggle?: boolean;
 }
 
 const SPELL_RANGE = 9;
@@ -452,6 +455,20 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     magic: { element: 'wind', hits: (lv) => lv, perHit: () => 0.8 },
     area: { radius: 2, around: 'target' },
   },
+  mana_aura: {
+    id: 'mana_aura',
+    name: 'Mana Aura',
+    job: 'wizard',
+    maxLevel: 10,
+    kind: 'self',
+    toggle: true,
+    requires: [],
+    spCost: () => MANA_AURA_COST,
+    cooldownMs: 1000,
+    describe: (lv) =>
+      `Switch on a crackling mana field (tap again to switch off). ${Math.round(manaShieldShare(lv) * 100)}% of every hit you take is paid from SP instead of HP (1 SP stops ${manaShieldRatio(lv).toFixed(1)} damage), and whatever hits you takes ${manaThornsPercent(lv)}% MATK back. Costs ${MANA_AURA_COST} SP to switch on.`,
+    short: 'Mana',
+  },
   meteor_storm: {
     id: 'meteor_storm',
     name: 'Meteor Storm',
@@ -698,6 +715,21 @@ export function auraRadius(level: number): number {
 }
 
 export const AURA_TICK_MS = 1000;
+
+/** Mana Aura: SP to switch it on. */
+export const MANA_AURA_COST = 20;
+/** Share of each hit Mana Aura moves onto SP. */
+export function manaShieldShare(level: number): number {
+  return 0.3 + 0.05 * level;
+}
+/** Damage stopped per SP spent. */
+export function manaShieldRatio(level: number): number {
+  return 1 + 0.1 * level;
+}
+/** Thorns: MATK % dealt back to whatever hits you. */
+export function manaThornsPercent(level: number): number {
+  return 20 + 8 * level;
+}
 
 /** Increase SP Recovery: extra SP per natural tick, as a share of max SP per level (on top of 6 per level). */
 export const SP_RECOVERY_SHARE = 0.01;
