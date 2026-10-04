@@ -44,7 +44,8 @@ describe('Auto mode', () => {
     const beetle = [...w.monsters.values()][0]!;
     const spot = [{ x: beetle.tile.x - 4, y: beetle.tile.y }, { x: beetle.tile.x + 4, y: beetle.tile.y }, { x: beetle.tile.x, y: beetle.tile.y - 4 }, { x: beetle.tile.x, y: beetle.tile.y + 4 }].find((t) => w.grid.isWalkable(t.x, t.y))!;
     w.changeMap('meadow-2', spot);
-    for (const m of [...w.monsters.values()]) if (m.def.element !== 'earth') w.monsters.delete(m.id);
+    // Just that one beetle, so nothing else walks up and interrupts the cast.
+    for (const m of [...w.monsters.values()]) if (m.id !== beetle.id) w.monsters.delete(m.id);
     const order: string[] = [];
     w.events.on('skillUsed', (e) => order.push(`skill:${e.skillId}`));
     w.events.on('damage', (e) => e.sourceId === 'player' && order.push('hit'));
@@ -199,5 +200,62 @@ describe('quick bar', () => {
     const b = new World(content, meadow, { seed: 2 });
     applySaveDoc(b, migrate(doc));
     expect(b.player.hotbar).toEqual(['bash']);
+  });
+});
+
+describe('spawning', () => {
+  it('monsters never appear within 7 tiles of the player, on entering a map or respawning', () => {
+    const w = new World(content, meadow, { seed: 6 });
+    const m0 = [...w.monsters.values()][0]!;
+    w.changeMap('meadow-2', content.maps.get('meadow-2')!.playerStart);
+    w.changeMap('meadow-1', m0.tile);
+    for (const m of w.monsters.values()) expect(tileDistance(m.tile, w.player.tile)).toBeGreaterThanOrEqual(7);
+    // Clear the map while standing in the middle of a spawn area; everything respawns away from you.
+    const seen = new Set<number>();
+    for (const m of [...w.monsters.values()]) {
+      seen.add(m.id);
+      w.monsters.delete(m.id);
+    }
+    const respawns = (w as unknown as { respawns: Array<{ spawnIndex: number; at: number }> }).respawns;
+    meadow.spawns.forEach((sp, i) => {
+      for (let n = 0; n < sp.count; n++) respawns.push({ spawnIndex: i, at: 0 });
+    });
+    for (let t = 0; t < 30_000; t += F.TICK_MS) {
+      w.player.hp = 1e6;
+      w.tick();
+      for (const m of w.monsters.values()) {
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        expect(tileDistance(m.tile, w.player.tile)).toBeGreaterThanOrEqual(7);
+      }
+    }
+  });
+});
+
+describe('Auto after an interrupted cast', () => {
+  it('fights with basic attacks for a moment instead of recasting into every hit', () => {
+    const w = new World(content, content.maps.get('meadow-2')!, { seed: 4 });
+    gainXp(w.player, 0, 100_000);
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    w.applyAction({ type: 'changeJob', job: 'mage' });
+    w.player.skillPoints = 5;
+    for (let i = 0; i < 5; i++) w.learnSkill('fire_bolt');
+    w.player.hp = 1e6;
+    w.setAuto(true);
+    run(w, 20_000, () => !!w.player.casting);
+    expect(w.player.casting).not.toBeNull();
+    // A heavy hit knocks the spell away.
+    const m = w.monsters.get(w.player.casting!.targetId)!;
+    (w as unknown as { hurtPlayer: (m: unknown, amount: number) => void }).hurtPlayer(m, 1000);
+    expect(w.player.casting).toBeNull();
+    const used: string[] = [];
+    w.events.on('skillUsed', (e) => used.push(e.skillId));
+    let hits = 0;
+    w.events.on('damage', (e) => e.sourceId === 'player' && hits++);
+    w.events.on('miss', () => hits++);
+    run(w, 3000);
+    expect(w.player.casting).toBeNull();
+    expect(used).toEqual([]);
+    expect(hits).toBeGreaterThan(0);
   });
 });

@@ -113,6 +113,12 @@ const PICKUP_RANGE = 1;
 const CHASE_REPATH_MS = 300;
 /** Auto mode looks this far (tiles) for monsters, and this far for loot. */
 const AUTO_RANGE = 10;
+/** Monsters never appear closer than this to the player (tiles). */
+const SPAWN_CLEARANCE = 7;
+/** When a spawn area has no spot that far away, it tries again after this long. */
+const SPAWN_RETRY_MS = 3000;
+/** How long Auto avoids cast-time spells after one is interrupted. */
+const AUTO_CAST_COOLDOWN_MS = 4000;
 /** Auto leaves out spells that do less than this share of their damage to the target. */
 const AUTO_MIN_ELEMENT = 0.5;
 const AUTO_LOOT_RANGE = 5;
@@ -147,11 +153,15 @@ export class World {
   auto = false;
   /** After a manual move, Auto waits this long (ms) before taking over again. */
   private autoPauseMs = 0;
+  /** After a cast is knocked out of your hands, Auto sticks to basic attacks until then. */
+  private autoNoCastUntil = 0;
   /** Where the pet stands; null without a pet. Not saved: it reappears next to the player. */
   /** Each pet's live state (position, hunger and bite timers), by pet. */
   private petStates = new Map<Pets.Pet, PetState>();
   /** Which pet is biting right now (for the petAttack event). */
   private biter = 0;
+  /** While a map loads: where the player is about to stand (spawns keep clear of it). */
+  private spawnClearOf: Tile | null = null;
   private auraMs = 0;
   /** Whether the bag was over the slow-recovery weight last tick (for a one-time notice). */
   private wasHeavy = false;
@@ -452,6 +462,7 @@ export class World {
       if ((p.cooldowns.get(id) ?? 0) > 0 || p.sp < cost) continue;
       if (skill.needsWeapon && weapon.type !== skill.needsWeapon) continue;
       if (skill.needsTwoHanded && !twoHanded) continue;
+      if (skill.castMs && this.time < this.autoNoCastUntil) continue;
       if (skill.kind === 'self') {
         if (id === 'heal' ? p.hp >= d.maxHp * 0.6 : !skill.buffMs || p.buffs.has(id)) continue;
         this.useSkill(id);
@@ -1557,13 +1568,15 @@ export class World {
       this.placePlayer(tile);
       return;
     }
-    this.loadMap(map);
+    this.loadMap(map, tile);
     this.placePlayer(tile);
     this.events.emit('mapChanged', { mapId });
     this.onEnterMap(mapId);
   }
 
-  private loadMap(map: MapDef): void {
+  /** Builds a map and spawns its monsters, keeping them clear of `arrival` (where the player will stand). */
+  private loadMap(map: MapDef, arrival?: Tile): void {
+    this.spawnClearOf = arrival ?? null;
     this.currentMap = map;
     this.flags.set(visitedFlag(map.id), true);
     this.currentGrid = buildGrid(map);
@@ -1580,6 +1593,7 @@ export class World {
       }
       for (let n = 0; n < spawn.count; n++) this.spawnMonster(i);
     });
+    this.spawnClearOf = null;
   }
 
   /** Loads saved flags and respawns the current map, so a boss killed before saving stays dead. */
@@ -2047,6 +2061,8 @@ export class World {
       p.casting = null;
       p.intent = { kind: 'none' };
       this.events.emit('castInterrupted', {});
+      // Auto stops trying spells with a cast time for a moment and fights back instead.
+      this.autoNoCastUntil = this.time + AUTO_CAST_COOLDOWN_MS;
     }
     if (p.hp <= 0) this.killPlayer();
   }
@@ -2109,8 +2125,12 @@ export class World {
   private spawnMonster(spawnIndex: number): void {
     const spawn = this.map.spawns[spawnIndex]!;
     const def = this.content.monsters.get(spawn.monster)!;
-    const tile = this.randomWalkableIn(spawn.area);
-    if (!tile) return;
+    const tile = this.spawnTile(spawn.area, def.boss);
+    if (!tile) {
+      // Every free spot is right next to the player: try again in a moment.
+      this.respawns.push({ spawnIndex, at: this.time + SPAWN_RETRY_MS });
+      return;
+    }
     this.addMonster(def, tile, spawnIndex);
     if (def.boss) this.events.emit('boss', { kind: 'appeared', name: def.name });
   }
@@ -2165,6 +2185,23 @@ export class World {
         add.hostile = true;
       }
     }
+  }
+
+  /**
+   * A free tile in a spawn area at least SPAWN_CLEARANCE tiles from the player,
+   * so nothing pops up on top of you. A boss's arena may be smaller than that:
+   * it takes the farthest spot it finds. Null if only spots near the player are free.
+   */
+  private spawnTile(area: { x: number; y: number; w: number; h: number }, boss = false): Tile | null {
+    const p = this.spawnClearOf ?? this.player.tile;
+    let far: Tile | null = null;
+    for (let i = 0; i < 60; i++) {
+      const t = this.randomWalkableIn(area);
+      if (!t) return null;
+      if (tileDistance(t, p) >= SPAWN_CLEARANCE) return t;
+      if (!far || tileDistance(t, p) > tileDistance(far, p)) far = t;
+    }
+    return boss ? far : null;
   }
 
   private randomWalkableIn(area: { x: number; y: number; w: number; h: number }): Tile | null {
