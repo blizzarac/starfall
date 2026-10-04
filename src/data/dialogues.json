@@ -986,7 +986,7 @@
         ]
       },
       "care": {
-        "text": "Tap your pet to open its window. Feed it a Pet Treat when it's hungry and it grows fond of you. Once it trusts you it helps: stronger stats, and Jellops and Gullwings pick up loot for you. Starve it and it will leave.",
+        "text": "Open Menu → Pet to look after your pets. Feed it a Pet Treat when it's hungry and it grows fond of you. Once it trusts you it helps: stronger stats, and Jellops and Gullwings pick up loot for you. Starve it and it will leave.",
         "choices": [
           {
             "label": "Thanks"

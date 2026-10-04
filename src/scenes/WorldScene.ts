@@ -698,12 +698,7 @@ export class WorldScene extends Phaser.Scene {
       this.world.attack(monster.id);
       return;
     }
-    for (const [pet, view] of this.petViews) {
-      if (Phaser.Math.Distance.Between(ptr.worldX, ptr.worldY, view.root.x, view.root.y - 12) < this.pickRadius()) {
-        this.game.events.emit('openPet', this.world.player.pets.indexOf(pet));
-        return;
-      }
-    }
+    // Pets aren't tappable (they'd get in the way); open them from Menu → Pet.
     const npcId = this.npcAt(ptr.worldX, ptr.worldY);
     if (npcId) {
       this.world.talkTo(npcId);

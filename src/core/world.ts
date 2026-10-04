@@ -493,7 +493,7 @@ export class World {
     const notice = (text: string) => this.events.emit('notice', { text });
     const def = this.content.monsters.get(lure.tames ?? '');
     if (!def) return;
-    if (p.pets.length >= Pets.MAX_PETS) return notice(`You already have ${Pets.MAX_PETS} pets. Release one first (tap a pet).`);
+    if (p.pets.length >= Pets.MAX_PETS) return notice(`You already have ${Pets.MAX_PETS} pets. Release one first (Menu → Pet).`);
     if (p.lure) {
       const ready = this.content.monsters.get(this.content.items.get(p.lure)?.tames ?? '');
       return notice(`A lure is already out. Wear down a ${ready?.name ?? 'monster'} first.`);
