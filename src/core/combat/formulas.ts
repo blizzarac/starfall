@@ -242,7 +242,7 @@ export function sellPrice(price: number): number {
 // ---- Refining ------------------------------------------------------------
 
 /** Chance that refining to `nextLevel` succeeds. Up to +4 is always safe. */
-const REFINE_CHANCE = [1, 1, 1, 1, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
+const REFINE_CHANCE = [1, 1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4];
 
 export function refineChance(nextLevel: number): number {
   return REFINE_CHANCE[nextLevel - 1] ?? 0;
