@@ -10,7 +10,7 @@ import { Panel } from './widgets';
  */
 export const WORLD_LAYOUT: Record<string, { x: number; y: number }> = {
   town: { x: 0, y: 0.06 },
-  'meadow-1': { x: 0, y: 0.22 },
+  'meadow-1': { x: 0.5, y: 0.06 },
   'meadow-2': { x: 0.5, y: 0.22 },
   'meadow-3': { x: 0.5, y: 0.38 },
   whisperwood: { x: 0.5, y: 0.54 },
@@ -22,7 +22,7 @@ export const WORLD_LAYOUT: Record<string, { x: number; y: number }> = {
   'sunscorch-dunes': { x: 0, y: 0.7 },
   'sunken-ruins': { x: 0, y: 0.86 },
   'iron-wastes': { x: 0, y: 0.38 },
-  'clockwork-citadel': { x: 0.5, y: 0.06 },
+  'clockwork-citadel': { x: 0, y: 0.22 },
 };
 
 /** Ship routes (drawn dashed): they come from NPC dialogue, not portals. */
@@ -83,6 +83,16 @@ export class WorldMapWindow {
       return { x: area.x + l.x * area.w, y: area.y + l.y * area.h };
     };
     const been = (id: string) => w.flags.has(visitedFlag(id));
+    // Places next to somewhere you've been show their name (but not their monsters) so you know where a road leads.
+    const known = new Set<string>();
+    for (const map of w.content.maps.values()) {
+      if (!been(map.id)) continue;
+      for (const portal of map.portals) known.add(portal.to.map);
+    }
+    for (const [a, b] of SEA_ROUTES) {
+      if (been(a)) known.add(b);
+      if (been(b)) known.add(a);
+    }
 
     // Roads between maps (each pair once), and sea routes dashed.
     const g = this.scene.add.graphics();
@@ -117,7 +127,7 @@ export class WorldMapWindow {
       p.add(this.scene.add.rectangle(c.x + 3, c.y + 3, BOX_W, BOX_H, COLORS.ink));
       p.add(this.scene.add.rectangle(c.x, c.y, BOX_W, BOX_H, fill).setStrokeStyle(here ? 3.5 : 2.5, COLORS.ink));
       const range = mapLevelRange(w, map);
-      const name = visited ? map.name : '???';
+      const name = visited || known.has(map.id) ? map.name : '???';
       const sub = !visited ? '' : map.kind === 'town' ? 'Town' : range ? `Lv ${range[0]}–${range[1]}` : '';
       const label = this.scene.add
         .text(c.x, c.y - (sub ? 7 : 0), name, { ...TEXT, fontSize: '11px', fontStyle: 'bold', align: 'center', wordWrap: { width: BOX_W - 8 }, lineSpacing: -2 })

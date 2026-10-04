@@ -55,5 +55,15 @@ describe('next goal', () => {
 describe('world map', () => {
   it('places every map', () => {
     for (const id of content.maps.keys()) expect(WORLD_LAYOUT[id], id).toBeDefined();
+    // No two areas share a box, and every road on the map runs straight down a column or along a row.
+    const spots = Object.values(WORLD_LAYOUT).map((l) => `${l.x},${l.y}`);
+    expect(new Set(spots).size).toBe(spots.length);
+    for (const map of content.maps.values()) {
+      for (const portal of map.portals) {
+        const a = WORLD_LAYOUT[map.id]!;
+        const b = WORLD_LAYOUT[portal.to.map]!;
+        expect(a.x === b.x || a.y === b.y, `${map.id} → ${portal.to.map}`).toBe(true);
+      }
+    }
   });
 });
