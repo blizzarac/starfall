@@ -64,7 +64,7 @@ export function derivedStats(p: Player): DerivedStats {
 /** Gear and pet bonuses added together. */
 function allBonus(p: Player): ReturnType<typeof gearBonus> {
   const total = gearBonus(p);
-  for (const pet of p.pets) for (const [k, v] of Object.entries(petBonus(pet))) total[k as keyof typeof total] += v ?? 0;
+  for (const pet of p.pets) if (!pet.waiting) for (const [k, v] of Object.entries(petBonus(pet))) total[k as keyof typeof total] += v ?? 0;
   return total;
 }
 

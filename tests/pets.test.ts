@@ -158,15 +158,40 @@ describe('taming and caring', () => {
     expect(w.itemCount('jelly_drop')).toBe(before + 1);
   });
 
-  it('a starving pet loses friendship and eventually runs away', () => {
+  it('a starving pet goes home to Brightmoor and waits until you feed it there', () => {
     const w = tamed();
-    w.player.pets[0]!.hunger = 0;
-    w.player.pets[0]!.intimacy = 20;
-    let ran = false;
-    w.events.on('petRanAway', () => (ran = true));
+    const pet = w.player.pets[0]!;
+    pet.hunger = 0;
+    pet.intimacy = 20;
+    let home = false;
+    w.events.on('petWentHome', () => (home = true));
     run(w, Pets.HUNGER_TICK_MS + 100);
-    expect(ran).toBe(true);
-    expect(w.player.pets).toHaveLength(0);
+    expect(home).toBe(true);
+    // Still yours, but it doesn't follow, help or fight out here.
+    expect(w.player.pets).toEqual([pet]);
+    expect(pet.waiting).toBe(true);
+    expect(w.petMovers()).toHaveLength(0);
+    w.addItem(Pets.PET_FOOD, 2);
+    expect(w.feedPet(pet)).toMatch(/waiting in Brightmoor/);
+    expect(w.itemCount(Pets.PET_FOOD)).toBe(2);
+    // It keeps through a save.
+    const loaded = new World(content, meadow, { seed: 5 });
+    applySaveDoc(loaded, migrate(JSON.parse(JSON.stringify(toSaveDoc(w, 0)))));
+    expect(loaded.player.pets[0]!.waiting).toBe(true);
+    // In town it waits by Mabel; a treat there brings it back.
+    w.changeMap('town', { x: 22, y: 21 });
+    run(w, 100);
+    const mover = w.petMovers()[0]?.mover;
+    expect(mover && tileDistance(mover.tile, Pets.PET_HOME)).toBeLessThanOrEqual(2);
+    const hunger = pet.hunger;
+    run(w, Pets.HUNGER_TICK_MS * 3);
+    expect(pet.hunger).toBe(hunger);
+    expect(w.feedPet(pet)).toBeNull();
+    expect(pet.waiting).toBe(false);
+    expect(pet.intimacy).toBeGreaterThanOrEqual(Pets.START_INTIMACY);
+    expect(pet.hunger).toBeGreaterThan(hunger);
+    run(w, 100);
+    expect(tileDistance(w.petMovers()[0]!.mover.tile, w.player.tile)).toBeLessThanOrEqual(2);
   });
 
   it('the pet is saved and loaded, and old saves load without one', () => {

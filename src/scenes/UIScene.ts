@@ -697,7 +697,7 @@ export class UIScene extends Phaser.Scene {
       ev.on('autoChanged', (e) => this.addLog(e.on ? 'Auto on: fighting nearby monsters and picking up loot. Tap the map to take over.' : 'Auto off.')),
       ev.on('petTamed', (e) => this.addLog(`You tamed a ${e.name}! See how it's doing in Menu → Pet.`)),
       ev.on('lureReady', (e) => this.addLog(`Lure ready. Fight a ${e.name} down to a quarter of its HP to tame it.`)),
-      ev.on('petRanAway', (e) => this.addLog(`${e.name} got too hungry and ran away…`)),
+      ev.on('petWentHome', (e) => this.addLog(`${e.name} got too hungry and went home to Brightmoor. Feed it by Mabel to bring it back.`)),
       ev.on('petLevelUp', (e) => this.addLog(`${e.name} reached level ${e.level}!`)),
       ev.on('storyLine', (e) => this.storyLine(e.text)),
       ev.on('storyEnded', (e) => this.storyLine(`— ${e.title} —`, 6000)),

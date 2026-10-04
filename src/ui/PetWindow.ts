@@ -20,7 +20,7 @@ export class PetWindow {
   ) {
     this.panel = new Panel(scene, 'Pet', centered(380, 640), () => this.close());
     const refresh = () => this.panel.visible && this.refresh();
-    for (const e of ['petFed', 'petChanged', 'petTamed', 'petRanAway', 'petLevelUp', 'inventoryChanged'] as const) world.events.on(e, refresh);
+    for (const e of ['petFed', 'petChanged', 'petTamed', 'petWentHome', 'petLevelUp', 'inventoryChanged'] as const) world.events.on(e, refresh);
   }
 
   open(index?: number): void {
@@ -75,7 +75,7 @@ export class PetWindow {
       });
       top = 34;
     }
-    text(12, 42 + top, `${def?.name ?? pet.species} · ${species.blurb} · Pets ${pets.length}/${MAX_PETS}`, 12, TONE.muted);
+    text(12, 42 + top, `${def?.name ?? pet.species} · ${species.blurb}`, 12, TONE.muted);
 
     const bar = (y: number, label: string, value: string, frac: number, color: number) => {
       text(12, y, label, 13, TONE.ink, true);
@@ -101,8 +101,9 @@ export class PetWindow {
     const bonus = describeBonus(petBonus(pet)).join(' · ');
     const perk = species.loots ? `${bonus ? ' · ' : ''}picks up loot` : '';
     const starving = appetite(pet.hunger) === 'Starving';
-    line(bonusFactor(pet.intimacy) === 0 ? `Too awkward to help yet. Feed it and fight together.` : `Helping you: ${bonus}${perk}`, 13, bonusFactor(pet.intimacy) ? TONE.good : TONE.muted);
-    line(starving ? 'Too hungry to fight!' : `Bites for about ${petAttackDamage(pet)} every ${PET_ATTACK_MS / 1000} s`, 13, starving ? TONE.bad : TONE.ink);
+    if (pet.waiting) line(`Waiting at home in Brightmoor, by Mabel. Feed it a treat there to bring it back.`, 13, TONE.bad);
+    else line(bonusFactor(pet.intimacy) === 0 ? `Too awkward to help yet. Feed it and fight together.` : `Helping you: ${bonus}${perk}`, 13, bonusFactor(pet.intimacy) ? TONE.good : TONE.muted);
+    if (!pet.waiting) line(starving ? 'Too hungry to fight!' : `Bites for about ${petAttackDamage(pet)} every ${PET_ATTACK_MS / 1000} s`, 13, starving ? TONE.bad : TONE.ink);
 
     // Gear: what it wears, and the collars and charms in your bag.
     const gear = pet.gear;
@@ -134,7 +135,7 @@ export class PetWindow {
     const bw = p.w - 24;
     y = Math.max(y + 6, p.h - 150);
     p.add(
-      makeButton(this.scene, 12, y, bw, 38, `Feed a Pet Treat (${treats} left)`, () => {
+      makeButton(this.scene, 12, y, bw, 38, pet.waiting ? `Bring back with a Pet Treat (${treats} left)` : `Feed a Pet Treat (${treats} left)`, () => {
         const err = w.feedPet(pet);
         this.message = err ?? 'Munch munch!';
         this.messageColor = err ? TONE.bad : TONE.good;

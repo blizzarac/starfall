@@ -6,7 +6,7 @@ export interface Pet {
   /** Monster id of the species. */
   species: string;
   name: string;
-  /** Friendship, 0–1000. At 0 the pet runs away. */
+  /** Friendship, 0–1000. At 0 the pet goes home to Brightmoor and waits. */
   intimacy: number;
   /** Fullness, 0–100. Drops over time; feed with a Pet Treat. */
   hunger: number;
@@ -16,6 +16,8 @@ export interface Pet {
   xp: number;
   /** The collar or charm it wears, if any (saved as its item id). */
   gear: ItemDef | null;
+  /** Gone home to Brightmoor after starving: it waits by Mabel until you feed it there. */
+  waiting?: boolean;
 }
 
 export interface PetSpecies {
@@ -40,6 +42,8 @@ export const PET_SPECIES: Record<string, PetSpecies> = {
 export const MAX_PETS = 3;
 export const PET_FOOD = 'pet_treat';
 export const START_INTIMACY = 100;
+/** Where a starving pet goes to wait, and the tile it waits by (next to Mabel). */
+export const PET_HOME = { map: 'town', x: 24, y: 21 };
 export const START_HUNGER = 80;
 export const MAX_INTIMACY = 1000;
 /** Hunger drops by one point this often (simulated ms). */

@@ -75,7 +75,8 @@ export interface WorldEvents extends Record<string, unknown> {
   /** A lure was readied: wear this monster down to tame it. */
   lureReady: { name: string };
   petFed: { delta: number; pet: number };
-  petRanAway: { name: string };
+  /** A pet starved and went home to Brightmoor to wait. */
+  petWentHome: { name: string };
   /** The pet was renamed, released, replaced or changed gear. */
   petChanged: Record<string, never>;
   /** The pet bit a monster. */
@@ -537,8 +538,15 @@ export class World {
   feedPet(which?: Pets.Pet): string | null {
     const pet = this.petOf(which);
     if (!pet) return "You don't have a pet.";
+    if (pet.waiting && this.map.id !== Pets.PET_HOME.map) return `${pet.name} is waiting in Brightmoor, by Mabel. Feed it there to bring it back.`;
     if (!this.hasItem(Pets.PET_FOOD, 1)) return `You need a ${this.content.items.get(Pets.PET_FOOD)?.name ?? 'treat'}.`;
     this.removeItem(Pets.PET_FOOD, 1);
+    if (pet.waiting) {
+      // Fed at home, it forgives you and comes along again.
+      pet.waiting = false;
+      pet.intimacy = Math.max(pet.intimacy, Pets.START_INTIMACY);
+      this.placePet(pet);
+    }
     const delta = Pets.feed(pet);
     // A friendship charm makes treats count for more too.
     if (delta > 0) pet.intimacy = Math.min(Pets.MAX_INTIMACY, pet.intimacy + Math.round(delta * (Pets.petGear(pet).friendship ?? 0)));
@@ -559,7 +567,7 @@ export class World {
   /** A monster fell with the pets out: each learns from the fight and grows fonder of you. */
   private rewardPet(baseXp: number): void {
     for (const pet of this.player.pets) {
-      if (!this.petState(pet).mover) continue;
+      if (pet.waiting || !this.petState(pet).mover) continue;
       const levels = Pets.gainPetXp(pet, baseXp * (1 + (Pets.petGear(pet).xp ?? 0)));
       if (Pets.appetite(pet.hunger) !== 'Starving') this.addIntimacy(pet, Pets.KILL_INTIMACY);
       if (levels > 0) {
@@ -621,6 +629,7 @@ export class World {
     this.player.pets.forEach((pet, i) => {
       if (only && pet !== only) return;
       const st = this.petState(pet);
+      if (pet.waiting) return void (st.mover = null);
       st.mover = createMover(spots[i % Math.max(1, spots.length)] ?? p, F.PLAYER_MOVE_MS);
       st.skips.clear();
     });
@@ -633,6 +642,17 @@ export class World {
   private updateOnePet(pet: Pets.Pet, dt: number): void {
     const p = this.player;
     const st = this.petState(pet);
+    if (pet.waiting) {
+      // Waits by Mabel in Brightmoor: shown there, and nowhere else. No hunger, no fights.
+      const home = Pets.PET_HOME;
+      if (this.map.id !== home.map) st.mover = null;
+      else if (!st.mover) {
+        const n = this.player.pets.filter((x) => x.waiting).indexOf(pet);
+        const spots = this.dropSpots(home);
+        st.mover = createMover(spots[n % Math.max(1, spots.length)] ?? home, F.PLAYER_MOVE_MS);
+      }
+      return;
+    }
     if (!st.mover) this.placePet(pet);
     const mover = st.mover!;
 
@@ -643,9 +663,12 @@ export class World {
       if (Pets.appetite(pet.hunger) === 'Starving') this.addIntimacy(pet, -Pets.STARVING_LOSS);
       if (pet.hunger === 25) this.events.emit('notice', { text: `${pet.name} is hungry. Feed it a Pet Treat.` });
       if (pet.intimacy === 0) {
-        const name = pet.name;
-        this.releasePet(pet);
-        this.events.emit('petRanAway', { name });
+        // Too hungry to stay: it goes home to Brightmoor and waits there.
+        pet.waiting = true;
+        st.mover = null;
+        st.hungerMs = 0;
+        this.refreshStats();
+        this.events.emit('petWentHome', { name: pet.name });
         return;
       }
     }

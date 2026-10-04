@@ -28,6 +28,8 @@ const PetSaveSchema = z.object({
   level: z.number().int().min(1).optional(),
   xp: z.number().int().min(0).optional(),
   gear: z.string().nullable().optional(),
+  /** Waiting in Brightmoor after starving. Absent in older saves. */
+  waiting: z.boolean().optional(),
 });
 
 export const SaveDocSchema = z.object({
