@@ -242,6 +242,9 @@ export function sellPrice(price: number): number {
 // ---- Refining ------------------------------------------------------------
 
 /** Chance that refining to `nextLevel` succeeds. Up to +4 is always safe. */
+/** Every monster gives this much more base and job XP than its listed value. */
+export const KILL_XP_RATE = 1.5;
+
 const REFINE_CHANCE = [1, 1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4];
 
 export function refineChance(nextLevel: number): number {

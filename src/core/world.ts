@@ -114,7 +114,7 @@ const CHASE_REPATH_MS = 300;
 /** Auto mode looks this far (tiles) for monsters, and this far for loot. */
 const AUTO_RANGE = 10;
 /** Monsters never appear closer than this to the player (tiles). */
-const SPAWN_CLEARANCE = 7;
+const SPAWN_CLEARANCE = 10;
 /** When a spawn area has no spot that far away, it tries again after this long. */
 const SPAWN_RETRY_MS = 3000;
 /** How long Auto avoids cast-time spells after one is interrupted. */
@@ -1880,7 +1880,7 @@ export class World {
     this.events.emit('monsterDied', { monsterId: m.id, tile: { ...m.tile } });
     this.session.kills += 1;
 
-    this.grantXp(m.def.baseXp, m.def.jobXp);
+    this.grantXp(Math.round(m.def.baseXp * F.KILL_XP_RATE), Math.round(m.def.jobXp * F.KILL_XP_RATE));
     this.rewardPet(m.def.baseXp);
     this.trackKill(m);
 

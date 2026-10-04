@@ -204,12 +204,12 @@ describe('quick bar', () => {
 });
 
 describe('spawning', () => {
-  it('monsters never appear within 7 tiles of the player, on entering a map or respawning', () => {
+  it('monsters never appear within 10 tiles of the player, on entering a map or respawning', () => {
     const w = new World(content, meadow, { seed: 6 });
     const m0 = [...w.monsters.values()][0]!;
     w.changeMap('meadow-2', content.maps.get('meadow-2')!.playerStart);
     w.changeMap('meadow-1', m0.tile);
-    for (const m of w.monsters.values()) expect(tileDistance(m.tile, w.player.tile)).toBeGreaterThanOrEqual(7);
+    for (const m of w.monsters.values()) expect(tileDistance(m.tile, w.player.tile)).toBeGreaterThanOrEqual(10);
     // Clear the map while standing in the middle of a spawn area; everything respawns away from you.
     const seen = new Set<number>();
     for (const m of [...w.monsters.values()]) {
@@ -226,7 +226,7 @@ describe('spawning', () => {
       for (const m of w.monsters.values()) {
         if (seen.has(m.id)) continue;
         seen.add(m.id);
-        expect(tileDistance(m.tile, w.player.tile)).toBeGreaterThanOrEqual(7);
+        expect(tileDistance(m.tile, w.player.tile)).toBeGreaterThanOrEqual(10);
       }
     }
   });

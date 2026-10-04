@@ -28,6 +28,22 @@ function become(job: 'archer' | 'acolyte'): World {
 }
 
 /** An archer with a bow, standing in the meadow; returns the nearest Jellop. */
+/** Monsters never spawn near the player, so tests walk one over: a free tile `dist` away. */
+function bringNear(w: World, m: { tile: { x: number; y: number }; next: unknown; path: unknown[]; goal: unknown }, dist = 3): void {
+  const p = w.player.tile;
+  for (let dy = -dist; dy <= dist; dy++)
+    for (let dx = -dist; dx <= dist; dx++) {
+      const t = { x: p.x + dx, y: p.y + dy };
+      if (Math.max(Math.abs(dx), Math.abs(dy)) === dist && w.grid.isWalkable(t.x, t.y)) {
+        m.tile = t;
+        m.next = null;
+        m.path = [];
+        m.goal = null;
+        return;
+      }
+    }
+}
+
 function archerInMeadow() {
   const w = become('archer');
   w.addItem('willow_bow', 1);
@@ -35,6 +51,7 @@ function archerInMeadow() {
   w.changeMap('meadow-1', { x: 20, y: 22 });
   const m = [...w.monsters.values()].sort((a, b) => tileDistance(a.tile, w.player.tile) - tileDistance(b.tile, w.player.tile))[0]!;
   m.hp = 100_000;
+  bringNear(w, m);
   return { w, m };
 }
 
@@ -162,6 +179,7 @@ describe('Acolyte', () => {
     w.changeMap('caves-1', { x: 19, y: 2 });
     const bat = [...w.monsters.values()].find((m) => m.def.element === 'shadow')!;
     for (const m of w.monsters.values()) if (m !== bat) w.monsters.delete(m.id);
+    bringNear(w, bat);
     bat.def = { ...bat.def, ai: { ...bat.def.ai, aggressive: false } };
     w.player.sp = 999;
     let dealt = 0;

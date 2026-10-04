@@ -34,6 +34,22 @@ function swordsman(): World {
   return w;
 }
 
+/** Monsters never spawn near the player, so tests walk one over: a free tile `dist` away. */
+function bringNear(w: World, m: { tile: { x: number; y: number }; next: unknown; path: unknown[]; goal: unknown }, dist = 3): void {
+  const p = w.player.tile;
+  for (let dy = -dist; dy <= dist; dy++)
+    for (let dx = -dist; dx <= dist; dx++) {
+      const t = { x: p.x + dx, y: p.y + dy };
+      if (Math.max(Math.abs(dx), Math.abs(dy)) === dist && w.grid.isWalkable(t.x, t.y)) {
+        m.tile = t;
+        m.next = null;
+        m.path = [];
+        m.goal = null;
+        return;
+      }
+    }
+}
+
 describe('first job', () => {
   it('opens at job level 5 with Basic Training 4, through the guild trial', () => {
     const w = new World(content, content.maps.get(START_MAP)!, { seed: 1 });
@@ -135,6 +151,7 @@ describe('active skills', () => {
     for (let i = 0; i < 5; i++) w.learnSkill('endure');
     w.changeMap('meadow-1', content.maps.get('meadow-1')!.playerStart);
     w.player.sp = 500;
+    bringNear(w, [...w.monsters.values()][0]!);
     return w;
   }
 
