@@ -125,6 +125,28 @@ describe('Auto mode', () => {
     expect(w.player.dead).toBe(true);
     expect(w.auto).toBe(false);
   });
+  it('keeps going when a spell target dies mid-cast (to a pet, say), and stands up when switched on', () => {
+    const w = new World(content, content.maps.get('meadow-2')!, { seed: 4 });
+    gainXp(w.player, 0, 100_000);
+    for (let i = 0; i < 4; i++) w.learnSkill('basic_training');
+    w.applyAction({ type: 'changeJob', job: 'mage' });
+    w.player.skillPoints = 5;
+    for (let i = 0; i < 5; i++) w.learnSkill('fire_bolt');
+    w.player.hp = 1e6;
+    w.toggleSit();
+    w.setAuto(true);
+    expect(w.player.sitting).toBe(false);
+    run(w, 20_000, () => !!w.player.casting);
+    const target = w.monsters.get(w.player.casting!.targetId)!;
+    w.monsters.delete(target.id);
+    run(w, 200);
+    // Not stuck "casting" at a monster that is gone.
+    expect(w.player.casting?.targetId).not.toBe(target.id);
+    let hits = 0;
+    w.events.on('skillUsed', () => hits++);
+    run(w, 10_000, () => hits > 0);
+    expect(hits).toBeGreaterThan(0);
+  });
 });
 
 describe('best potion', () => {

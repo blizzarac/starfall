@@ -356,6 +356,8 @@ export class World {
 
   setAuto(on: boolean): void {
     this.auto = on;
+    // Auto does nothing while sitting, so turning it on stands you up.
+    if (on) this.player.sitting = false;
     this.autoPauseMs = 0;
     this.events.emit('autoChanged', { on });
   }
@@ -1630,8 +1632,11 @@ export class World {
     if (intent.kind === 'attack' || intent.kind === 'skill') {
       const target = this.monsters.get(intent.targetId);
       if (!target) {
+        // The target is gone (a pet, an aura or another spell finished it): drop any half-done cast too,
+        // or the player would stand there "casting" forever and Auto would never act again.
         p.intent = { kind: 'none' };
         p.path = [];
+        p.casting = null;
       } else if (intent.kind === 'skill' && p.casting) {
         // Once a cast starts the target may walk away; the spell still lands, as in the original.
         p.casting.remainingMs -= dt;
